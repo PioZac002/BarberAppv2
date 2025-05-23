@@ -6,7 +6,7 @@ import {
     UserIcon,
     Star,
     Bell,
-    LogOut,
+    LogOut, Scissors,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -53,10 +53,11 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
             { icon: HomeIcon, label: "Overview", href: "/admin-dashboard" },
             { icon: UserIcon, label: "Users", href: "/admin-dashboard/users" },
             { icon: CalendarIcon, label: "Appointments", href: "/admin-dashboard/appointments" },
-            { icon: Star, label: "Services", href: "/admin-dashboard/services" },
+            { icon: Scissors, label: "Services", href: "/admin-dashboard/services" },
             { icon: Bell, label: "Staff", href: "/admin-dashboard/staff" },
             { icon: Bell, label: "Reports", href: "/admin-dashboard/reports" },
             { icon: Bell, label: "Settings", href: "/admin-dashboard/settings" },
+            { icon: Star, label: "Reviews", href: "/admin-dashboard/reviews" }
         ];
 
         switch (user.role) {

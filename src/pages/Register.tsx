@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -96,9 +95,9 @@ const Register = () => {
                 phone: formData.phone,
                 password: formData.password,
             });
-            // Redirect happens in the register function
+            // Usunięto toast.success, bo jest w useAuth.tsx
         } catch (error) {
-            toast.error("Registration failed. Please try again.");
+            toast.error("Rejestracja nie powiodła się. Spróbuj ponownie.");
         } finally {
             setIsSubmitting(false);
         }

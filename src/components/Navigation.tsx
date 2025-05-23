@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,8 +20,6 @@ const Navigation = () => {
         const token = localStorage.getItem("token");
         if (token) {
             setIsLoggedIn(true);
-            // In a real app, decode JWT to get user role
-            // For demo, we'll just set a sample role
             const storedRole = localStorage.getItem("userRole");
             setUserRole(storedRole as "client" | "barber" | "admin" || "client");
         }
@@ -70,6 +67,14 @@ const Navigation = () => {
         }
     };
 
+    const adminSubMenu = [
+        { name: "Overview", path: "/admin-dashboard" },
+        { name: "Users", path: "/admin-dashboard/users" },
+        { name: "Appointments", path: "/admin-dashboard/appointments" },
+        { name: "Services", path: "/admin-dashboard/services" },
+        { name: "Reviews", path: "/admin-dashboard/reviews" },
+    ];
+
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
     const closeMenu = () => setIsMenuOpen(false);
 
@@ -86,7 +91,6 @@ const Navigation = () => {
                     BarberShop
                 </Link>
 
-                {/* Desktop Navigation */}
                 <nav className="hidden md:flex items-center space-x-6">
                     {navLinks.map((link) =>
                         link.isButton ? (
@@ -112,7 +116,6 @@ const Navigation = () => {
                         )
                     )}
 
-                    {/* Auth Buttons for Desktop */}
                     <div className="hidden md:flex items-center space-x-4">
                         {isLoggedIn ? (
                             <DropdownMenu>
@@ -127,9 +130,17 @@ const Navigation = () => {
                                     <DropdownMenuItem asChild>
                                         <Link to="/profile">Profile</Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                        <Link to={getDashboardUrl()}>Dashboard</Link>
-                                    </DropdownMenuItem>
+                                    {userRole === "admin" ? (
+                                        adminSubMenu.map((subLink) => (
+                                            <DropdownMenuItem key={subLink.name} asChild>
+                                                <Link to={subLink.path}>{subLink.name}</Link>
+                                            </DropdownMenuItem>
+                                        ))
+                                    ) : (
+                                        <DropdownMenuItem asChild>
+                                            <Link to={getDashboardUrl()}>Dashboard</Link>
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem onClick={handleLogout}>
                                         Logout
                                     </DropdownMenuItem>
@@ -151,7 +162,6 @@ const Navigation = () => {
                     </div>
                 </nav>
 
-                {/* Mobile menu button */}
                 <button
                     className="md:hidden text-white"
                     onClick={toggleMenu}
@@ -165,7 +175,6 @@ const Navigation = () => {
                 </button>
             </div>
 
-            {/* Mobile Navigation Menu */}
             {isMenuOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-90 z-40 md:hidden animate-fade-in">
                     <div className="flex flex-col h-full justify-center items-center space-y-8 p-4">
@@ -184,7 +193,6 @@ const Navigation = () => {
                             </Link>
                         ))}
 
-                        {/* Auth Links for Mobile */}
                         {isLoggedIn ? (
                             <>
                                 <Link
@@ -194,13 +202,26 @@ const Navigation = () => {
                                 >
                                     Profile
                                 </Link>
-                                <Link
-                                    to={getDashboardUrl()}
-                                    className="text-xl text-white"
-                                    onClick={closeMenu}
-                                >
-                                    Dashboard
-                                </Link>
+                                {userRole === "admin" ? (
+                                    adminSubMenu.map((subLink) => (
+                                        <Link
+                                            key={subLink.name}
+                                            to={subLink.path}
+                                            className="text-xl text-white"
+                                            onClick={closeMenu}
+                                        >
+                                            {subLink.name}
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <Link
+                                        to={getDashboardUrl()}
+                                        className="text-xl text-white"
+                                        onClick={closeMenu}
+                                    >
+                                        Dashboard
+                                    </Link>
+                                )}
                                 <button
                                     className="text-xl text-white"
                                     onClick={() => {

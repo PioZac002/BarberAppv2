@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,9 +50,9 @@ const Login = () => {
 
         try {
             await login(email, password);
-            // Redirect happens in the login function
+            // Usunięto toast.success, bo jest w useAuth.tsx
         } catch (error) {
-            toast.error("Login failed. Please check your credentials and try again.");
+            toast.error("Logowanie nie powiodło się. Sprawdź dane i spróbuj ponownie.");
         } finally {
             setIsSubmitting(false);
         }
@@ -65,9 +64,9 @@ const Login = () => {
                 <div className="w-full max-w-md px-4">
                     <Card className="animate-fade-in">
                         <CardHeader className="space-y-1 text-center">
-                            <CardTitle className="text-3xl font-bold text-barber-dark">Welcome back</CardTitle>
+                            <CardTitle className="text-3xl font-bold text-barber-dark">Witaj ponownie</CardTitle>
                             <CardDescription>
-                                Enter your email and password to login to your account
+                                Wprowadź email i hasło, aby zalogować się na swoje konto
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -81,6 +80,7 @@ const Login = () => {
                                             placeholder="name@example.com"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
+                                            autoComplete="email"
                                             className={errors.email ? "border-red-500" : ""}
                                         />
                                         {errors.email && (
@@ -89,12 +89,12 @@ const Login = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <Label htmlFor="password">Password</Label>
+                                            <Label htmlFor="password">Hasło</Label>
                                             <Link
                                                 to="/forgot-password"
                                                 className="text-sm text-barber hover:underline"
                                             >
-                                                Forgot password?
+                                                Zapomniałeś hasła?
                                             </Link>
                                         </div>
                                         <Input
@@ -103,6 +103,7 @@ const Login = () => {
                                             placeholder="••••••••"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
+                                            autoComplete="current-password"
                                             className={errors.password ? "border-red-500" : ""}
                                         />
                                         {errors.password && (
@@ -114,20 +115,20 @@ const Login = () => {
                                         className="bg-barber hover:bg-barber-muted btn-hover"
                                         disabled={isSubmitting}
                                     >
-                                        {isSubmitting ? "Logging in..." : "Login"}
+                                        {isSubmitting ? "Logowanie..." : "Zaloguj się"}
                                     </Button>
                                 </div>
                             </form>
 
                             <div className="mt-4">
                                 <p className="text-sm text-center text-gray-500">
-                                    For demo purposes, use:
+                                    Do celów demonstracyjnych użyj:
                                 </p>
                                 <ul className="text-xs text-center text-gray-500 mt-1">
-                                    <li>client@example.com (client)</li>
-                                    <li>barber@example.com (barber)</li>
+                                    <li>client@example.com (klient)</li>
+                                    <li>barber@example.com (fryzjer)</li>
                                     <li>admin@example.com (admin)</li>
-                                    <li>Password can be anything</li>
+                                    <li>Hasło może być dowolne</li>
                                 </ul>
                             </div>
                         </CardContent>
@@ -137,13 +138,13 @@ const Login = () => {
                                     <div className="w-full border-t border-gray-200"></div>
                                 </div>
                                 <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-white px-2 text-gray-500">Or</span>
+                                    <span className="bg-white px-2 text-gray-500">Lub</span>
                                 </div>
                             </div>
                             <div className="text-center text-sm">
-                                Don't have an account?{" "}
+                                Nie masz konta?{" "}
                                 <Link to="/register" className="text-barber hover:underline">
-                                    Register
+                                    Zarejestruj się
                                 </Link>
                             </div>
                         </CardFooter>

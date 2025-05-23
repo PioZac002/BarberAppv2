@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.10",
     "@radix-ui/react-alert-dialog": "^1.1.13",
     "@radix-ui/react-aspect-ratio": "^1.1.6",
@@ -44,6 +45,7 @@
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.508.0",
     "path": "^0.12.7",
+    "pg": "^8.16.0",
     "react": "^19.1.0",
     "react-day-picker": "^9.6.7",
     "react-dom": "^19.1.0",
@@ -52,7 +54,8 @@
     "recharts": "^2.15.3",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0",
-    "vaul": "^1.1.2"
+    "vaul": "^1.1.2",
+    "zod": "^3.25.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

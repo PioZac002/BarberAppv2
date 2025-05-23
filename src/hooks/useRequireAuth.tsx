@@ -1,8 +1,9 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
+import { UserRole } from '@/types/auth';
 
 type UserRole = "client" | "barber" | "admin";
 
