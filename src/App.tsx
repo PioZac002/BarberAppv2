@@ -5,10 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 
-
 // Pages
 import Home from "./pages/Home";
-import PublicServices from "./pages/Services"; // Alias dla publicznego Services
+import PublicServices from "./pages/Services";
 import Team from "./pages/Team";
 import Reviews from "./pages/Reviews";
 import Booking from "./pages/Booking";
@@ -22,6 +21,9 @@ import UserDashboard from "./pages/user-dashboard/UserDashboard";
 // Barber Dashboard
 import BarberDashboard from "./pages/barber-dashboard/BarberDashboard";
 import BarberPortfolio from "./pages/barber-dashboard/BarberPortfolio";
+import BarberAppointments from "./pages/barber-dashboard/BarberAppointments";
+import BarberNotifications from "./pages/barber-dashboard/BarberNotifications";
+import BarberProfile from "./pages/barber-dashboard/BarberProfile";
 
 // Admin Dashboard
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
@@ -56,7 +58,10 @@ const App = () => (
 
                         {/* Barber Dashboard Routes */}
                         <Route path="/barber-dashboard" element={<BarberDashboard />} />
+                        <Route path="/barber-dashboard/appointments" element={<BarberAppointments />} />
                         <Route path="/barber-dashboard/portfolio" element={<BarberPortfolio />} />
+                        <Route path="/barber-dashboard/notifications" element={<BarberNotifications />} />
+                        <Route path="/barber-dashboard/profile" element={<BarberProfile />} />
 
                         {/* Admin Dashboard Routes */}
                         <Route path="/admin-dashboard" element={<AdminDashboard />}>

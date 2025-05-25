@@ -1,5 +1,4 @@
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
 
 const Table = React.forwardRef<
@@ -105,6 +104,18 @@ const TableCaption = React.forwardRef<
 ))
 TableCaption.displayName = "TableCaption"
 
+const TableCard = React.forwardRef<
+    HTMLDivElement,
+    React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+    <div
+        ref={ref}
+        className={cn("p-4 border rounded-lg shadow-sm", className)}
+        {...props}
+    />
+))
+TableCard.displayName = "TableCard"
+
 export {
     Table,
     TableHeader,
@@ -114,4 +125,5 @@ export {
     TableRow,
     TableCell,
     TableCaption,
+    TableCard
 }
