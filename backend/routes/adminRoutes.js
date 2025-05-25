@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/authMiddleware');
+// Importujemy verifyToken i requireAdmin z authMiddleware
+const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
 const {
     getStats,
     getRevenue,
@@ -19,27 +20,24 @@ const {
     deleteReview
 } = require('../controllers/adminController');
 
-const requireAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Brak dostępu' });
-    }
-    next();
-};
+// Stosujemy middleware do wszystkich tras w tym routerze
+router.use(verifyToken, requireAdmin);
 
-router.get('/stats', verifyToken, requireAdmin, getStats);
-router.get('/revenue', verifyToken, requireAdmin, getRevenue);
-router.get('/recent-activities', verifyToken, requireAdmin, getRecentActivities);
-router.get('/users', verifyToken, requireAdmin, getUsers);
-router.put('/users/:id', verifyToken, requireAdmin, updateUser);
-router.delete('/users/:id', verifyToken, requireAdmin, deleteUser);
-router.get('/appointments', verifyToken, requireAdmin, getAppointments);
-router.put('/appointments/:id', verifyToken, requireAdmin, updateAppointment);
-router.delete('/appointments/:id', verifyToken, requireAdmin, deleteAppointment);
-router.get('/services', verifyToken, requireAdmin, getServices);
-router.post('/services', verifyToken, requireAdmin, addService);
-router.put('/services/:id', verifyToken, requireAdmin, updateService);
-router.delete('/services/:id', verifyToken, requireAdmin, deleteService);
-router.get('/reviews', verifyToken, requireAdmin, getReviews);
-router.delete('/reviews/:id', verifyToken, requireAdmin, deleteReview);
+// Trasy (już nie potrzebują indywidualnego verifyToken i requireAdmin)
+router.get('/stats', getStats);
+router.get('/revenue', getRevenue);
+router.get('/recent-activities', getRecentActivities);
+router.get('/users', getUsers);
+router.put('/users/:id', updateUser);
+router.delete('/users/:id', deleteUser);
+router.get('/appointments', getAppointments);
+router.put('/appointments/:id', updateAppointment);
+router.delete('/appointments/:id', deleteAppointment);
+router.get('/services', getServices);
+router.post('/services', addService);
+router.put('/services/:id', updateService);
+router.delete('/services/:id', deleteService);
+router.get('/reviews', getReviews);
+router.delete('/reviews/:id', deleteReview);
 
 module.exports = router;

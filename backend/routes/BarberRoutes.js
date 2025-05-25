@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/authMiddleware');
+// Importujemy verifyToken i requireBarber z authMiddleware
+const { verifyToken, requireBarber } = require('../middleware/authMiddleware');
 const {
     getBarberPortfolio,
     addPortfolioImage,
@@ -10,44 +11,39 @@ const {
     getBarberNotifications,
     markNotificationAsRead,
     deleteNotification,
-    markAllNotificationsAsRead, // Nowa funkcja
+    markAllNotificationsAsRead,
     getBarberStats,
     getBarberAppointments,
-    updateAppointmentStatus, // Nowa funkcja
+    updateAppointmentStatus,
     getBarberSchedule
 } = require('../controllers/barberController');
 
-// Middleware do sprawdzania roli barbera
-const requireBarber = (req, res, next) => {
-    if (req.user.role !== 'barber') {
-        return res.status(403).json({ error: 'Brak dostępu' });
-    }
-    next();
-};
+// Stosujemy middleware do wszystkich tras w tym routerze
+router.use(verifyToken, requireBarber);
 
-// Trasy Portfolio
-router.get('/portfolio', verifyToken, requireBarber, getBarberPortfolio);
-router.post('/portfolio', verifyToken, requireBarber, addPortfolioImage);
-router.delete('/portfolio/:imageId', verifyToken, requireBarber, deletePortfolioImage);
+// Trasy Portfolio (już nie potrzebują indywidualnego verifyToken i requireBarber)
+router.get('/portfolio', getBarberPortfolio);
+router.post('/portfolio', addPortfolioImage);
+router.delete('/portfolio/:imageId', deletePortfolioImage);
 
 // Trasy Profilu
-router.get('/profile', verifyToken, requireBarber, getBarberProfile);
-router.put('/profile', verifyToken, requireBarber, updateBarberProfile);
+router.get('/profile', getBarberProfile);
+router.put('/profile', updateBarberProfile);
 
 // Trasy Powiadomień
-router.get('/notifications', verifyToken, requireBarber, getBarberNotifications);
-router.put('/notifications/read-all', verifyToken, requireBarber, markAllNotificationsAsRead); // Nowa trasa
-router.put('/notifications/:id/read', verifyToken, requireBarber, markNotificationAsRead);
-router.delete('/notifications/:id', verifyToken, requireBarber, deleteNotification);
+router.get('/notifications', getBarberNotifications);
+router.put('/notifications/read-all', markAllNotificationsAsRead);
+router.put('/notifications/:id/read', markNotificationAsRead);
+router.delete('/notifications/:id', deleteNotification);
 
 // Trasy Statystyk
-router.get('/stats', verifyToken, requireBarber, getBarberStats);
+router.get('/stats', getBarberStats);
 
 // Trasy Wizyt
-router.get('/appointments', verifyToken, requireBarber, getBarberAppointments);
-router.put('/appointments/:id/status', verifyToken, requireBarber, updateAppointmentStatus); // Nowa trasa
+router.get('/appointments', getBarberAppointments);
+router.put('/appointments/:id/status', updateAppointmentStatus);
 
 // Trasa Harmonogramu
-router.get('/schedule', verifyToken, requireBarber, getBarberSchedule);
+router.get('/schedule', getBarberSchedule);
 
 module.exports = router;

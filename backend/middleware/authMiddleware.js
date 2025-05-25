@@ -1,18 +1,54 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// Weryfikacja tokenu JWT
 const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1]; // Pobierz token z nagłówka
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
     if (!token) {
-        return res.status(403).json({ error: 'Brak tokena' });
+        return res.status(403).json({ error: 'Brak tokena uwierzytelniającego.' });
     }
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET); // Zweryfikuj token
-        req.user = decoded; // Zapisz zdekodowane dane w obiekcie żądania
-        next(); // Przejdź do następnego middleware lub trasy
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded; // np. req.user = { id: 1, role: 'client', iat: ..., exp: ... }
+        next();
     } catch (err) {
-        return res.status(401).json({ error: 'Nieprawidłowy token' });
+        console.error("Błąd weryfikacji tokenu:", err.message);
+        if (err.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Token wygasł.', code: 'TOKEN_EXPIRED' });
+        }
+        return res.status(401).json({ error: 'Nieprawidłowy lub nieważny token.' });
     }
 };
 
-module.exports = { verifyToken };
+// Middleware sprawdzające rolę 'client'
+const requireClient = (req, res, next) => {
+    if (!req.user || req.user.role !== 'client') {
+        return res.status(403).json({ error: 'Dostęp zabroniony. Wymagana rola klienta.' });
+    }
+    next();
+};
+
+// Middleware sprawdzające rolę 'barber'
+const requireBarber = (req, res, next) => {
+    if (!req.user || req.user.role !== 'barber') {
+        return res.status(403).json({ error: 'Dostęp zabroniony. Wymagana rola barbera.' });
+    }
+    next();
+};
+
+// Middleware sprawdzające rolę 'admin'
+const requireAdmin = (req, res, next) => {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Dostęp zabroniony. Wymagana rola administratora.' });
+    }
+    next();
+};
+
+module.exports = {
+    verifyToken,
+    requireClient,
+    requireBarber,
+    requireAdmin
+};

@@ -1,6 +1,15 @@
-
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
+// Komponenty podstron
+import UserProfile from "./UserProfile";
+import UserAppointments from "./UserAppointments";
+import UserNotifications from "./UserNotifications";
+import UserReviews from "./UserReviews";
+
 import {
     Card,
     CardContent,
@@ -8,137 +17,233 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Calendar, User, Star, Bell, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import {
+    Calendar,
+    User,
+    Star,
+    Bell,
+    Clock,
+    CheckSquare,
+    ThumbsUp,
+    ArrowRight,
+    Info,
+} from "lucide-react";
+import { toast } from "sonner";
+import { format, formatDistanceToNow, isValid } from "date-fns";
 
-// Dummy data for the dashboard
-const upcomingAppointment = {
-    id: 1,
-    date: "2023-11-15",
-    time: "10:30 AM",
-    service: "Classic Haircut",
-    barber: "David Mitchell",
-};
+// Interfejsy dla danych pobieranych dla sekcji Overview
+interface UpcomingAppointmentInfo {
+    id: number;
+    date: string; // Oczekiwany format YYYY-MM-DD z backendu
+    time: string;
+    service: string;
+    barber: string;
+}
+
+interface UserStatsInfo {
+    totalAppointments: number;
+    hoursSaved: string;
+    avgRatingGiven: number | null;
+}
+
+interface OverviewNotificationInfo {
+    id: number;
+    title: string;
+    created_at: string;
+    link?: string | null;
+    is_read: boolean;
+    type?: string;
+}
 
 const UserDashboard = () => {
-    const { user, loading } = useRequireAuth();
+    const { tab } = useParams<{ tab?: string }>();
+    const { user: authUser, token, loading: authContextLoading } = useAuth();
+    useRequireAuth({ allowedRoles: ["client"] });
 
-    if (loading) {
+    const [upcomingAppointment, setUpcomingAppointment] = useState<UpcomingAppointmentInfo | null>(null);
+    const [userStats, setUserStats] = useState<UserStatsInfo | null>(null);
+    const [recentNotifications, setRecentNotifications] = useState<OverviewNotificationInfo[]>([]);
+    const [isOverviewDataLoadingLocal, setIsOverviewDataLoadingLocal] = useState(true);
+
+    useEffect(() => {
+        if (authContextLoading) {
+            setIsOverviewDataLoadingLocal(true);
+            return;
+        }
+
+        if (!authUser || !token) {
+            setIsOverviewDataLoadingLocal(false);
+            setUpcomingAppointment(null);
+            setUserStats(null);
+            setRecentNotifications([]);
+            return;
+        }
+
+        if ((!tab || tab === "overview" || tab === undefined)) {
+            const fetchOverviewData = async () => {
+                setIsOverviewDataLoadingLocal(true);
+                try {
+                    const headers = { Authorization: `Bearer ${token}` };
+                    const [statsRes, nextApptRes, notifRes] = await Promise.all([
+                        fetch("http://localhost:3000/api/user/stats", { headers }),
+                        fetch("http://localhost:3000/api/user/appointments/next-upcoming", { headers }),
+                        fetch("http://localhost:3000/api/user/notifications", { headers }),
+                    ]);
+
+                    if (statsRes.ok) setUserStats(await statsRes.json());
+                    else console.error("Failed to fetch user stats:", await statsRes.text());
+
+                    if (nextApptRes.ok) setUpcomingAppointment(await nextApptRes.json());
+                    else console.error("Failed to fetch next upcoming appointment:", await nextApptRes.text());
+
+                    if (notifRes.ok) {
+                        const allNotifs: OverviewNotificationInfo[] = await notifRes.json();
+                        setRecentNotifications(allNotifs.slice(0,3));
+                    } else console.error("Failed to fetch recent notifications:", await notifRes.text());
+
+                } catch (error) {
+                    console.error("Error fetching overview data:", error);
+                    toast.error("An error occurred while loading dashboard data.");
+                } finally {
+                    setIsOverviewDataLoadingLocal(false);
+                }
+            };
+            fetchOverviewData();
+        } else {
+            setIsOverviewDataLoadingLocal(false);
+        }
+    }, [authUser, token, tab, authContextLoading]);
+
+    if (authContextLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
-            </div>
+            <DashboardLayout title="Loading Dashboard...">
+                <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                </div>
+            </DashboardLayout>
         );
     }
 
-    return (
-        <DashboardLayout title="Dashboard Overview">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Welcome Card */}
-                <div className="md:col-span-2">
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-2xl">
-                                Hello, {user?.firstName || "Client"}!
+    if (!authUser) {
+        return (
+            <DashboardLayout title="Authentication Error">
+                <div className="p-6 text-center">
+                    <p className="text-red-500">Authentication error. Please log in to continue.</p>
+                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                        <Link to="/login">Go to Login</Link>
+                    </Button>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    const StatCard = ({ title, value, icon, description, linkTo, isAction }: { title: string, value: string | number, icon: React.ReactNode, description?: string, linkTo?: string, isAction?: boolean }) => {
+        const content = (
+            <div className={`flex items-center p-3 sm:p-4 rounded-lg shadow-sm transition-all duration-200 h-full ${isAction ? 'bg-barber/5 hover:bg-barber/10' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                <div className={`p-2 sm:p-3 rounded-full mr-3 sm:mr-4 ${isAction ? 'bg-barber/20' : 'bg-barber/10'}`}>
+                    {icon}
+                </div>
+                <div>
+                    <p className={`text-xs sm:text-sm font-medium ${isAction ? 'text-barber' : 'text-gray-500'}`}>{title}</p>
+                    <p className={`text-lg sm:text-xl font-semibold ${isAction ? 'text-barber' : 'text-gray-800'}`}>{value}</p>
+                    {description && !isAction && <p className="text-xs text-gray-400">{description}</p>}
+                </div>
+            </div>
+        );
+        return linkTo ? <Link to={linkTo} className="block no-underline h-full">{content}</Link> : <div className="h-full">{content}</div>;
+    }
+
+    const renderOverviewContent = () => {
+        if (isOverviewDataLoadingLocal) {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 animate-pulse">
+                    <div className="md:col-span-2 xl:col-span-3"><Card><CardHeader className="pb-4"><div className="h-8 bg-gray-300 rounded w-3/4 mb-2"></div><div className="h-4 bg-gray-300 rounded w-1/2"></div></CardHeader><CardContent><div className="grid grid-cols-1 sm:grid-cols-3 gap-4"><div className="h-20 bg-gray-300 rounded-lg"></div><div className="h-20 bg-gray-300 rounded-lg"></div><div className="h-20 bg-gray-300 rounded-lg"></div></div></CardContent></Card></div>
+                    <div className="md:col-span-2"><Card><CardHeader><div className="h-6 bg-gray-300 rounded w-1/2"></div></CardHeader><CardContent><div className="h-24 bg-gray-300 rounded-lg"></div></CardContent></Card></div>
+                    <div className="md:col-span-1"><Card><CardHeader><div className="h-6 bg-gray-300 rounded w-3/4"></div></CardHeader><CardContent><div className="space-y-3"><div className="h-10 bg-gray-300 rounded-md"></div><div className="h-10 bg-gray-300 rounded-md"></div><div className="h-10 bg-gray-300 rounded-md"></div></div></CardContent></Card></div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                <div className="md:col-span-2 xl:col-span-3">
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-xl sm:text-2xl font-semibold">
+                                Hello, {authUser?.firstName || "Client"}!
                             </CardTitle>
-                            <CardDescription>
-                                Welcome to your personal dashboard. Here's a summary of your account.
+                            <CardDescription className="text-xs sm:text-sm">
+                                Welcome to your personal dashboard. Here's a summary of your activity.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                                    <Calendar className="h-8 w-8 text-barber mr-3" />
-                                    <div>
-                                        <p className="text-sm text-gray-500">Appointments</p>
-                                        <p className="text-xl font-semibold">3 Total</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                                    <Clock className="h-8 w-8 text-barber mr-3" />
-                                    <div>
-                                        <p className="text-sm text-gray-500">Hours Saved</p>
-                                        <p className="text-xl font-semibold">2.5 Hours</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                                    <Star className="h-8 w-8 text-barber mr-3" />
-                                    <div>
-                                        <p className="text-sm text-gray-500">Avg Rating</p>
-                                        <p className="text-xl font-semibold">5.0</p>
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                <StatCard
+                                    title="Total Appointments"
+                                    value={userStats?.totalAppointments?.toString() ?? "0"}
+                                    icon={<CheckSquare className="h-6 w-6 text-barber" />}
+                                    description="Excluding canceled"
+                                />
+                                <StatCard
+                                    title="Avg. Rating Given"
+                                    value={userStats?.avgRatingGiven ? `${userStats.avgRatingGiven}/5.0` : "N/A"}
+                                    icon={<ThumbsUp className="h-6 w-6 text-barber" />}
+                                    description="Your average review score"
+                                />
+                                <StatCard
+                                    title="Quick Booking"
+                                    value="Find a Slot"
+                                    icon={<Calendar className="h-6 w-6 text-barber" />}
+                                    linkTo="/booking"
+                                    description="Book your next visit"
+                                    isAction
+                                />
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="md:col-span-1">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quick Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <Button asChild className="w-full mb-2 bg-barber hover:bg-barber-muted">
-                                <Link to="/booking">Book New Appointment</Link>
-                            </Button>
-                            <Button asChild variant="outline" className="w-full mb-2">
-                                <Link to="/user-dashboard/appointments">View My Appointments</Link>
-                            </Button>
-                            <Button asChild variant="outline" className="w-full">
-                                <Link to="/user-dashboard/profile">Update Profile</Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Upcoming Appointment */}
                 <div className="md:col-span-2">
-                    <Card>
+                    <Card className="shadow-sm">
                         <CardHeader>
-                            <CardTitle className="flex items-center">
+                            <CardTitle className="flex items-center text-lg sm:text-xl">
                                 <Calendar className="h-5 w-5 mr-2 text-barber" />
-                                Upcoming Appointment
+                                Next Upcoming Appointment
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {upcomingAppointment ? (
-                                <div className="bg-gray-50 rounded-lg p-5">
-                                    <div className="flex flex-col sm:flex-row justify-between mb-4">
+                            {upcomingAppointment && upcomingAppointment.date ? ( // Dodano sprawdzenie upcomingAppointment.date
+                                <div className="bg-barber/5 rounded-lg p-4">
+                                    <div className="flex flex-col sm:flex-row justify-between mb-3">
                                         <div>
-                                            <h3 className="font-semibold text-lg">{upcomingAppointment.service}</h3>
-                                            <p className="text-gray-600">with {upcomingAppointment.barber}</p>
+                                            <h3 className="font-semibold text-md sm:text-lg text-gray-800">{upcomingAppointment.service}</h3>
+                                            <p className="text-xs sm:text-sm text-gray-600">with {upcomingAppointment.barber}</p>
                                         </div>
-                                        <div className="mt-2 sm:mt-0 flex items-center">
-                                            <Clock className="h-4 w-4 mr-1 text-gray-500" />
+                                        <div className="mt-2 sm:mt-0 text-xs sm:text-sm flex items-center text-gray-700">
+                                            <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
                                             <span>
-                        {new Date(upcomingAppointment.date).toLocaleDateString()} at{" "}
+                                                {/* POPRAWKA TUTAJ: Użyj standardowego formatu np. "MMM d, yyyy" lub "PP" */}
+                                                {isValid(new Date(upcomingAppointment.date)) ? format(new Date(upcomingAppointment.date), "MMM d, yyyy") : "Invalid date"} at{" "}
                                                 {upcomingAppointment.time}
-                      </span>
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex space-x-2">
+                                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="border-barber text-barber hover:bg-barber/10"
+                                            disabled
+                                            className="w-full sm:w-auto border-barber text-barber hover:bg-barber/10"
                                         >
-                                            Reschedule
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="border-red-500 text-red-500 hover:bg-red-50"
-                                        >
-                                            Cancel
+                                            Reschedule (soon)
                                         </Button>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <p className="text-gray-500 mb-4">You have no upcoming appointments.</p>
+                                <div className="text-center py-6">
+                                    <Info className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500 mb-3">You have no upcoming appointments.</p>
                                     <Button asChild className="bg-barber hover:bg-barber-muted">
                                         <Link to="/booking">Book Now</Link>
                                     </Button>
@@ -148,37 +253,34 @@ const UserDashboard = () => {
                     </Card>
                 </div>
 
-                {/* Recent Activities / Notifications */}
                 <div className="md:col-span-1">
-                    <Card>
+                    <Card className="shadow-sm">
                         <CardHeader>
-                            <CardTitle className="flex items-center">
+                            <CardTitle className="flex items-center text-lg sm:text-xl">
                                 <Bell className="h-5 w-5 mr-2 text-barber" />
-                                Notifications
+                                Recent Notifications
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ul className="space-y-4">
-                                <li className="bg-gray-50 p-3 rounded-md">
-                                    <p className="text-sm">Your appointment for Classic Haircut is confirmed.</p>
-                                    <p className="text-xs text-gray-500 mt-1">2 days ago</p>
-                                </li>
-                                <li className="bg-gray-50 p-3 rounded-md">
-                                    <p className="text-sm">
-                                        New promotional offer: 20% off for all services this weekend!
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">5 days ago</p>
-                                </li>
-                                <li className="bg-gray-50 p-3 rounded-md">
-                                    <p className="text-sm">
-                                        Thank you for your recent visit. Please rate your experience.
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">1 week ago</p>
-                                </li>
-                            </ul>
+                            {recentNotifications.length > 0 ? (
+                                <ul className="space-y-2.5">
+                                    {recentNotifications.map(notif => (
+                                        <li key={notif.id} className={`p-2.5 rounded-md border ${notif.is_read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
+                                            <Link to={notif.link || "/user-dashboard/notifications"} className="block group">
+                                                <p className={`text-xs sm:text-sm font-medium truncate group-hover:text-barber ${notif.is_read ? 'text-gray-600' : 'text-gray-800'}`}>{notif.title}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    {isValid(new Date(notif.created_at)) ? formatDistanceToNow(new Date(notif.created_at), { addSuffix: true }) : "Invalid date"}
+                                                </p>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-sm text-gray-500 py-4 text-center">No recent notifications.</p>
+                            )}
                             <Button
                                 variant="link"
-                                className="w-full mt-4 text-barber"
+                                className="w-full mt-3 text-barber px-0 text-xs sm:text-sm"
                                 asChild
                             >
                                 <Link to="/user-dashboard/notifications">View All Notifications</Link>
@@ -187,6 +289,50 @@ const UserDashboard = () => {
                     </Card>
                 </div>
             </div>
+        );
+    };
+
+    const renderContentByTab = () => {
+        if (!authUser && !authContextLoading) {
+            return (
+                <div className="p-6 text-center">
+                    <p className="text-red-500">Please log in to view this page.</p>
+                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Go to Login</Link></Button>
+                </div>
+            );
+        }
+
+        switch (tab) {
+            case "profile":
+                return <UserProfile />;
+            case "appointments":
+                return <UserAppointments />;
+            case "notifications":
+                return <UserNotifications />;
+            case "reviews":
+                return <UserReviews />;
+            case undefined:
+            case "overview":
+            default:
+                return renderOverviewContent();
+        }
+    };
+
+    const getTitle = () => {
+        switch (tab) {
+            case "profile": return "My Profile";
+            case "appointments": return "My Appointments";
+            case "notifications": return "Notifications";
+            case "reviews": return "My Reviews";
+            case undefined:
+            case "overview":
+            default: return "Dashboard Overview";
+        }
+    };
+
+    return (
+        <DashboardLayout title={getTitle()}>
+            {renderContentByTab()}
         </DashboardLayout>
     );
 };
