@@ -4,6 +4,8 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const barberRoutes = require('./routes/barberRoutes');
 const userRoutes = require('./routes/userRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const publicTeamRoutes = require('./routes/publicTeamRoutes'); // <-- NOWY IMPORT
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +18,8 @@ app.use('/api', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/barber', barberRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/booking', bookingRoutes);
+app.use('/api/public/team', publicTeamRoutes); // <-- NOWA TRASA
 
 app.listen(port, () => {
     console.log(`Serwer działa na porcie ${port}`);
