@@ -1,255 +1,332 @@
-import { useState, useEffect } from "react";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+// src/pages/barber-dashboard/BarberNotificationsPage.tsx
+import { useState, useEffect, useMemo } from "react"; // Dodano useMemo
+import { useAuth } from "@/hooks/useAuth";
 import {
     Card,
     CardContent,
     CardHeader,
     CardTitle,
+    CardDescription, // <-- DODANO IMPORT CardDescription
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Bell,
-    Calendar,
-    User,
-    Star,
+    AlertTriangle,
     CheckCircle,
+    Info,
+    CalendarDays, // Użyjemy CalendarDays dla spójności z innymi miejscami
+    Users as UsersIcon,
+    DollarSign,
+    Clock,
     Trash2,
+    Link as LinkIconUI
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { format } from "date-fns"; // Do formatowania daty
+import { toast as sonnerToast } from "sonner";
+import { formatDistanceToNow, isValid as isValidDateFn } from "date-fns";
+import { Link as RouterLink } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-interface Notification {
+interface AdminNotificationBackend {
     id: number;
     type: string;
     title: string;
     message: string;
-    is_read: boolean; // Zmieniono z 'read' na 'is_read' zgodnie z bazą danych
-    created_at: string; // Zmieniono z 'time'
-    // Dodaj inne pola jeśli są potrzebne, np. link
+    link?: string | null;
+    is_read: boolean;
+    created_at: string;
+    related_appointment_id?: number;
+    related_client_id?: number;
+    related_barber_id?: number;
 }
 
-const BarberNotifications = () => {
-    const { user, loading } = useRequireAuth({ allowedRoles: ["barber", "admin"] });
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+interface AdminNotificationFE extends AdminNotificationBackend {
+    displayType: "info" | "warning" | "success" | "error";
+    category: "appointments" | "users" | "system" | "revenue" | "other";
+    timestamp: Date;
+}
+
+const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby pasowała do nazwy pliku
+    const { token, loading: authContextLoading, user: authUser } = useAuth(); // Dodano authUser
+    const isMobile = useIsMobile();
+    const [activeTab, setActiveTab] = useState("all"); // Domyślnie 'all'
+    const [notifications, setNotifications] = useState<AdminNotificationFE[]>([]); // Użyjemy AdminNotificationFE dla spójności
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Funkcja mapująca typy backendowe na frontendowe (przykładowa, dostosuj do swoich potrzeb)
+    const mapBackendNotificationToFrontend = (notif: AdminNotificationBackend): AdminNotificationFE => {
+        let displayType: AdminNotificationFE["displayType"] = "info";
+        let category: AdminNotificationFE["category"] = "other";
+
+        // Załóżmy, że typy powiadomień barbera są podobne do admina, dostosuj jeśli inne
+        switch (notif.type.toLowerCase()) { // Dodano toLowerCase dla pewności
+            case "new_booking_barber":
+            case "appointment_confirmed_by_admin_staff":
+            case "appointment_status_changed_by_barber":
+                displayType = "info";
+                category = "appointments";
+                break;
+            case "new_review": // Przykładowy typ dla barbera
+                displayType = "success";
+                category = "users"; // Lub "system"
+                break;
+            // Dodaj inne mapowania dla typów powiadomień barbera
+            default:
+                displayType = "info";
+                category = "system";
+        }
+
+        return {
+            ...notif,
+            timestamp: new Date(notif.created_at),
+            displayType,
+            category,
+        };
+    };
 
     useEffect(() => {
-        if (!user || loading) return;
+        if (authContextLoading) {
+            setIsLoading(true);
+            return;
+        }
+        if (!token || !authUser) { // Sprawdź też authUser
+            setIsLoading(false);
+            setNotifications([]);
+            if (!authContextLoading) sonnerToast.error("Błąd autoryzacji. Proszę się zalogować.");
+            return;
+        }
 
         const fetchNotifications = async () => {
+            if(!token) return;
+            setIsLoading(true);
             try {
+                // Endpoint dla powiadomień barbera
                 const response = await fetch("http://localhost:3000/api/barber/notifications", {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!response.ok) throw new Error("Failed to fetch notifications");
-                const data = await response.json();
-                setNotifications(data);
-            } catch (error) {
-                console.error(error);
-                toast.error("Failed to load notifications");
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: "Nie udało się pobrać powiadomień barbera" }));
+                    throw new Error(errorData.error || "Nie udało się pobrać powiadomień barbera");
+                }
+                const data: AdminNotificationBackend[] = await response.json(); // Użyj AdminNotificationBackend jako typ danych z API
+                setNotifications(data.map(mapBackendNotificationToFrontend));
+            } catch (error: any) {
+                sonnerToast.error(error.message);
+                setNotifications([]);
+            } finally {
+                setIsLoading(false);
             }
         };
-
         fetchNotifications();
-    }, [user, loading]);
+    }, [token, authUser, authContextLoading]); // Dodano authUser do zależności
 
-    if (loading) {
+    const getFilteredNotifications = () => {
+        if (activeTab === "all") return notifications;
+        if (activeTab === "unread") return notifications.filter(n => !n.is_read);
+        // Dla barbera kategorie mogą być inne, na razie uproszczone filtrowanie
+        return notifications.filter(n => n.category === activeTab || n.type.toLowerCase().includes(activeTab));
+    };
+
+    const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
+
+    const getNotificationIcon = (type: AdminNotificationFE["displayType"]) => {
+        switch (type) {
+            case "warning": return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+            case "success": return <CheckCircle className="h-5 w-5 text-green-500" />;
+            case "error": return <AlertTriangle className="h-5 w-5 text-red-500" />;
+            default: return <Info className="h-5 w-5 text-blue-500" />;
+        }
+    };
+
+    const getCategoryIcon = (category: AdminNotificationFE["category"]) => {
+        switch (category) {
+            case "appointments": return <CalendarDays className="h-4 w-4 text-gray-500" />;
+            case "users": return <UsersIcon className="h-4 w-4 text-gray-500" />;
+            case "revenue": return <DollarSign className="h-4 w-4 text-gray-500" />; // Raczej nie dla barbera
+            default: return <Bell className="h-4 w-4 text-gray-500" />;
+        }
+    };
+
+    const markAsRead = async (id: number) => {
+        if (!token) { sonnerToast.error("Błąd autoryzacji."); return; }
+        try {
+            const response = await fetch(`http://localhost:3000/api/barber/notifications/${id}/read`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({error: "Failed to mark as read"}));
+                throw new Error(errorData.error || "Błąd podczas oznaczania jako przeczytane.");
+            }
+            setNotifications(prev =>
+                prev.map(notification =>
+                    notification.id === id
+                        ? { ...notification, is_read: true }
+                        : notification
+                )
+            );
+        } catch (error: any) {
+            sonnerToast.error(error.message || "Błąd podczas oznaczania jako przeczytane.");
+        }
+    };
+
+    const deleteNotificationFE = async (id: number) => {
+        if (!token) { sonnerToast.error("Błąd autoryzacji."); return; }
+        if (!window.confirm("Are you sure you want to delete this notification?")) return;
+        try {
+            const response = await fetch(`http://localhost:3000/api/barber/notifications/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({error: "Failed to delete"}));
+                throw new Error(errorData.error || "Błąd podczas usuwania powiadomienia.");
+            }
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            sonnerToast.success("Powiadomienie usunięte");
+        } catch (error: any) {
+            sonnerToast.error(error.message || "Błąd podczas usuwania powiadomienia.");
+        }
+    };
+
+    const markAllAsRead = async () => {
+        if (!token || unreadCount === 0) return;
+        try {
+            const response = await fetch(`http://localhost:3000/api/barber/notifications/read-all`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({error: "Failed to mark all as read"}));
+                throw new Error(errorData.error || "Błąd podczas oznaczania wszystkich jako przeczytane.");
+            }
+            setNotifications(prev =>
+                prev.map(notification => ({ ...notification, is_read: true }))
+            );
+            sonnerToast.success("Wszystkie oznaczono jako przeczytane");
+        } catch (error: any) {
+            sonnerToast.error(error.message || "Błąd podczas oznaczania wszystkich jako przeczytane.");
+        }
+    };
+
+
+    if (authContextLoading || isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
             </div>
         );
     }
 
-    const unreadCount = notifications.filter(n => !n.is_read).length;
-
-    const markAsRead = async (id: number) => {
-        try {
-            const response = await fetch(`http://localhost:3000/api/barber/notifications/${id}/read`, {
-                method: "PUT",
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            if (!response.ok) throw new Error("Failed to mark as read");
-            setNotifications(prev =>
-                prev.map(notification =>
-                    notification.id === id ? { ...notification, is_read: true } : notification
-                )
-            );
-            // toast.success("Notification marked as read"); // Można usunąć dla mniejszej ilości toastów
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to mark notification as read");
-        }
-    };
-
-    const markAllAsRead = async () => {
-        if (unreadCount === 0) return;
-        try {
-            const response = await fetch("http://localhost:3000/api/barber/notifications/read-all", { // Nowy endpoint
-                method: "PUT",
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            if (!response.ok) throw new Error("Failed to mark all as read");
-            setNotifications(prev =>
-                prev.map(notification => ({ ...notification, is_read: true }))
-            );
-            toast.success("All notifications marked as read");
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to mark all notifications as read");
-        }
-    };
-
-    const deleteNotification = async (id: number) => {
-        try {
-            const response = await fetch(`http://localhost:3000/api/barber/notifications/${id}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            if (!response.ok) throw new Error("Failed to delete notification");
-            setNotifications(prev => prev.filter(notification => notification.id !== id));
-            toast.success("Notification deleted");
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to delete notification");
-        }
-    };
-
-    const getNotificationIcon = (type: string) => {
-        switch (type) {
-            case "new_appointment": // Przykładowe typy
-            case "appointment_canceled":
-            case "appointment_confirmed":
-                return Calendar;
-            case "new_review":
-                return Star;
-            case "profile_update": // Przykładowy typ
-                return User;
-            default:
-                return Bell;
-        }
-    };
-
-    const getNotificationColor = (type: string) => {
-        // Możesz dostosować kolory do typów
-        switch (type) {
-            case "new_appointment": return "text-blue-600";
-            case "appointment_canceled": return "text-red-600";
-            case "new_review": return "text-yellow-600";
-            default: return "text-gray-600";
-        }
-    };
+    const filteredNotifications = getFilteredNotifications();
 
     return (
-        <DashboardLayout title="Notifications">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="flex items-center">
-                        <Bell className="h-5 w-5 mr-2 text-barber" />
-                        Notifications
-                        {unreadCount > 0 && (
-                            <Badge variant="destructive" className="ml-2">
-                                {unreadCount} new
-                            </Badge>
+        // Komponent NIE renderuje DashboardLayout
+        <div className="space-y-4 md:space-y-6 p-1">
+            <Card className="shadow-sm">
+                <CardHeader className="border-b pb-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+                        <div className="flex items-center gap-2">
+                            <Bell className="h-6 w-6 text-barber" />
+                            <CardTitle className="text-xl md:text-2xl">
+                                My Notifications
+                                {unreadCount > 0 && (
+                                    <Badge variant="destructive" className="ml-2 text-xs px-1.5 py-0.5">
+                                        {unreadCount} NEW
+                                    </Badge>
+                                )}
+                            </CardTitle>
+                        </div>
+                        {notifications.length > 0 && unreadCount > 0 && (
+                            <Button
+                                onClick={markAllAsRead}
+                                variant="outline"
+                                size={isMobile ? "sm" : "default"}
+                                className={isMobile ? "w-full mt-2 sm:mt-0" : ""}
+                            >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Mark All as Read
+                            </Button>
                         )}
-                    </CardTitle>
-                    {unreadCount > 0 && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={markAllAsRead}
-                            className="flex items-center"
-                        >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Mark All Read
-                        </Button>
-                    )}
+                    </div>
+                    <CardDescription className="mt-1 text-xs md:text-sm">
+                        View and manage your work-related notifications.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    {notifications.length > 0 ? (
-                        <div className="space-y-4">
-                            {notifications.map((notification) => {
-                                const IconComponent = getNotificationIcon(notification.type);
-                                return (
+                <CardContent className="p-3 sm:p-4">
+                    {/* Uproszczone Taby dla Barbera - można rozbudować, jeśli potrzebne kategorie */}
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-2'} h-auto sm:h-10 mb-4`}>
+                            <TabsTrigger value="all" className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "all" ? "bg-primary text-primary-foreground" : ""}`}>All</TabsTrigger>
+                            <TabsTrigger value="unread" className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "unread" ? "bg-primary text-primary-foreground" : ""}`}>Unread</TabsTrigger>
+                        </TabsList>
+
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                            {filteredNotifications.length === 0 ? (
+                                <div className="py-10 text-center">
+                                    <Info className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500">
+                                        {activeTab === "unread" ? "All notifications have been read." : "No notifications in this category."}
+                                    </p>
+                                </div>
+                            ) : (
+                                filteredNotifications.map((notification) => (
                                     <div
                                         key={notification.id}
-                                        className={`p-4 rounded-lg border transition-colors ${
-                                            notification.is_read
-                                                ? "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                                                : "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                                        className={`border rounded-lg overflow-hidden transition-all hover:shadow-md ${
+                                            !notification.is_read ? 'border-l-4 border-barber bg-barber/5' : 'bg-card'
                                         }`}
                                     >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-start space-x-3 flex-1">
-                                                <div className={`p-2 rounded-full ${
-                                                    notification.is_read ? "bg-gray-200" : "bg-white shadow-sm"
-                                                }`}>
-                                                    <IconComponent
-                                                        className={`h-5 w-5 ${getNotificationColor(notification.type)}`}
-                                                    />
+                                        <div className={`flex items-start gap-3 ${isMobile ? "p-2.5" : "p-3"}`}>
+                                            <div className={`mt-1 flex flex-col items-center space-y-1 opacity-80 ${isMobile ? "hidden sm:flex" : "flex"}`}>
+                                                {getNotificationIcon(notification.type)} {/* Użycie displayType */}
+                                                {/* Można usunąć getCategoryIcon, jeśli kategorie nie są tu tak istotne */}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} ${!notification.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                        {notification.title}
+                                                    </h4>
+                                                    {!notification.is_read && (
+                                                        <div className="w-2 h-2 bg-barber rounded-full animate-pulse flex-shrink-0 ml-2" />
+                                                    )}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center space-x-2 mb-1">
-                                                        <h3 className={`font-medium ${
-                                                            notification.is_read ? "text-gray-700" : "text-gray-900"
-                                                        }`}>
-                                                            {notification.title}
-                                                        </h3>
-                                                        {!notification.is_read && (
-                                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                                        )}
+                                                <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'} mb-1.5 line-clamp-2`}>
+                                                    {notification.message}
+                                                </p>
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                    <div className="flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        <span>{isValidDateFn(new Date(notification.created_at)) ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true }) : "Invalid date"}</span>
                                                     </div>
-                                                    <p className={`text-sm ${
-                                                        notification.is_read ? "text-gray-600" : "text-gray-700"
-                                                    }`}>
-                                                        {notification.message}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 mt-2">
-                                                        {format(new Date(notification.created_at), "PPpp")}
-                                                    </p>
+                                                    {notification.link && (
+                                                        <RouterLink to={notification.link} className="text-primary hover:underline flex items-center gap-1">
+                                                            <LinkIconUI className="h-3 w-3" /> Details
+                                                        </RouterLink>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-1 ml-2 sm:ml-4">
+                                            <div className="flex flex-col items-center gap-0.5 ml-2">
                                                 {!notification.is_read && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon" // Zmieniono na 'icon' dla spójności
-                                                        onClick={() => markAsRead(notification.id)}
-                                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8"
-                                                        title="Mark as read"
-                                                    >
-                                                        <CheckCircle className="h-4 w-4" />
+                                                    <Button onClick={() => markAsRead(notification.id)} size="icon" variant="ghost" className={`text-green-600 hover:bg-green-100 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`} title="Mark as read">
+                                                        <CheckCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
                                                     </Button>
                                                 )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon" // Zmieniono na 'icon'
-                                                    onClick={() => deleteNotification(notification.id)}
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
-                                                    title="Delete notification"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
+                                                <Button onClick={() => deleteNotificationFE(notification.id)} size="icon" variant="ghost" className={`text-destructive hover:bg-destructive/10 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`} title="Delete notification">
+                                                    <Trash2 className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
                                                 </Button>
                                             </div>
                                         </div>
                                     </div>
-                                );
-                            })}
+                                ))
+                            )}
                         </div>
-                    ) : (
-                        <div className="text-center py-12">
-                            <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-1">No notifications</h3>
-                            <p className="text-gray-500">
-                                You're all caught up! New notifications will appear here.
-                            </p>
-                        </div>
-                    )}
+                    </Tabs>
                 </CardContent>
             </Card>
-        </DashboardLayout>
+        </div>
     );
 };
 
-export default BarberNotifications;
+export default BarberNotificationsPage;

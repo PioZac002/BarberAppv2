@@ -1,10 +1,12 @@
+// src/pages/barber-dashboard/BarberPortfolio.tsx
 import { useState, useEffect } from "react";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { useAuth } from "@/hooks/useAuth";
 import {
     Card,
     CardContent,
     CardHeader,
     CardTitle,
+    CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +16,6 @@ import {
     Link as LinkIcon,
     Upload,
 } from "lucide-react";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
     Dialog,
     DialogContent,
@@ -28,19 +29,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Link as RouterLink } from "react-router-dom";
 
 interface PortfolioImage {
     id: number;
     image_url: string;
     title: string;
     description: string;
+    created_at: string;
 }
 
 const placeholderSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e9ecef'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16px' fill='%236c757d'%3EImage not found%3C/text%3E%3C/svg%3E";
 
-const BarberPortfolio = () => {
-    const { user, loading } = useRequireAuth({ allowedRoles: ["barber", "admin"] });
+const BarberPortfolioPage = () => {
+    const { user: authUser, token, loading: authContextLoading } = useAuth();
+
     const [portfolioImages, setPortfolioImages] = useState<PortfolioImage[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [imageToDelete, setImageToDelete] = useState<PortfolioImage | null>(null);
@@ -50,31 +55,41 @@ const BarberPortfolio = () => {
     const [newImageDescription, setNewImageDescription] = useState("");
 
     useEffect(() => {
-        if (!user || loading) return;
+        if (authContextLoading) {
+            setIsLoading(true);
+            return;
+        }
+        if (!authUser || !token) {
+            setIsLoading(false);
+            setPortfolioImages([]);
+            if(!authContextLoading && !authUser) toast.error("Authentication required to view portfolio.");
+            return;
+        }
 
         const fetchPortfolio = async () => {
+            if(!token) return;
+            setIsLoading(true);
             try {
                 const response = await fetch("http://localhost:3000/api/barber/portfolio", {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
                     let errorMsg = "Failed to fetch portfolio";
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorMsg;
-                    } catch (e) { /* Ignore if response is not JSON */ }
+                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { /* Ignore */ }
                     throw new Error(errorMsg);
                 }
-                const data = await response.json();
+                const data: PortfolioImage[] = await response.json();
+                data.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
                 setPortfolioImages(data);
             } catch (error: any) {
-                console.error(error);
+                console.error("Error fetching portfolio:", error);
                 toast.error(error.message || "Failed to load portfolio");
+            } finally {
+                setIsLoading(false);
             }
         };
-
         fetchPortfolio();
-    }, [user, loading]);
+    }, [authUser, token, authContextLoading]);
 
     const resetAddModalForm = () => {
         setNewImageUrl("");
@@ -87,13 +102,14 @@ const BarberPortfolio = () => {
             toast.error("Image URL is required");
             return;
         }
+        if (!token) { toast.error("Authentication error."); return; }
 
         try {
             const response = await fetch("http://localhost:3000/api/barber/portfolio", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     image_url: newImageUrl,
@@ -105,18 +121,12 @@ const BarberPortfolio = () => {
                 let errorMsg = "Failed to add image";
                 try {
                     const errorData = await response.json();
-                    if (errorData && errorData.error) {
-                        errorMsg = errorData.error;
-                    } else {
-                        errorMsg = `Error: ${response.status} ${response.statusText}`;
-                    }
-                } catch (e) {
-                    errorMsg = `Server error: ${response.status} ${response.statusText}`;
-                }
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) {  errorMsg = `Server error: ${response.status} ${response.statusText}`; }
                 throw new Error(errorMsg);
             }
             const addedImage = await response.json();
-            setPortfolioImages(prevImages => [addedImage, ...prevImages]);
+            setPortfolioImages(prevImages => [addedImage, ...prevImages].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
             resetAddModalForm();
             setIsAddModalOpen(false);
             toast.success("Image added to portfolio!");
@@ -132,48 +142,55 @@ const BarberPortfolio = () => {
     };
 
     const handleDeleteConfirm = async () => {
-        if (imageToDelete) {
-            try {
-                const response = await fetch(`http://localhost:3000/api/barber/portfolio/${imageToDelete.id}`, {
-                    method: "DELETE",
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-                });
-                if (!response.ok) {
-                    let errorMsg = "Failed to delete image";
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorMsg;
-                    } catch (e) { /* Ignore */ }
-                    throw new Error(errorMsg);
-                }
-                setPortfolioImages(portfolioImages.filter(img => img.id !== imageToDelete.id));
-                setIsDeleteModalOpen(false);
-                setImageToDelete(null);
-                toast.success("Image removed from portfolio.");
-            } catch (error: any) {
-                console.error(error);
-                toast.error(error.message || "Failed to delete image");
+        if (!imageToDelete || !token) {
+            if(!token) toast.error("Authentication error.");
+            return;
+        }
+        try {
+            const response = await fetch(`http://localhost:3000/api/barber/portfolio/${imageToDelete.id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) {
+                let errorMsg = "Failed to delete image";
+                try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { /* Ignore */ }
+                throw new Error(errorMsg);
             }
+            setPortfolioImages(portfolioImages.filter(img => img.id !== imageToDelete.id));
+            setIsDeleteModalOpen(false);
+            setImageToDelete(null);
+            toast.success("Image removed from portfolio.");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || "Failed to delete image");
         }
     };
 
-    if (loading) {
+    if (authContextLoading || isLoading) {
         return (
-            <DashboardLayout title="My Portfolio">
-                <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
-                </div>
-            </DashboardLayout>
+            <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+            </div>
+        );
+    }
+
+    if (!authContextLoading && !authUser) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-red-500">Could not authenticate user.</p>
+                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><RouterLink to="/login">Go to Login</RouterLink></Button>
+            </div>
         );
     }
 
     return (
-        <DashboardLayout title="My Portfolio">
-            <Card className="mb-6">
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
+        // Opakowujemy wszystko we fragment Reacta <>...</>
+        <>
+            <Card className="mb-6 shadow-md">
+                <CardHeader className="border-b pb-4">
+                    <CardTitle className="flex items-center justify-between text-xl sm:text-2xl">
                         <div className="flex items-center">
-                            <ImageIcon className="h-5 w-5 mr-2 text-barber" />
+                            <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-barber" />
                             Portfolio Gallery
                         </div>
                         <Button
@@ -181,20 +198,23 @@ const BarberPortfolio = () => {
                                 resetAddModalForm();
                                 setIsAddModalOpen(true);
                             }}
-                            className="bg-barber hover:bg-barber-muted"
+                            className="bg-barber hover:bg-barber-muted text-xs sm:text-sm h-9 sm:h-10"
+                            size="sm"
                         >
                             <Plus className="h-4 w-4 mr-1" />
                             Add New Image
                         </Button>
                     </CardTitle>
+                    {/* Możesz dodać CardDescription, jeśli jest zaimportowana i potrzebna */}
+                    <CardDescription className="mt-1 text-xs md:text-sm">Showcase your best work to attract clients.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3 sm:p-4">
                     {portfolioImages.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                             {portfolioImages.map((image) => (
                                 <div
                                     key={image.id}
-                                    className="group relative rounded-lg overflow-hidden shadow-lg aspect-square"
+                                    className="group relative rounded-lg overflow-hidden shadow-lg aspect-w-1 aspect-h-1"
                                 >
                                     <img
                                         src={image.image_url}
@@ -204,16 +224,16 @@ const BarberPortfolio = () => {
                                             (e.target as HTMLImageElement).src = placeholderSvg;
                                         }}
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex flex-col justify-end">
-                                        <h3 className="font-semibold text-lg text-white truncate">{image.title}</h3>
-                                        {image.description && <p className="text-sm text-gray-200 line-clamp-2">{image.description}</p>}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-3 sm:p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <h3 className="font-semibold text-md sm:text-lg text-white truncate">{image.title}</h3>
+                                        {image.description && <p className="text-xs sm:text-sm text-gray-200 line-clamp-2">{image.description}</p>}
                                     </div>
                                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                         <Button
                                             size="icon"
                                             variant="destructive"
-                                            className="h-9 w-9 rounded-full bg-red-600/80 hover:bg-red-600"
-                                            onClick={() => openDeleteModal(image)}
+                                            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-red-600/70 hover:bg-red-600"
+                                            onClick={(e) => { e.stopPropagation(); openDeleteModal(image);}}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -245,7 +265,6 @@ const BarberPortfolio = () => {
                 </CardContent>
             </Card>
 
-            {/* Add Image Modal */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -259,79 +278,42 @@ const BarberPortfolio = () => {
                             <Label htmlFor="newImageUrl">Image URL <span className="text-red-500">*</span></Label>
                             <div className="flex items-center space-x-2">
                                 <LinkIcon className="h-4 w-4 text-gray-500" />
-                                <Input
-                                    id="newImageUrl"
-                                    value={newImageUrl}
-                                    onChange={(e) => setNewImageUrl(e.target.value)}
-                                    placeholder="https://example.com/your-image.jpg"
-                                />
+                                <Input id="newImageUrl" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://example.com/your-image.jpg"/>
                             </div>
                         </div>
-
                         {newImageUrl && (
                             <div className="border rounded-md p-2 max-h-48 overflow-hidden">
-                                <img
-                                    src={newImageUrl}
-                                    alt="Preview"
-                                    className="w-full h-auto object-contain rounded max-h-44"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                        const parent = (e.target as HTMLImageElement).parentElement;
-                                        if (parent && !parent.querySelector('.error-text')) {
-                                            const errorText = document.createElement('p');
-                                            errorText.className = 'text-red-500 text-xs error-text';
-                                            errorText.textContent = 'Invalid image URL or unable to load image.';
-                                            parent.appendChild(errorText);
-                                        }
-                                    }}
-                                    onLoad={(e) => {
-                                        (e.target as HTMLImageElement).style.display = 'block';
-                                        const parent = (e.target as HTMLImageElement).parentElement;
-                                        const errorText = parent?.querySelector('.error-text');
-                                        if (errorText) parent?.removeChild(errorText);
-                                    }}
-                                />
+                                <img src={newImageUrl} alt="Preview" className="w-full h-auto object-contain rounded max-h-44"
+                                     onError={(e) => {
+                                         (e.target as HTMLImageElement).style.display = 'none';
+                                         const parent = (e.target as HTMLImageElement).parentElement;
+                                         if (parent && !parent.querySelector('.error-text')) {
+                                             const errorText = document.createElement('p');
+                                             errorText.className = 'text-red-500 text-xs error-text';
+                                             errorText.textContent = 'Invalid image URL or unable to load image.';
+                                             parent.appendChild(errorText);
+                                         }
+                                     }}
+                                     onLoad={(e) => {
+                                         (e.target as HTMLImageElement).style.display = 'block';
+                                         const parent = (e.target as HTMLImageElement).parentElement;
+                                         const errorText = parent?.querySelector('.error-text');
+                                         if (errorText) parent?.removeChild(errorText);
+                                     }} />
                             </div>
                         )}
-
-                        <div className="space-y-1">
-                            <Label htmlFor="newImageTitle">Title</Label>
-                            <Input
-                                id="newImageTitle"
-                                value={newImageTitle}
-                                onChange={(e) => setNewImageTitle(e.target.value)}
-                                placeholder="e.g., Classic Fade"
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label htmlFor="newImageDescription">Description</Label>
-                            <Textarea
-                                id="newImageDescription"
-                                value={newImageDescription}
-                                onChange={(e) => setNewImageDescription(e.target.value)}
-                                placeholder="e.g., Clean fade with textured top"
-                                rows={3}
-                            />
-                        </div>
+                        <div className="space-y-1"> <Label htmlFor="newImageTitle">Title</Label> <Input id="newImageTitle" value={newImageTitle} onChange={(e) => setNewImageTitle(e.target.value)} placeholder="e.g., Classic Fade" /> </div>
+                        <div className="space-y-1"> <Label htmlFor="newImageDescription">Description</Label> <Textarea id="newImageDescription" value={newImageDescription} onChange={(e) => setNewImageDescription(e.target.value)} placeholder="e.g., Clean fade with textured top" rows={3} /> </div>
                     </div>
                     <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            className="bg-barber hover:bg-barber-muted"
-                            onClick={handleAddImage}
-                            disabled={!newImageUrl}
-                        >
-                            <Upload className="h-4 w-4 mr-2" />
-                            Add to Portfolio
+                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                        <Button className="bg-barber hover:bg-barber-muted" onClick={handleAddImage} disabled={!newImageUrl} >
+                            <Upload className="h-4 w-4 mr-2" /> Add to Portfolio
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Modal */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -340,33 +322,19 @@ const BarberPortfolio = () => {
                             Are you sure you want to remove this image titled "{imageToDelete?.title || 'Untitled'}" from your portfolio? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
-                    {imageToDelete && (
-                        <div className="border rounded-md p-2 my-4 max-h-48 overflow-hidden">
-                            <img
-                                src={imageToDelete.image_url}
-                                alt={imageToDelete.title || 'Image to delete'}
-                                className="w-full h-auto object-contain rounded max-h-44"
-                                onError={(e) => { (e.target as HTMLImageElement).src = placeholderSvg; }}
-                            />
-                        </div>
-                    )}
+                    {imageToDelete && ( <div className="border rounded-md p-2 my-4 max-h-48 overflow-hidden"> <img src={imageToDelete.image_url} alt={imageToDelete.title || 'Image to delete'} className="w-full h-auto object-contain rounded max-h-44" onError={(e) => { (e.target as HTMLImageElement).src = placeholderSvg; }} /> </div> )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            {/* POPRAWIONA LINIA PONIŻEJ */}
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDeleteConfirm}
-                        >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove Image
+                        <Button variant="destructive" onClick={handleDeleteConfirm} >
+                            <Trash2 className="h-4 w-4 mr-2" /> Remove Image
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </DashboardLayout>
+        </> // <-- Zamknięcie fragmentu Reacta
     );
 };
 
-export default BarberPortfolio;
+export default BarberPortfolioPage;

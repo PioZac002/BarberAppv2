@@ -7,7 +7,9 @@ import {
     Bell,
     LogOut,
     Scissors,
-    BarChart // Dodano ikonę dla raportów
+    BarChart, // Upewnij się, że ta ikona jest poprawnie zaimportowana (była w Twoim kodzie)
+    Menu,   // Dodano, jeśli używasz <Menu /> do otwierania
+    X       // <-- DODANO BRAKUJĄCY IMPORT IKONY X
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";

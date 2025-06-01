@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+// src/pages/user-dashboard/UserDashboard.tsx
+import { Routes, Route, useParams, Link } from "react-router-dom"; // Dodano Routes, Route
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -10,110 +10,13 @@ import UserAppointments from "./UserAppointments";
 import UserNotifications from "./UserNotifications";
 import UserReviews from "./UserReviews";
 
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-    Calendar,
-    User,
-    Star,
-    Bell,
-    Clock,
-    CheckSquare,
-    ThumbsUp,
-    ArrowRight,
-    Info,
-} from "lucide-react";
-import { toast } from "sonner";
-import { format, formatDistanceToNow, isValid } from "date-fns";
-
-// Interfejsy dla danych pobieranych dla sekcji Overview
-interface UpcomingAppointmentInfo {
-    id: number;
-    date: string; // Oczekiwany format YYYY-MM-DD z backendu
-    time: string;
-    service: string;
-    barber: string;
-}
-
-interface UserStatsInfo {
-    totalAppointments: number;
-    hoursSaved: string;
-    avgRatingGiven: number | null;
-}
-
-interface OverviewNotificationInfo {
-    id: number;
-    title: string;
-    created_at: string;
-    link?: string | null;
-    is_read: boolean;
-    type?: string;
-}
+// Komponent dla Overview - może być nowym plikiem lub zdefiniowany tutaj
+import UserOverview from "./UserOverview"; // Załóżmy, że stworzyłeś UserOverview.tsx
 
 const UserDashboard = () => {
-    const { tab } = useParams<{ tab?: string }>();
-    const { user: authUser, token, loading: authContextLoading } = useAuth();
+    // const { tab } = useParams<{ tab?: string }>(); // Już niepotrzebne w ten sposób
+    const { user: authUser, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["client"] });
-
-    const [upcomingAppointment, setUpcomingAppointment] = useState<UpcomingAppointmentInfo | null>(null);
-    const [userStats, setUserStats] = useState<UserStatsInfo | null>(null);
-    const [recentNotifications, setRecentNotifications] = useState<OverviewNotificationInfo[]>([]);
-    const [isOverviewDataLoadingLocal, setIsOverviewDataLoadingLocal] = useState(true);
-
-    useEffect(() => {
-        if (authContextLoading) {
-            setIsOverviewDataLoadingLocal(true);
-            return;
-        }
-
-        if (!authUser || !token) {
-            setIsOverviewDataLoadingLocal(false);
-            setUpcomingAppointment(null);
-            setUserStats(null);
-            setRecentNotifications([]);
-            return;
-        }
-
-        if ((!tab || tab === "overview" || tab === undefined)) {
-            const fetchOverviewData = async () => {
-                setIsOverviewDataLoadingLocal(true);
-                try {
-                    const headers = { Authorization: `Bearer ${token}` };
-                    const [statsRes, nextApptRes, notifRes] = await Promise.all([
-                        fetch("http://localhost:3000/api/user/stats", { headers }),
-                        fetch("http://localhost:3000/api/user/appointments/next-upcoming", { headers }),
-                        fetch("http://localhost:3000/api/user/notifications", { headers }),
-                    ]);
-
-                    if (statsRes.ok) setUserStats(await statsRes.json());
-                    else console.error("Failed to fetch user stats:", await statsRes.text());
-
-                    if (nextApptRes.ok) setUpcomingAppointment(await nextApptRes.json());
-                    else console.error("Failed to fetch next upcoming appointment:", await nextApptRes.text());
-
-                    if (notifRes.ok) {
-                        const allNotifs: OverviewNotificationInfo[] = await notifRes.json();
-                        setRecentNotifications(allNotifs.slice(0,3));
-                    } else console.error("Failed to fetch recent notifications:", await notifRes.text());
-
-                } catch (error) {
-                    console.error("Error fetching overview data:", error);
-                    toast.error("An error occurred while loading dashboard data.");
-                } finally {
-                    setIsOverviewDataLoadingLocal(false);
-                }
-            };
-            fetchOverviewData();
-        } else {
-            setIsOverviewDataLoadingLocal(false);
-        }
-    }, [authUser, token, tab, authContextLoading]);
 
     if (authContextLoading) {
         return (
@@ -125,7 +28,7 @@ const UserDashboard = () => {
         );
     }
 
-    if (!authUser) {
+    if (!authUser && !authContextLoading) { // Dodatkowe sprawdzenie
         return (
             <DashboardLayout title="Authentication Error">
                 <div className="p-6 text-center">
@@ -138,201 +41,23 @@ const UserDashboard = () => {
         );
     }
 
-    const StatCard = ({ title, value, icon, description, linkTo, isAction }: { title: string, value: string | number, icon: React.ReactNode, description?: string, linkTo?: string, isAction?: boolean }) => {
-        const content = (
-            <div className={`flex items-center p-3 sm:p-4 rounded-lg shadow-sm transition-all duration-200 h-full ${isAction ? 'bg-barber/5 hover:bg-barber/10' : 'bg-gray-50 hover:bg-gray-100'}`}>
-                <div className={`p-2 sm:p-3 rounded-full mr-3 sm:mr-4 ${isAction ? 'bg-barber/20' : 'bg-barber/10'}`}>
-                    {icon}
-                </div>
-                <div>
-                    <p className={`text-xs sm:text-sm font-medium ${isAction ? 'text-barber' : 'text-gray-500'}`}>{title}</p>
-                    <p className={`text-lg sm:text-xl font-semibold ${isAction ? 'text-barber' : 'text-gray-800'}`}>{value}</p>
-                    {description && !isAction && <p className="text-xs text-gray-400">{description}</p>}
-                </div>
-            </div>
-        );
-        return linkTo ? <Link to={linkTo} className="block no-underline h-full">{content}</Link> : <div className="h-full">{content}</div>;
-    }
+    // Logika renderowania overview może pozostać w osobnym komponencie UserOverview
+    // lub być częścią trasy bazowej "/"
 
-    const renderOverviewContent = () => {
-        if (isOverviewDataLoadingLocal) {
-            return (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 animate-pulse">
-                    <div className="md:col-span-2 xl:col-span-3"><Card><CardHeader className="pb-4"><div className="h-8 bg-gray-300 rounded w-3/4 mb-2"></div><div className="h-4 bg-gray-300 rounded w-1/2"></div></CardHeader><CardContent><div className="grid grid-cols-1 sm:grid-cols-3 gap-4"><div className="h-20 bg-gray-300 rounded-lg"></div><div className="h-20 bg-gray-300 rounded-lg"></div><div className="h-20 bg-gray-300 rounded-lg"></div></div></CardContent></Card></div>
-                    <div className="md:col-span-2"><Card><CardHeader><div className="h-6 bg-gray-300 rounded w-1/2"></div></CardHeader><CardContent><div className="h-24 bg-gray-300 rounded-lg"></div></CardContent></Card></div>
-                    <div className="md:col-span-1"><Card><CardHeader><div className="h-6 bg-gray-300 rounded w-3/4"></div></CardHeader><CardContent><div className="space-y-3"><div className="h-10 bg-gray-300 rounded-md"></div><div className="h-10 bg-gray-300 rounded-md"></div><div className="h-10 bg-gray-300 rounded-md"></div></div></CardContent></Card></div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-                <div className="md:col-span-2 xl:col-span-3">
-                    <Card className="shadow-sm">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="text-xl sm:text-2xl font-semibold">
-                                Hello, {authUser?.firstName || "Client"}!
-                            </CardTitle>
-                            <CardDescription className="text-xs sm:text-sm">
-                                Welcome to your personal dashboard. Here's a summary of your activity.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                <StatCard
-                                    title="Total Appointments"
-                                    value={userStats?.totalAppointments?.toString() ?? "0"}
-                                    icon={<CheckSquare className="h-6 w-6 text-barber" />}
-                                    description="Excluding canceled"
-                                />
-                                <StatCard
-                                    title="Avg. Rating Given"
-                                    value={userStats?.avgRatingGiven ? `${userStats.avgRatingGiven}/5.0` : "N/A"}
-                                    icon={<ThumbsUp className="h-6 w-6 text-barber" />}
-                                    description="Your average review score"
-                                />
-                                <StatCard
-                                    title="Quick Booking"
-                                    value="Find a Slot"
-                                    icon={<Calendar className="h-6 w-6 text-barber" />}
-                                    linkTo="/booking"
-                                    description="Book your next visit"
-                                    isAction
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="md:col-span-2">
-                    <Card className="shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-lg sm:text-xl">
-                                <Calendar className="h-5 w-5 mr-2 text-barber" />
-                                Next Upcoming Appointment
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {upcomingAppointment && upcomingAppointment.date ? ( // Dodano sprawdzenie upcomingAppointment.date
-                                <div className="bg-barber/5 rounded-lg p-4">
-                                    <div className="flex flex-col sm:flex-row justify-between mb-3">
-                                        <div>
-                                            <h3 className="font-semibold text-md sm:text-lg text-gray-800">{upcomingAppointment.service}</h3>
-                                            <p className="text-xs sm:text-sm text-gray-600">with {upcomingAppointment.barber}</p>
-                                        </div>
-                                        <div className="mt-2 sm:mt-0 text-xs sm:text-sm flex items-center text-gray-700">
-                                            <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
-                                            <span>
-                                                {/* POPRAWKA TUTAJ: Użyj standardowego formatu np. "MMM d, yyyy" lub "PP" */}
-                                                {isValid(new Date(upcomingAppointment.date)) ? format(new Date(upcomingAppointment.date), "MMM d, yyyy") : "Invalid date"} at{" "}
-                                                {upcomingAppointment.time}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled
-                                            className="w-full sm:w-auto border-barber text-barber hover:bg-barber/10"
-                                        >
-                                            Reschedule (soon)
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-6">
-                                    <Info className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                    <p className="text-sm text-gray-500 mb-3">You have no upcoming appointments.</p>
-                                    <Button asChild className="bg-barber hover:bg-barber-muted">
-                                        <Link to="/booking">Book Now</Link>
-                                    </Button>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="md:col-span-1">
-                    <Card className="shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="flex items-center text-lg sm:text-xl">
-                                <Bell className="h-5 w-5 mr-2 text-barber" />
-                                Recent Notifications
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {recentNotifications.length > 0 ? (
-                                <ul className="space-y-2.5">
-                                    {recentNotifications.map(notif => (
-                                        <li key={notif.id} className={`p-2.5 rounded-md border ${notif.is_read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
-                                            <Link to={notif.link || "/user-dashboard/notifications"} className="block group">
-                                                <p className={`text-xs sm:text-sm font-medium truncate group-hover:text-barber ${notif.is_read ? 'text-gray-600' : 'text-gray-800'}`}>{notif.title}</p>
-                                                <p className="text-xs text-gray-500 mt-0.5">
-                                                    {isValid(new Date(notif.created_at)) ? formatDistanceToNow(new Date(notif.created_at), { addSuffix: true }) : "Invalid date"}
-                                                </p>
-                                            </Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-gray-500 py-4 text-center">No recent notifications.</p>
-                            )}
-                            <Button
-                                variant="link"
-                                className="w-full mt-3 text-barber px-0 text-xs sm:text-sm"
-                                asChild
-                            >
-                                <Link to="/user-dashboard/notifications">View All Notifications</Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        );
-    };
-
-    const renderContentByTab = () => {
-        if (!authUser && !authContextLoading) {
-            return (
-                <div className="p-6 text-center">
-                    <p className="text-red-500">Please log in to view this page.</p>
-                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Go to Login</Link></Button>
-                </div>
-            );
-        }
-
-        switch (tab) {
-            case "profile":
-                return <UserProfile />;
-            case "appointments":
-                return <UserAppointments />;
-            case "notifications":
-                return <UserNotifications />;
-            case "reviews":
-                return <UserReviews />;
-            case undefined:
-            case "overview":
-            default:
-                return renderOverviewContent();
-        }
-    };
-
-    const getTitle = () => {
-        switch (tab) {
-            case "profile": return "My Profile";
-            case "appointments": return "My Appointments";
-            case "notifications": return "Notifications";
-            case "reviews": return "My Reviews";
-            case undefined:
-            case "overview":
-            default: return "Dashboard Overview";
-        }
-    };
+    // Tytuł dla DashboardLayout może być dynamiczny w zależności od aktualnej trasy
+    // Można to zrobić używając useLocation i dopasowując tytuł
 
     return (
-        <DashboardLayout title={getTitle()}>
-            {renderContentByTab()}
+        <DashboardLayout title="User Dashboard"> {/* Możesz chcieć dynamicznego tytułu */}
+            <Routes>
+                {/* Trasa bazowa dla /user-dashboard (może to być overview) */}
+                <Route path="/" element={<UserOverview />} /> {/* Lub bezpośrednio renderOverviewContent() jeśli jest proste */}
+                <Route path="profile" element={<UserProfile />} />
+                <Route path="appointments" element={<UserAppointments />} />
+                <Route path="notifications" element={<UserNotifications />} />
+                <Route path="reviews" element={<UserReviews />} />
+                {/* Możesz dodać Route path="overview" element={<UserOverview />} jeśli chcesz mieć jawną ścieżkę */}
+            </Routes>
         </DashboardLayout>
     );
 };
