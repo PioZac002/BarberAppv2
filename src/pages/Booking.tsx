@@ -4,17 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import CalendarComponent from "@/components/ui/calendar";
+// Usunięto: import CalendarComponent from "@/components/ui/calendar";
+import MuiCalendar from "@/components/ui/mui-calendar"; // NOWY IMPORT
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea"; // <-- DODANY IMPORT TEXTAREA
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, CheckCircle, User as UserIcon, ShoppingBag, Scissors } from "lucide-react";
+import { CalendarDays as CalendarIcon, Clock, CheckCircle, User as UserIcon, ShoppingBag, Scissors } from "lucide-react"; // Zmieniono CalendarIcon na CalendarDays dla jasności
 import { toast } from "sonner";
-import { format, isValid as isValidDate } from "date-fns";
+import { format, isValid as isValidDateFn } from "date-fns"; // Zmieniono alias dla isValid
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import dayjs from 'dayjs'; // Potrzebny dla MuiCalendar
 
 interface Service {
     id: number;
@@ -35,7 +37,7 @@ interface Barber {
 }
 
 interface BookingFormData {
-    date: Date | undefined;
+    date: Date | undefined; // Pozostaje Date | undefined dla logiki formularza
     timeSlot: string | null;
     serviceId: number | null;
     barberId: number | null;
@@ -74,6 +76,8 @@ const Booking = () => {
     });
 
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+    // useEffects dla fetchServices, fetchBarbers, fetchAvailableTimeSlots, user - BEZ ZMIAN
 
     useEffect(() => {
         if (token) {
@@ -169,7 +173,9 @@ const Booking = () => {
         }
     }, [user]);
 
+
     const validateStep = (currentStep: number): boolean => {
+        // ... (logika validateStep bez zmian)
         const newErrors: { [key: string]: string } = {};
         if (currentStep === 1) {
             if (!formData.serviceId) newErrors.serviceId = "Please select a service";
@@ -194,6 +200,7 @@ const Booking = () => {
     };
 
     const handleNext = () => {
+        // ... (bez zmian)
         if (validateStep(step)) {
             setStep(step + 1);
             window.scrollTo(0, 0);
@@ -203,11 +210,13 @@ const Booking = () => {
     };
 
     const handleBack = () => {
+        // ... (bez zmian)
         setStep(step - 1);
         window.scrollTo(0, 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
+        // ... (bez zmian)
         e.preventDefault();
         if (!validateStep(4) || !token) {
             if (!token) toast.error("Authentication error. Please log in.");
@@ -248,16 +257,19 @@ const Booking = () => {
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        // ... (bez zmian)
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleDateSelect = (selectedDate: Date | undefined) => {
-        setFormData((prev) => ({ ...prev, date: selectedDate, timeSlot: null }));
-        setErrors(prev => ({ ...prev, date: "", timeSlot: ""}));
+    // ZMODYFIKOWANA handleDateSelect dla MuiCalendar
+    const handleDateSelect = (selectedDate: Date | null) => { // MuiCalendar zwraca Date | null
+        setFormData((prev) => ({ ...prev, date: selectedDate || undefined, timeSlot: null }));
+        setErrors(prev => ({ ...prev, date: "", timeSlot: "" }));
     };
 
     const getStepTitle = (): string => {
+        // ... (bez zmian)
         switch (step) {
             case 1: return "Select Service";
             case 2: return "Select Barber";
@@ -273,6 +285,7 @@ const Booking = () => {
     const renderStepContent = () => {
         switch (step) {
             case 1:
+                // ... (bez zmian)
                 return (
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Select a Service</Label>
@@ -309,6 +322,7 @@ const Booking = () => {
                     </div>
                 );
             case 2:
+                // ... (bez zmian)
                 return (
                     <div className="space-y-4">
                         <Label className="text-base font-medium">Select a Barber</Label>
@@ -344,18 +358,27 @@ const Booking = () => {
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal mt-1", !formData.date && "text-muted-foreground", errors.date && "border-red-500")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
+                                        <CalendarIcon className="mr-2 h-4 w-4" /> {/* Używamy CalendarDays jako CalendarIcon */}
+                                        {formData.date && isValidDateFn(formData.date) ? format(formData.date, "PPP") : <span>Pick a date</span>}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
-                                    <CalendarComponent mode="single" selected={formData.date} onSelect={handleDateSelect} disabled={(date: Date) => date < new Date(new Date().setDate(new Date().getDate() -1))} className="rounded-md border" />
+                                    {/* ZASTOSOWANIE MuiCalendar */}
+                                    <MuiCalendar
+                                        value={formData.date || null} // MuiCalendar oczekuje Date | null
+                                        onChange={handleDateSelect}
+                                        // Blokowanie przeszłych dat dla MuiCalendar
+                                        shouldDisableDate={(day) => day.isBefore(dayjs().startOf('day'))}
+                                        // Możesz chcieć dodać className, jeśli potrzebujesz dodatkowych stylów
+                                        // className="rounded-md border" // To jest przykład, MuiCalendar ma swoje style
+                                    />
                                 </PopoverContent>
                             </Popover>
                             {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
                         </div>
                         <div>
                             <Label className="text-base font-medium">Select Time Slot</Label>
+                            {/* ... (reszta logiki dla time slot bez zmian) ... */}
                             {isLoadingTimeSlots ? <p className="text-sm text-gray-500 mt-1">Loading available times...</p> :
                                 availableTimeSlots.length > 0 ? (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-1">
@@ -372,7 +395,8 @@ const Booking = () => {
                         </div>
                     </div>
                 );
-            case 4: // Linia 403, gdzie używany jest Textarea
+            case 4:
+                // ... (bez zmian)
                 return (
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -401,14 +425,14 @@ const Booking = () => {
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="notes">Special Requests (optional)</Label>
-                            <Textarea // UŻYCIE TEXTAREA
+                            <Textarea
                                 id="notes"
                                 name="notes"
                                 rows={3}
                                 value={formData.notes}
                                 onChange={handleChange}
                                 placeholder="Any special requests or notes for your barber..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent" // Dodane klasy dla spójności
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent"
                             />
                         </div>
                         <div className="flex items-start space-x-2 pt-2">
@@ -429,6 +453,7 @@ const Booking = () => {
         }
     };
 
+    // Reszta komponentu (progressPercentage, currentService, etc. JSX) bez zmian
     const progressPercentage = Math.min((step / 4) * 100, 100);
     const currentService = getSelectedService();
     const currentBarber = getSelectedBarber();
@@ -492,7 +517,7 @@ const Booking = () => {
                                         <div>
                                             <Label className="text-xs text-gray-500">Date & Time</Label>
                                             <p className="font-medium text-gray-700">
-                                                {formData.date ? format(formData.date, "PPP") : "Not selected"}
+                                                {formData.date && isValidDateFn(formData.date) ? format(formData.date, "PPP") : "Not selected"}
                                                 {formData.timeSlot ? ` at ${formData.timeSlot}` : ""}
                                             </p>
                                         </div>

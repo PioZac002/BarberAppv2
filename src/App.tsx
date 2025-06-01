@@ -20,18 +20,11 @@ import UserDashboard from "./pages/user-dashboard/UserDashboard";
 
 // Barber Dashboard
 import BarberDashboard from "./pages/barber-dashboard/BarberDashboard";
-import BarberPortfolio from "./pages/barber-dashboard/BarberPortfolio";
-import BarberAppointments from "./pages/barber-dashboard/BarberAppointments";
-import BarberNotifications from "./pages/barber-dashboard/BarberNotifications";
-import BarberProfile from "./pages/barber-dashboard/BarberProfile";
+// Importy podstron BarberDashboard nie są tu potrzebne, jeśli BarberDashboard.tsx ma własne <Routes>
 
 // Admin Dashboard
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
-import AdminOverview from "./pages/admin-dashboard/AdminOverview";
-import AdminUsers from "./pages/admin-dashboard/AdminUsers";
-import AdminAppointments from "./pages/admin-dashboard/AdminAppointments";
-import AdminServices from "./pages/admin-dashboard/AdminServices";
-import AdminReviews from "./pages/admin-dashboard/AdminReviews";
+// Importy podstron AdminDashboard nie są tu potrzebne, jeśli AdminDashboard.tsx ma własne <Routes>
 
 const queryClient = new QueryClient();
 
@@ -53,24 +46,17 @@ const App = () => (
                         <Route path="/register" element={<Register />} />
 
                         {/* Client Dashboard Routes */}
-                        <Route path="/user-dashboard" element={<UserDashboard />} />
-                        <Route path="/user-dashboard/:tab" element={<UserDashboard />} />
+                        {/* Użyj /* aby UserDashboard mógł obsługiwać zagnieżdżone trasy np. /:tab */}
+                        <Route path="/user-dashboard/*" element={<UserDashboard />} />
 
                         {/* Barber Dashboard Routes */}
-                        <Route path="/barber-dashboard" element={<BarberDashboard />} />
-                        <Route path="/barber-dashboard/appointments" element={<BarberAppointments />} />
-                        <Route path="/barber-dashboard/portfolio" element={<BarberPortfolio />} />
-                        <Route path="/barber-dashboard/notifications" element={<BarberNotifications />} />
-                        <Route path="/barber-dashboard/profile" element={<BarberProfile />} />
+                        {/* Użyj /* aby BarberDashboard mógł obsługiwać zagnieżdżone trasy */}
+                        <Route path="/barber-dashboard/*" element={<BarberDashboard />} />
 
                         {/* Admin Dashboard Routes */}
-                        <Route path="/admin-dashboard" element={<AdminDashboard />}>
-                            <Route index element={<AdminOverview />} />
-                            <Route path="users" element={<AdminUsers />} />
-                            <Route path="appointments" element={<AdminAppointments />} />
-                            <Route path="services" element={<AdminServices />} />
-                            <Route path="reviews" element={<AdminReviews />} />
-                        </Route>
+                        {/* KLUCZOWA ZMIANA: Użyj "/*", aby AdminDashboard mógł obsługiwać wszystkie zagnieżdżone trasy */}
+                        <Route path="/admin-dashboard/*" element={<AdminDashboard />} />
+                        {/* Usuwamy zagnieżdżone <Route> stąd, ponieważ są one teraz w AdminDashboard.tsx */}
 
                         {/* 404 Page */}
                         <Route path="*" element={<NotFound />} />

@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-// Importujemy verifyToken i requireAdmin z authMiddleware
 const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
 const {
     getStats,
     getRevenue,
-    getRecentActivities,
+    getAdminNotifications, // Zmieniono z getRecentActivities
     getUsers,
     updateUser,
     deleteUser,
@@ -17,16 +16,15 @@ const {
     updateService,
     deleteService,
     getReviews,
-    deleteReview
+    deleteReview,
+    getReportData // Dodano import nowej funkcji
 } = require('../controllers/adminController');
 
-// Stosujemy middleware do wszystkich tras w tym routerze
 router.use(verifyToken, requireAdmin);
 
-// Trasy (już nie potrzebują indywidualnego verifyToken i requireAdmin)
 router.get('/stats', getStats);
 router.get('/revenue', getRevenue);
-router.get('/recent-activities', getRecentActivities);
+router.get('/notifications', getAdminNotifications); // Zmieniono ścieżkę i funkcję
 router.get('/users', getUsers);
 router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
@@ -39,5 +37,6 @@ router.put('/services/:id', updateService);
 router.delete('/services/:id', deleteService);
 router.get('/reviews', getReviews);
 router.delete('/reviews/:id', deleteReview);
+router.get('/reports-data', getReportData); // Dodano nową trasę
 
 module.exports = router;

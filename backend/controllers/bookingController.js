@@ -3,6 +3,7 @@ const { parse, format, addMinutes, isValid: isValidDateFn } = require('date-fns'
 
 // Funkcja generateTimeSlots
 const generateTimeSlots = (startTimeStr, endTimeStr, slotIntervalMinutes, serviceDurationMinutes) => {
+    // ... (kod funkcji bez zmian)
     const slots = [];
     if (!startTimeStr || !endTimeStr || !/^\d{2}:\d{2}$/.test(startTimeStr) || !/^\d{2}:\d{2}$/.test(endTimeStr)) {
         console.error("Invalid start or end time string for generateTimeSlots:", startTimeStr, endTimeStr);
@@ -11,48 +12,37 @@ const generateTimeSlots = (startTimeStr, endTimeStr, slotIntervalMinutes, servic
     try {
         let currentTime = parse(startTimeStr, 'HH:mm', new Date());
         const endTime = parse(endTimeStr, 'HH:mm', new Date());
-
         while (currentTime < endTime) {
             const slotEndTime = addMinutes(currentTime, serviceDurationMinutes);
-            if (slotEndTime > endTime) {
-                break;
-            }
+            if (slotEndTime > endTime) break;
             slots.push(format(currentTime, 'HH:mm'));
             currentTime = addMinutes(currentTime, slotIntervalMinutes);
         }
-    } catch (error) {
-        console.error("Error generating time slots:", error);
-        return [];
-    }
+    } catch (error) { console.error("Error generating time slots:", error); return []; }
     return slots;
 };
 
-// Pobieranie usług
-exports.getServicesForBooking = async (req, res) => {
+// getServicesForBooking
+const getServicesForBooking = async (req, res) => {
+    // ... (kod funkcji bez zmian)
     try {
-        // Jeśli nie masz kolumny is_active, usuń warunek WHERE is_active = TRUE
         const result = await pool.query(
             'SELECT id, name, description, duration, price, photo_url AS image FROM services WHERE is_active = TRUE ORDER BY name'
         );
-        const services = result.rows.map(s => ({
-            ...s,
-            price: parseFloat(s.price)
-        }));
-        res.json(services);
+        res.json(result.rows.map(s => ({ ...s, price: parseFloat(s.price) })));
     } catch (err) {
         console.error("Error in getServicesForBooking:", err.stack);
         res.status(500).json({ error: 'Server error fetching services. Check backend logs.' });
     }
 };
 
-// Pobieranie barberów
-exports.getBarbersForBooking = async (req, res) => {
+// getBarbersForBooking
+const getBarbersForBooking = async (req, res) => {
+    // ... (kod funkcji bez zmian)
     try {
         const query = `
             SELECT 
-                b.id, 
-                u.first_name, 
-                u.last_name,
+                b.id, u.first_name, u.last_name,
                 COALESCE(b.job_title, 'Barber') AS role,
                 COALESCE(b.profile_image_url, 'https://via.placeholder.com/150/CCCCCC/808080?Text=No+Image') AS image,
                 b.experience AS experience_text, 
@@ -62,41 +52,29 @@ exports.getBarbersForBooking = async (req, res) => {
             LEFT JOIN (
                 SELECT barber_id, ROUND(AVG(rating),1) as avg_rating FROM reviews GROUP BY barber_id
             ) br ON br.barber_id = b.id
-            ORDER BY u.first_name, u.last_name; 
-        `;
+            ORDER BY u.first_name, u.last_name;`;
         const result = await pool.query(query);
-
-        const barbers = result.rows.map(b_row => ({
-            id: b_row.id,
-            name: `${b_row.first_name} ${b_row.last_name}`,
-            role: b_row.role,
-            rating: parseFloat(b_row.rating) || 0,
-            experience: parseInt(b_row.experience_text, 10) || 0,
+        res.json(result.rows.map(b_row => ({
+            id: b_row.id, name: `${b_row.first_name} ${b_row.last_name}`, role: b_row.role,
+            rating: parseFloat(b_row.rating) || 0, experience: parseInt(b_row.experience_text, 10) || 0,
             image: b_row.image
-        }));
-        res.json(barbers);
+        })));
     } catch (err) {
         console.error("Error in getBarbersForBooking:", err.stack);
         res.status(500).json({ error: 'Server error fetching barbers. Check backend logs.' });
     }
 };
 
-// Pobieranie dostępnych slotów czasowych
-exports.getAvailableTimeSlots = async (req, res) => {
+// getAvailableTimeSlots
+const getAvailableTimeSlots = async (req, res) => {
+    // ... (kod funkcji bez zmian)
     const { date, serviceId, barberId } = req.query;
-
-    if (!date || !serviceId || !barberId) {
-        return res.status(400).json({ error: 'Date, serviceId, and barberId are required.' });
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
-    }
+    if (!date || !serviceId || !barberId) return res.status(400).json({ error: 'Date, serviceId, and barberId are required.' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
 
     try {
         const serviceResult = await pool.query('SELECT duration FROM services WHERE id = $1 AND is_active = TRUE', [serviceId]);
-        if (serviceResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Service not found or is not active.' });
-        }
+        if (serviceResult.rows.length === 0) return res.status(404).json({ error: 'Service not found or is not active.' });
         const serviceDurationMinutes = parseInt(serviceResult.rows[0].duration, 10);
 
         const barberWorkingHoursResult = await pool.query('SELECT working_hours FROM barbers WHERE id = $1', [barberId]);
@@ -104,45 +82,30 @@ exports.getAvailableTimeSlots = async (req, res) => {
         if (barberWorkingHoursResult.rows.length > 0 && barberWorkingHoursResult.rows[0].working_hours) {
             const parts = barberWorkingHoursResult.rows[0].working_hours.split('-');
             if (parts.length === 2 && /^\d{2}:\d{2}$/.test(parts[0]) && /^\d{2}:\d{2}$/.test(parts[1])) {
-                workStartStr = parts[0];
-                workEndStr = parts[1];
-            } else {
-                console.warn(`Invalid working_hours format for barber ${barberId}: ${barberWorkingHoursResult.rows[0].working_hours}. Using default.`);
-            }
-        } else {
-            console.warn(`Working hours not set for barber ${barberId}. Using default.`);
-        }
+                [workStartStr, workEndStr] = parts;
+            } else { console.warn(`Invalid working_hours for barber ${barberId}. Using default.`); }
+        } else { console.warn(`Working hours not set for barber ${barberId}. Using default.`); }
 
         const slotIntervalMinutes = 30;
         const allPossibleSlots = generateTimeSlots(workStartStr, workEndStr, slotIntervalMinutes, serviceDurationMinutes);
 
         const appointmentsResult = await pool.query(
-            `SELECT appointment_time, 
-                    (SELECT duration FROM services s_apt WHERE s_apt.id = a.service_id) as duration 
-             FROM appointments a 
-             WHERE barber_id = $1 AND DATE(appointment_time AT TIME ZONE 'UTC') = $2 AND status NOT IN ('canceled', 'cancelled', 'no-show')`,
-            [barberId, date]
-        );
+            `SELECT appointment_time, (SELECT duration FROM services s_apt WHERE s_apt.id = a.service_id) as duration 
+             FROM appointments a WHERE barber_id = $1 AND DATE(appointment_time AT TIME ZONE 'UTC') = $2 AND status NOT IN ('canceled', 'cancelled', 'no-show')`,
+            [barberId, date]);
 
         const bookedSlots = appointmentsResult.rows.map(apt => {
-            const aptDate = new Date(apt.appointment_time);
-            const startTime = parse(format(aptDate, 'HH:mm'), 'HH:mm', new Date(date));
-            return {
-                start: startTime,
-                end: addMinutes(startTime, parseInt(apt.duration, 10))
-            };
+            const startTime = parse(format(new Date(apt.appointment_time), 'HH:mm'), 'HH:mm', new Date(date));
+            return { start: startTime, end: addMinutes(startTime, parseInt(apt.duration, 10)) };
         });
 
         const availableSlots = allPossibleSlots.filter(slotStr => {
             const slotStartDateTime = parse(slotStr, 'HH:mm', new Date(date));
             const slotEndDateTime = addMinutes(slotStartDateTime, serviceDurationMinutes);
-            const isBooked = bookedSlots.some(bookedSlot => slotStartDateTime < bookedSlot.end && slotEndDateTime > bookedSlot.start);
-            return !isBooked;
+            return !bookedSlots.some(bs => slotStartDateTime < bs.end && slotEndDateTime > bs.start);
         });
 
-        const formattedAvailableSlots = availableSlots.map(slot => format(parse(slot, 'HH:mm', new Date()), 'h:mm a'));
-        res.json(formattedAvailableSlots);
-
+        res.json(availableSlots.map(slot => format(parse(slot, 'HH:mm', new Date()), 'h:mm a')));
     } catch (err) {
         console.error("Error in getAvailableTimeSlots:", err.stack);
         res.status(500).json({ error: 'Server error fetching time slots. Check backend logs.' });
@@ -150,9 +113,10 @@ exports.getAvailableTimeSlots = async (req, res) => {
 };
 
 // Tworzenie rezerwacji z powiadomieniami
-exports.createBooking = async (req, res) => {
+const createBooking = async (req, res) => {
+    // ... (kod funkcji createBooking z poprzedniej odpowiedzi, BEZ ZMIAN W SAMEJ FUNKCJI)
     const clientUserId = req.user.id;
-    const { serviceId, barberId, date, timeSlot, notes } = req.body; // barberId to ID z tabeli barbers
+    const { serviceId, barberId, date, timeSlot, notes } = req.body;
 
     if (!serviceId || !barberId || !date || !timeSlot) {
         return res.status(400).json({ error: 'Service, barber, date, and time slot are required.' });
@@ -178,6 +142,7 @@ exports.createBooking = async (req, res) => {
             RETURNING id, appointment_time,
                       (SELECT name FROM services WHERE id = $3) AS service_name,
                       (SELECT first_name || ' ' || last_name FROM users WHERE id = $1) as client_name,
+                      (SELECT user_id FROM barbers WHERE id = $2) as target_barber_user_id,
                       (SELECT first_name || ' ' || last_name FROM users WHERE id = (SELECT user_id FROM barbers WHERE id = $2)) as target_barber_name;
         `;
         const newAppointmentResult = await pgClient.query(appointmentInsertQuery,
@@ -193,60 +158,73 @@ exports.createBooking = async (req, res) => {
         const appointmentTimeFormatted = format(new Date(newAppointment.appointment_time), "MMM d, yyyy 'at' h:mm a");
         const serviceName = newAppointment.service_name;
         const clientName = newAppointment.client_name;
-        const targetBarberName = newAppointment.target_barber_name; // Imię i nazwisko barbera
+        const targetBarberName = newAppointment.target_barber_name;
+        const targetBarberUserId = newAppointment.target_barber_user_id;
 
-        // --- Tworzenie Powiadomień ---
         const clientNotificationTitle = "Booking Pending Confirmation";
         const clientMessage = `Your booking for ${serviceName} with ${targetBarberName} on ${appointmentTimeFormatted} is pending. We will notify you upon confirmation.`;
-
-        const staffNotificationTitle = "New Booking Received";
-        const staffMessage = `New booking from ${clientName} for ${serviceName} with ${targetBarberName} on ${appointmentTimeFormatted} (Appt ID: ${appointmentId}).`;
-
-        // 1. Powiadomienie dla klienta (tabela user_notifications)
         await pgClient.query(
-            `INSERT INTO user_notifications (user_id, title, message, link, type, is_read, created_at)
+            `INSERT INTO user_notifications (user_id, type, title, message, link, is_read, created_at)
              VALUES ($1, $2, $3, $4, $5, FALSE, NOW())`,
-            [clientUserId, clientNotificationTitle, clientMessage, `/user-dashboard/appointments`, 'booking_pending']
+            [clientUserId, 'booking_pending', clientNotificationTitle, clientMessage, `/user-dashboard/appointments`]
         );
 
-        // 2. Powiadomienie dla barbera (tabela notifications, używając barberId z tabeli barbers)
-        // Tabela 'notifications' używa 'barber_id' (ID z tabeli 'barbers')
-        if (barberId) { // barberId to ID z tabeli barbers
+        const barberNotificationTitle = "New Booking Received";
+        const barberMessageForBarber = `New booking from ${clientName} for ${serviceName} on ${appointmentTimeFormatted} (Appt ID: ${appointmentId}).`;
+        if (barberId) {
             await pgClient.query(
-                `INSERT INTO notifications (barber_id, title, message, link, type, is_read, created_at)
-                 VALUES ($1, $2, $3, $4, $5, FALSE, NOW())`,
-                [barberId, staffNotificationTitle, staffMessage, `/barber-dashboard/schedule`, 'new_booking_barber']
+                `INSERT INTO notifications (barber_id, recipient_user_id, type, title, message, link, is_read, created_at) 
+                 VALUES ($1, $2, $3, $4, $5, $6, FALSE, NOW())`,
+                [
+                    barberId,
+                    targetBarberUserId,
+                    'new_booking_barber',
+                    barberNotificationTitle,
+                    barberMessageForBarber,
+                    `/barber-dashboard/schedule`
+                ]
             );
         }
 
-        // 3. Powiadomienia dla adminów
-        // Admini widzą wszystkie powiadomienia z tabeli notifications.
-        // Nie tworzymy dla nich osobnych rekordów, jeśli mają dostęp do wszystkich powiadomień barberów.
-        // Jeśli admini mieliby mieć osobne, dedykowane im rekordy, tabela 'notifications'
-        // musiałaby zostać zmodyfikowana, np. przez dodanie kolumny 'recipient_user_id' (user_id admina)
-        // i ustawienie 'barber_id' na NULL dla powiadomień czysto administracyjnych.
-        // Na razie zakładamy, że admin przegląda powiadomienia barberów.
-        // Jeśli chcesz DEDYKOWANE powiadomienie dla admina (np. o innej treści),
-        // a tabela notifications ma tylko barber_id, to jest problematyczne.
-        // Można by np. dodać powiadomienie z barber_id = NULL (jeśli dozwolone i masz taki "specjalny" barber_id dla adminów)
-        // lub specjalnym typem, który admini obserwują.
+        const adminNotificationTitle = "New Appointment Booked";
+        const adminMessageForAdmin = `A new appointment (ID: ${appointmentId}) has been booked by ${clientName} with ${targetBarberName} for ${serviceName} on ${appointmentTimeFormatted}.`;
+        const adminLink = `/admin-dashboard/appointments?appointmentId=${appointmentId}`;
 
-        // Przykład: jeśli chciałbyś logować akcję dla admina w tej samej tabeli (z barber_id = NULL, jeśli schemat pozwala)
-        // const adminUsersResult = await pgClient.query("SELECT id FROM users WHERE role = 'admin'");
-        // for (const admin of adminUsersResult.rows) {
-        //     // Tutaj musiałbyś zdecydować, jak zapisać to w tabeli notifications
-        //     // Jeśli notifications ma TYLKO barber_id, nie zapiszesz tu user_id admina.
-        //     // Można by np. stworzyć powiadomienie z barber_id = NULL i specjalnym typem.
-        //     await pgClient.query(
-        //         `INSERT INTO notifications (barber_id, title, message, link, type, is_read, created_at)
-        //          VALUES (NULL, $1, $2, $3, $4, FALSE, NOW())`, // barber_id = NULL
-        //         ["Admin Alert: New Booking", staffMessage, `/admin-dashboard/appointments`, 'new_booking_admin_alert']
-        //     );
-        // }
-        // Powyższy blok dla adminów jest zakomentowany, ponieważ wymaga decyzji o schemacie tabeli notifications.
+        const adminUsersResult = await pgClient.query("SELECT id FROM users WHERE role = 'admin'");
+        if (adminUsersResult.rows.length > 0) {
+            const adminNotificationQuery = `
+                INSERT INTO admin_notifications (admin_user_id, type, title, message, link, 
+                                                related_appointment_id, related_client_id, related_barber_id, 
+                                                is_read, created_at) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW());
+            `;
+            for (const admin of adminUsersResult.rows) {
+                try {
+                    await pgClient.query(adminNotificationQuery, [
+                        admin.id,
+                        'new_appointment_booked',
+                        adminNotificationTitle,
+                        adminMessageForAdmin,
+                        adminLink,
+                        appointmentId,
+                        clientUserId,
+                        barberId
+                    ]);
+                } catch (adminNotifError) {
+                    console.error(`Failed to send notification to admin ${admin.id}:`, adminNotifError.message);
+                }
+            }
+        }
 
         await pgClient.query('COMMIT');
-        res.status(201).json(newAppointment);
+        res.status(201).json({
+            id: newAppointment.id,
+            appointment_time: newAppointment.appointment_time,
+            service_name: serviceName,
+            client_name: clientName,
+            barber_name: targetBarberName,
+            status: 'pending'
+        });
 
     } catch (err) {
         if (pgClient) {
@@ -256,10 +234,22 @@ exports.createBooking = async (req, res) => {
         if (err.code === '23503') {
             return res.status(400).json({ error: 'Invalid service or barber selected, or other relational issue.' });
         }
+        if (err.code === '23505') {
+            return res.status(400).json({ error: `Duplicate key error: ${err.detail || err.message}` });
+        }
         res.status(500).json({ error: 'Server error creating booking. Check backend logs.' });
     } finally {
         if (pgClient) {
             pgClient.release();
         }
     }
+};
+
+// Upewnij się, że wszystkie funkcje, które mają być dostępne dla routera,
+// są tutaj eksportowane.
+module.exports = {
+    getServicesForBooking,
+    getBarbersForBooking,
+    getAvailableTimeSlots,
+    createBooking
 };

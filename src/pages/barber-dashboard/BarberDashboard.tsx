@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // Import Link for navigation
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { Link } from "react-router-dom";
+import { useRequireAuth } from "@/hooks/useRequireAuth"; // Zmieniono na useAuth dla tokena
+import { useAuth } from "@/hooks/useAuth"; // Dodano useAuth dla tokena
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
     Card,
@@ -9,22 +10,24 @@ import {
     CardTitle,
     CardDescription,
 } from "@/components/ui/card";
-import Calendar from "@/components/ui/calendar";
+// import Calendar from "@/components/ui/calendar"; // Stary import
+import MuiCalendar from "@/components/ui/mui-calendar"; // NOWY IMPORT
 import {
     User,
     Clock,
     CalendarDays,
     Info,
-    Bell, // Ikona dla powiadomień
-    Star, // Dla typu 'review' w powiadomieniach
-    ArrowRight, // Dla linku "View All"
+    Bell,
+    Star,
+    ArrowRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"; // Import Button
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format, isValid, formatDistanceToNow } from "date-fns"; // Dodano formatDistanceToNow
+import { format, isValid, formatDistanceToNow } from "date-fns";
+import dayjs from 'dayjs'; // Potrzebny dla MuiCalendar
 
-// Interfejsy
+// Interfejsy (bez zmian)
 interface DailyAppointment {
     id: number;
     client_name: string;
@@ -34,22 +37,21 @@ interface DailyAppointment {
     price: number | string;
 }
 
-interface Notification { // Skopiowane z BarberNotifications.tsx dla spójności
+interface Notification {
     id: number;
     type: string;
     title: string;
-    message: string; // Możemy wyświetlić fragment
+    message: string;
     is_read: boolean;
     created_at: string;
 }
 
-// Funkcje pomocnicze dla ikon powiadomień (skopiowane i uproszczone)
 const getNotificationIcon = (type: string) => {
     switch (type) {
-        case "new_appointment":
-        case "appointment_canceled":
-        case "appointment_confirmed":
-            return CalendarDays; // Zmieniono na CalendarDays dla odróżnienia od ikony tytułu
+        case "new_booking_barber": // Zaktualizowany typ z bookingController
+        case "appointment_confirmed_by_admin_staff": // Zaktualizowany typ z adminController
+        case "appointment_canceled": // Ogólny typ
+            return CalendarDays;
         case "new_review":
             return Star;
         default:
@@ -59,7 +61,9 @@ const getNotificationIcon = (type: string) => {
 
 const getNotificationColorClass = (type: string) => {
     switch (type) {
-        case "new_appointment": return "text-blue-500";
+        case "new_booking_barber":
+        case "appointment_confirmed_by_admin_staff":
+            return "text-blue-500";
         case "appointment_canceled": return "text-red-500";
         case "new_review": return "text-yellow-500";
         default: return "text-gray-500";
@@ -68,7 +72,11 @@ const getNotificationColorClass = (type: string) => {
 
 
 const BarberDashboard = () => {
-    const { user, loading: authLoading } = useRequireAuth({ allowedRoles: ["barber", "admin"] });
+    // Używamy useAuth do pobrania tokena i informacji o użytkowniku
+    const { user: authUser, token, loading: authLoading } = useAuth();
+    // useRequireAuth nadal może być używany do ochrony trasy, ale token bierzemy z useAuth
+    useRequireAuth({ allowedRoles: ["barber", "admin"] });
+
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [dailyAppointments, setDailyAppointments] = useState<DailyAppointment[]>([]);
     const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
@@ -77,7 +85,7 @@ const BarberDashboard = () => {
 
     // Efekt do pobierania wizyt dziennych
     useEffect(() => {
-        if (!user || !selectedDate || !isValid(selectedDate)) {
+        if (!authUser || !token || !selectedDate || !isValid(selectedDate)) { // Dodano sprawdzenie tokena
             setDailyAppointments([]);
             return;
         }
@@ -87,7 +95,7 @@ const BarberDashboard = () => {
             const formattedDate = format(selectedDate, "yyyy-MM-dd");
             try {
                 const response = await fetch(`http://localhost:3000/api/barber/schedule?date=${formattedDate}`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    headers: { Authorization: `Bearer ${token}` }, // Użyj tokena z useAuth
                 });
                 if (!response.ok) {
                     let errorMsg = "Failed to fetch daily schedule";
@@ -106,17 +114,17 @@ const BarberDashboard = () => {
         };
 
         fetchDailySchedule();
-    }, [user, selectedDate]);
+    }, [authUser, token, selectedDate]); // Dodano token do zależności
 
     // Efekt do pobierania ostatnich powiadomień
     useEffect(() => {
-        if (!user) return;
+        if (!authUser || !token) return; // Dodano sprawdzenie tokena
 
         const fetchLatestNotifications = async () => {
             setIsLoadingNotifications(true);
             try {
                 const response = await fetch("http://localhost:3000/api/barber/notifications", {
-                    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+                    headers: { Authorization: `Bearer ${token}` }, // Użyj tokena z useAuth
                 });
                 if (!response.ok) {
                     let errorMsg = "Failed to fetch notifications";
@@ -124,7 +132,7 @@ const BarberDashboard = () => {
                     throw new Error(errorMsg);
                 }
                 const data: Notification[] = await response.json();
-                setLatestNotifications(data.slice(0, 5)); // Weź pierwsze 5
+                setLatestNotifications(data.slice(0, 5));
             } catch (error: any) {
                 console.error("Error fetching notifications:", error);
                 toast.error(error.message || "Failed to load notifications");
@@ -134,10 +142,10 @@ const BarberDashboard = () => {
             }
         };
         fetchLatestNotifications();
-    }, [user]);
+    }, [authUser, token]); // Dodano token do zależności
 
 
-    if (authLoading) {
+    if (authLoading) { // Główny stan ładowania z useAuth
         return (
             <DashboardLayout title="My Schedule">
                 <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
@@ -148,15 +156,20 @@ const BarberDashboard = () => {
     }
 
     const getStatusBadgeVariant = (status: string) => {
-        switch (status) {
+        switch (status.toLowerCase()) { // Dodano toLowerCase dla pewności
             case "pending": return "bg-yellow-100 text-yellow-800";
             case "confirmed": return "bg-green-100 text-green-800";
             case "completed": return "bg-blue-100 text-blue-800";
-            case "canceled": return "bg-red-100 text-red-800";
+            case "canceled": case "cancelled": return "bg-red-100 text-red-800";
             case "no-show": return "bg-orange-100 text-orange-800";
             default: return "bg-gray-100 text-gray-800";
         }
     };
+
+    const handleDateChangeForMui = (newDate: Date | null) => {
+        setSelectedDate(newDate || undefined);
+    };
+
 
     return (
         <DashboardLayout title="Dashboard Overview">
@@ -175,16 +188,18 @@ const BarberDashboard = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="flex justify-center p-2 sm:p-4">
-                            <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={setSelectedDate}
-                                className="rounded-md border shadow-sm w-auto"
+                            {/* ZASTOSOWANIE MuiCalendar */}
+                            <MuiCalendar
+                                value={selectedDate || null} // MuiCalendar oczekuje Date | null
+                                onChange={handleDateChangeForMui}
+                                // Możesz dodać shouldDisableDate, minDate, maxDate jeśli potrzebne
+                                // np. shouldDisableDate={(day) => day.isAfter(dayjs().add(1, 'month'))}
+                                // className="rounded-md border shadow-sm" // Mui ma swoje style, ale można dodać
                             />
                         </CardContent>
                     </Card>
 
-                    {/* Karta Ostatnich Powiadomień */}
+                    {/* Karta Ostatnich Powiadomień (bez zmian) */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center text-lg sm:text-xl">
@@ -195,7 +210,7 @@ const BarberDashboard = () => {
                                 Your latest 5 notifications.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="pt-0 px-3 sm:px-4"> {/* Zmniejszony padding górny dla contentu */}
+                        <CardContent className="pt-0 px-3 sm:px-4">
                             {isLoadingNotifications ? (
                                 <div className="text-center py-4">
                                     <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-barber mx-auto"></div>
@@ -204,10 +219,10 @@ const BarberDashboard = () => {
                                 <div className="space-y-3">
                                     {latestNotifications.map((notification) => {
                                         const IconComponent = getNotificationIcon(notification.type);
-                                        const timeAgo = formatDistanceToNow(new Date(notification.created_at), { addSuffix: true });
+                                        const timeAgo = isValid(new Date(notification.created_at)) ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true }) : "Invalid date";
                                         return (
                                             <Link
-                                                to="/barber-dashboard/notifications" // Można dodać #notification-id jeśli strona powiadomień to obsłuży
+                                                to="/barber-dashboard/notifications"
                                                 key={notification.id}
                                                 className={`block p-2.5 rounded-md border transition-colors ${
                                                     notification.is_read
@@ -248,13 +263,13 @@ const BarberDashboard = () => {
                     </Card>
                 </div>
 
-                {/* Prawa Kolumna: Wizyty Dziennych */}
+                {/* Prawa Kolumna: Wizyty Dziennych (bez zmian) */}
                 <div className="xl:col-span-2 w-full">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center text-lg sm:text-xl">
                                 <Clock className="h-5 w-5 mr-2 text-barber" />
-                                Appointments for {selectedDate ? format(selectedDate, "PPP") : "..."}
+                                Appointments for {selectedDate && isValid(selectedDate) ? format(selectedDate, "PPP") : "..."}
                             </CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
                                 Your scheduled appointments for the selected date.
@@ -275,11 +290,7 @@ const BarberDashboard = () => {
                                         >
                                             <div className="flex items-center mb-2 sm:mb-0 w-full sm:w-auto">
                                                 <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white ${
-                                                    apt.status === 'confirmed' ? 'bg-barber' :
-                                                        apt.status === 'pending' ? 'bg-yellow-500' :
-                                                            apt.status === 'completed' ? 'bg-blue-500' :
-                                                                apt.status === 'canceled' ? 'bg-red-500' :
-                                                                    'bg-gray-400'
+                                                    getStatusBadgeVariant(apt.status).split(' ')[0] // Użyj tylko klasy tła dla fallbacku awatara
                                                 }`}>
                                                     <User className="h-5 w-5" />
                                                 </div>
@@ -293,7 +304,7 @@ const BarberDashboard = () => {
                                             <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto mt-1 sm:mt-0">
                                                 <p className="font-medium text-gray-700 flex items-center text-xs sm:text-sm whitespace-nowrap">
                                                     <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-gray-500"/>
-                                                    {format(new Date(apt.appointment_time), "p")}
+                                                    {isValid(new Date(apt.appointment_time)) ? format(new Date(apt.appointment_time), "p") : "Invalid time"}
                                                 </p>
                                                 <Badge className={`${getStatusBadgeVariant(apt.status)} mt-0 sm:mt-1 text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}>
                                                     {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
@@ -306,7 +317,7 @@ const BarberDashboard = () => {
                                 <div className="text-center py-10">
                                     <Info className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                                     <h3 className="text-md font-medium text-gray-700 mb-1">
-                                        No appointments scheduled for {selectedDate ? format(selectedDate, "PPP") : "this day"}.
+                                        No appointments scheduled for {selectedDate && isValid(selectedDate) ? format(selectedDate, "PPP") : "this day"}.
                                     </h3>
                                     <p className="text-sm text-gray-500">Your schedule is clear for this date.</p>
                                 </div>

@@ -1,20 +1,25 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Dodajemy Link
 import {
     Card,
     CardContent,
     CardHeader,
     CardTitle,
+    CardDescription // Dodajemy CardDescription
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"; // Dodajemy Button
 import {
     Users,
     Calendar,
     Scissors,
     DollarSign,
     TrendingUp,
-    Clock,
-    UserCheck,
-    Star,
+    Bell, // Zmieniamy Clock na Bell dla powiadomień
+    ArrowRight, // Ikona dla linku "View All"
+    Info // Ikona dla braku powiadomień
 } from "lucide-react";
+import { toast } from "sonner"; // Dodajemy toast
+import { formatDistanceToNow, isValid as isValidDate } from "date-fns"; // Dodajemy date-fns
 
 interface StatsData {
     users: number;
@@ -28,56 +33,71 @@ interface RevenueData {
     amount: number;
 }
 
-interface Activity {
+// Interfejs dla powiadomień admina
+interface AdminNotification {
     id: number;
     type: string;
-    description: string;
-    timestamp: string;
+    title: string;
+    message: string;
+    link?: string | null;
+    is_read: boolean;
+    created_at: string;
+    // Dodatkowe pola, jeśli są potrzebne
+    related_appointment_id?: number;
+    related_client_id?: number;
+    related_barber_id?: number;
 }
 
 const AdminOverview = () => {
     const [stats, setStats] = useState<StatsData | null>(null);
     const [revenue, setRevenue] = useState<RevenueData[]>([]);
-    const [activities, setActivities] = useState<Activity[]>([]);
+    const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]); // Zmieniono z activities
     const [loading, setLoading] = useState(true);
+    const [loadingNotifications, setLoadingNotifications] = useState(true); // Osobne ładowanie dla powiadomień
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchDashboardData = async () => {
+            setLoading(true);
+            setLoadingNotifications(true);
             try {
-                const [statsRes, revenueRes, activitiesRes] = await Promise.all([
+                const [statsRes, revenueRes, notificationsRes] = await Promise.all([
                     fetch('http://localhost:3000/api/admin/stats', {
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                     }),
                     fetch('http://localhost:3000/api/admin/revenue', {
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                     }),
-                    fetch('http://localhost:3000/api/admin/recent-activities', {
+                    fetch('http://localhost:3000/api/admin/notifications', { // Nowy endpoint
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                     }),
                 ]);
 
-                if (!statsRes.ok || !revenueRes.ok || !activitiesRes.ok) {
-                    throw new Error('Failed to fetch data');
-                }
+                if (!statsRes.ok) throw new Error('Failed to fetch stats');
+                if (!revenueRes.ok) throw new Error('Failed to fetch revenue');
+                if (!notificationsRes.ok) throw new Error('Failed to fetch admin notifications');
+
 
                 const statsData = await statsRes.json();
                 const revenueData = await revenueRes.json();
-                const activitiesData = await activitiesRes.json();
+                const notificationsData = await notificationsRes.json();
 
                 setStats(statsData);
                 setRevenue(revenueData);
-                setActivities(activitiesData);
+                setAdminNotifications(notificationsData.slice(0, 5)); // Pokaż ostatnie 5
+
+            } catch (error: any) {
+                console.error('Error fetching dashboard data:', error);
+                toast.error(error.message || "Failed to load dashboard data.");
+            } finally {
                 setLoading(false);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                setLoading(false);
+                setLoadingNotifications(false);
             }
         };
 
-        fetchData();
+        fetchDashboardData();
     }, []);
 
-    if (loading) {
+    if (loading) { // Główne ładowanie dla statystyk i przychodów
         return (
             <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
@@ -85,9 +105,25 @@ const AdminOverview = () => {
         );
     }
 
+    // Funkcja pomocnicza do renderowania ikony na podstawie typu powiadomienia
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case 'new_appointment_booked':
+            case 'appointment_status_changed':
+            case 'appointment_confirmed_by_admin':
+            case 'appointment_confirmed_log':
+                return <Calendar className="h-5 w-5 text-blue-500" />;
+            case 'new_user_registered':
+                return <Users className="h-5 w-5 text-green-500" />;
+            default:
+                return <Bell className="h-5 w-5 text-gray-500" />;
+        }
+    };
+
+
     return (
         <div>
-            {/* Stats Grid */}
+            {/* Stats Grid (bez zmian) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <Card>
                     <CardContent className="p-6">
@@ -100,11 +136,7 @@ const AdminOverview = () => {
                                 <Users className="h-6 w-6 text-barber" />
                             </div>
                         </div>
-                        <div className="flex items-center mt-4 text-sm">
-                            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                            <span className="text-green-500 font-medium">+7.2%</span>
-                            <span className="ml-1 text-gray-500">vs last month</span>
-                        </div>
+                        {/* Można usunąć lub dostosować te wskaźniki procentowe, jeśli nie ma danych */}
                     </CardContent>
                 </Card>
 
@@ -118,11 +150,6 @@ const AdminOverview = () => {
                             <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
                                 <Calendar className="h-6 w-6 text-barber" />
                             </div>
-                        </div>
-                        <div className="flex items-center mt-4 text-sm">
-                            <Clock className="h-4 w-4 text-blue-500 mr-1" />
-                            <span className="text-blue-500 font-medium">18 today</span>
-                            <span className="ml-1 text-gray-500">across all barbers</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -138,11 +165,6 @@ const AdminOverview = () => {
                                 <Scissors className="h-6 w-6 text-barber" />
                             </div>
                         </div>
-                        <div className="flex items-center mt-4 text-sm">
-                            <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                            <span className="text-yellow-500 font-medium">4.8 avg rating</span>
-                            <span className="ml-1 text-gray-500">across all services</span>
-                        </div>
                     </CardContent>
                 </Card>
 
@@ -157,18 +179,13 @@ const AdminOverview = () => {
                                 <DollarSign className="h-6 w-6 text-barber" />
                             </div>
                         </div>
-                        <div className="flex items-center mt-4 text-sm">
-                            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                            <span className="text-green-500 font-medium">+12.5%</span>
-                            <span className="ml-1 text-gray-500">vs last month</span>
-                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Recent Data Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Revenue Chart */}
+                {/* Revenue Chart (bez zmian) */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
@@ -184,7 +201,7 @@ const AdminOverview = () => {
                                         <div
                                             className="w-full bg-barber mb-2 rounded-t-sm"
                                             style={{
-                                                height: `${(data.amount / 9000) * 100}%`,
+                                                height: `${Math.min(100, (data.amount / (stats?.revenue || 9000)) * 100)}%`, // Ograniczenie wysokości
                                                 maxHeight: "90%"
                                             }}
                                         ></div>
@@ -196,31 +213,60 @@ const AdminOverview = () => {
                     </CardContent>
                 </Card>
 
-                {/* Recent Activities */}
+                {/* Admin Notifications */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <Clock className="h-5 w-5 mr-2 text-barber" />
-                            Recent Activities
+                            <Bell className="h-5 w-5 mr-2 text-barber" />
+                            Admin Notifications
                         </CardTitle>
+                        <CardDescription>
+                            Latest important system events and alerts.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-6">
-                            {activities.map((activity) => (
-                                <div key={activity.id} className="flex">
-                                    <div className="mr-4">
-                                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                                            <UserCheck className="h-5 w-5 text-green-600" />
+                        {loadingNotifications ? (
+                            <div className="flex items-center justify-center h-40">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-barber"></div>
+                            </div>
+                        ) : adminNotifications.length > 0 ? (
+                            <div className="space-y-4">
+                                {adminNotifications.map((notification) => (
+                                    <div key={notification.id} className={`p-3 rounded-md border ${notification.is_read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
+                                        <div className="flex items-start space-x-3">
+                                            <div className={`flex-shrink-0 p-2 rounded-full ${notification.is_read ? "bg-gray-200" : "bg-white shadow-sm"}`}>
+                                                {getNotificationIcon(notification.type)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <h4 className={`text-sm font-medium ${notification.is_read ? "text-gray-700" : "text-gray-900"} truncate`}>{notification.title}</h4>
+                                                    {!notification.is_read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse ml-2"></div>}
+                                                </div>
+                                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
+                                                <div className="text-xs text-gray-400 mt-1 flex justify-between items-center">
+                                                    <span>{isValidDate(new Date(notification.created_at)) ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true }) : "Invalid date"}</span>
+                                                    {notification.link && (
+                                                        <Link to={notification.link} className="text-barber hover:underline">
+                                                            View
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <p className="font-medium">{activity.type}</p>
-                                        <p className="text-sm text-gray-500">{activity.description}</p>
-                                        <p className="text-xs text-gray-400 mt-1">{new Date(activity.timestamp).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                                <Link to="/admin-dashboard/notifications" className="block mt-4">
+                                    <Button variant="outline" size="sm" className="w-full">
+                                        View All Notifications <ArrowRight className="h-4 w-4 ml-2"/>
+                                    </Button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="text-center py-10">
+                                <Info className="h-10 w-10 text-gray-400 mx-auto mb-3"/>
+                                <p className="text-sm text-gray-500">No new admin notifications.</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

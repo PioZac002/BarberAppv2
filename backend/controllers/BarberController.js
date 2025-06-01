@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { format } = require('date-fns'); // Dodajemy import format z date-fns
 
 // --- Funkcje Portfolio ---
 const getBarberPortfolio = async (req, res) => {
@@ -58,9 +59,8 @@ const deletePortfolioImage = async (req, res) => {
 };
 
 const getBarberProfile = async (req, res) => {
-    const userId = req.user.id; // To jest user_id z tabeli users
+    const userId = req.user.id;
     try {
-        // Pobierz dane z tabeli users i barbers
         const profileQuery = `
             SELECT 
                 u.first_name, 
@@ -80,7 +80,7 @@ const getBarberProfile = async (req, res) => {
             FROM users u
             JOIN barbers b ON u.id = b.user_id
             LEFT JOIN (
-                SELECT barber_id, ROUND(AVG(rating), 1) AS rating  -- Zaokrąglenie do 1 miejsca po przecinku
+                SELECT barber_id, ROUND(AVG(rating), 1) AS rating
                 FROM reviews 
                 GROUP BY barber_id
             ) AS avg_rating ON b.id = avg_rating.barber_id
@@ -102,15 +102,13 @@ const getBarberProfile = async (req, res) => {
         if (profileData.specialties && typeof profileData.specialties === 'string') {
             profileData.specialties = profileData.specialties.split(',').map(s => s.trim()).filter(s => s);
         } else if (profileData.specialties && Array.isArray(profileData.specialties)) {
-            // If it's already an array (e.g. from TEXT[] in PG), do nothing
+            // Already an array
         } else {
             profileData.specialties = [];
         }
 
-        // Konwersja rating i totalReviews na liczby, jeśli są stringami (czasem PG zwraca tak agregacje)
         profileData.rating = parseFloat(profileData.rating) || 0;
         profileData.totalReviews = parseInt(profileData.total_reviews, 10) || 0;
-
 
         res.json(profileData);
     } catch (err) {
@@ -124,35 +122,24 @@ const updateBarberProfile = async (req, res) => {
     const { bio, address, working_hours, instagram, facebook, specialties, experience } = req.body;
     let specialtiesForDb;
     if (typeof specialties === 'string') {
-        // Jeśli frontend wysyła string oddzielony przecinkami, konwertujemy na tablicę
         specialtiesForDb = specialties.split(',').map(s => s.trim()).filter(s => s.length > 0);
-        // Jeśli wpisano pusty string lub tylko przecinki, wynikiem będzie pusta tablica []
     } else if (Array.isArray(specialties)) {
-        // Jeśli frontend już wysyła tablicę (np. z bardziej zaawansowanego komponentu)
         specialtiesForDb = specialties.filter(s => typeof s === 'string' && s.trim().length > 0);
     } else {
-        // Domyślnie pusta tablica, jeśli specialties nie jest stringiem ani tablicą
         specialtiesForDb = [];
     }
 
     try {
         const result = await pool.query(
             `UPDATE barbers
-         SET bio = $1, address = $2, working_hours = $3, instagram = $4, facebook = $5, specialties = $6, experience = $7
-         WHERE user_id = $8 RETURNING id`,
+             SET bio = $1, address = $2, working_hours = $3, instagram = $4, facebook = $5, specialties = $6, experience = $7
+             WHERE user_id = $8 RETURNING id`,
             [bio, address, working_hours, instagram, facebook, specialtiesForDb, experience, userId]
         );
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Barber not found to update' });
         }
-
-        // Wywołaj getBarberProfile, aby zwrócić pełny, zaktualizowany profil
-        // To jest lepsze niż duplikowanie logiki pobierania profilu.
-        // Aby to zadziałało, req.user musi być dostępne lub musimy przekazać userId
-        // W tym kontekście, mamy userId, więc możemy napisać uproszczoną logikę pobierania
-        // lub po prostu przekierować na getBarberProfile. Bezpieczniej jest pobrać ponownie.
-
         const updatedProfileQuery = `
             SELECT 
                 u.first_name, 
@@ -190,8 +177,7 @@ const updateBarberProfile = async (req, res) => {
             profileData.specialties = profileData.specialties.split(',').map(s => s.trim()).filter(s => s);
         } else if (profileData.specialties && Array.isArray(profileData.specialties)) {
             // OK
-        }
-        else {
+        } else {
             profileData.specialties = [];
         }
         profileData.rating = parseFloat(profileData.rating) || 0;
@@ -204,17 +190,13 @@ const updateBarberProfile = async (req, res) => {
     }
 };
 
-
-// --- Funkcje Harmonogramu --- ZMODYFIKOWANE
 const getBarberSchedule = async (req, res) => {
     const userId = req.user.id;
-    const { date } = req.query; // Oczekujemy daty w formacie YYYY-MM-DD
+    const { date } = req.query;
 
     if (!date) {
         return res.status(400).json({ error: 'Date parameter is required' });
     }
-
-    // Walidacja formatu daty (prosta)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
         return res.status(400).json({ error: 'Invalid date format. Please use YYYY-MM-DD' });
@@ -244,7 +226,6 @@ const getBarberSchedule = async (req, res) => {
     }
 };
 
-// --- Funkcje Powiadomień ---
 const getBarberNotifications = async (req, res) => {
     const userId = req.user.id;
     try {
@@ -253,34 +234,37 @@ const getBarberNotifications = async (req, res) => {
             return res.status(404).json({ error: 'Barber not found' });
         }
         const barberId = barberResult.rows[0].id;
+        // Zakładamy, że powiadomienia dla barbera są w tabeli 'notifications' i łączone przez 'barber_id'
+        // Jeśli barber jest identyfikowany przez 'recipient_user_id', zapytanie musiałoby wyglądać inaczej
         const result = await pool.query('SELECT * FROM notifications WHERE barber_id = $1 ORDER BY created_at DESC', [barberId]);
         res.json(result.rows);
     } catch (err) {
         console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error fetching barber notifications' });
     }
 };
 
 const markNotificationAsRead = async (req, res) => {
     const notificationId = req.params.id;
-    const userId = req.user.id;
+    const userId = req.user.id; // user_id barbera
     try {
         const barberResult = await pool.query('SELECT id FROM barbers WHERE user_id = $1', [userId]);
         if (barberResult.rows.length === 0) {
             return res.status(404).json({ error: 'Barber not found' });
         }
-        const barberId = barberResult.rows[0].id;
+        const barberTableId = barberResult.rows[0].id; // id z tabeli barbers
+
         const result = await pool.query(
             'UPDATE notifications SET is_read = TRUE WHERE id = $1 AND barber_id = $2 RETURNING *',
-            [notificationId, barberId]
+            [notificationId, barberTableId]
         );
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Notification not found or not owned by barber' });
+            return res.status(404).json({ error: 'Notification not found or not owned by this barber' });
         }
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error marking notification as read' });
     }
 };
 
@@ -291,15 +275,15 @@ const markAllNotificationsAsRead = async (req, res) => {
         if (barberResult.rows.length === 0) {
             return res.status(404).json({ error: 'Barber not found' });
         }
-        const barberId = barberResult.rows[0].id;
+        const barberTableId = barberResult.rows[0].id;
         await pool.query(
             'UPDATE notifications SET is_read = TRUE WHERE barber_id = $1 AND is_read = FALSE',
-            [barberId]
+            [barberTableId]
         );
-        res.json({ message: 'All notifications marked as read' });
+        res.json({ message: 'All barber notifications marked as read' });
     } catch (err) {
         console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error marking all notifications as read' });
     }
 };
 
@@ -311,25 +295,25 @@ const deleteNotification = async (req, res) => {
         if (barberResult.rows.length === 0) {
             return res.status(404).json({ error: 'Barber not found' });
         }
-        const barberId = barberResult.rows[0].id;
+        const barberTableId = barberResult.rows[0].id;
         const result = await pool.query(
             'DELETE FROM notifications WHERE id = $1 AND barber_id = $2 RETURNING id',
-            [notificationId, barberId]
+            [notificationId, barberTableId]
         );
         if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Notification not found or not owned by barber' });
+            return res.status(404).json({ error: 'Notification not found or not owned by this barber' });
         }
         res.json({ message: 'Notification deleted' });
     } catch (err) {
         console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error deleting notification' });
     }
 };
 
-// --- Funkcje Statystyk ---
+
 const getBarberStats = async (req, res) => {
     const userId = req.user.id;
-    const { startDate, endDate } = req.query; // Należy dodać walidację dat
+    const { startDate, endDate } = req.query;
     try {
         const barberResult = await pool.query('SELECT id FROM barbers WHERE user_id = $1', [userId]);
         if (barberResult.rows.length === 0) {
@@ -337,7 +321,6 @@ const getBarberStats = async (req, res) => {
         }
         const barberId = barberResult.rows[0].id;
 
-        // Upewnij się, że startDate i endDate są dostarczone i poprawne
         if (!startDate || !endDate) {
             return res.status(400).json({ error: 'Start date and end date are required for stats.' });
         }
@@ -351,19 +334,19 @@ const getBarberStats = async (req, res) => {
             [barberId, 'completed', startDate, endDate]
         );
         res.json({
-            completedAppointments: completedAppointments.rows[0].count || 0,
-            totalRevenue: totalRevenue.rows[0].sum || 0
+            completedAppointments: parseInt(completedAppointments.rows[0].count, 10) || 0,
+            totalRevenue: parseFloat(totalRevenue.rows[0].sum) || 0
         });
     } catch (err) {
         console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error fetching barber stats' });
     }
 };
 
-// --- Funkcje Wizyt ---
+
 const getBarberAppointments = async (req, res) => {
     const userId = req.user.id;
-    const { upcoming } = req.query; // 'true' or 'false'/'undefined'
+    const { upcoming } = req.query;
     try {
         const barberResult = await pool.query('SELECT id FROM barbers WHERE user_id = $1', [userId]);
         if (barberResult.rows.length === 0) {
@@ -386,52 +369,124 @@ const getBarberAppointments = async (req, res) => {
         } else if (upcoming === 'false') {
             query += ' AND a.appointment_time < CURRENT_TIMESTAMP';
         }
-        // Jeśli 'upcoming' nie jest zdefiniowane, pobierz wszystkie
-
         query += ' ORDER BY a.appointment_time ASC';
 
         const result = await pool.query(query, params);
-        res.json(result.rows);
+        res.json(result.rows.map(apt => ({...apt, price: parseFloat(apt.price)})));
     } catch (err) {
         console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error fetching barber appointments' });
     }
 };
 
 const updateAppointmentStatus = async (req, res) => {
-    const userId = req.user.id;
+    const barberPerformingActionUserId = req.user.id; // user_id barbera, który dokonuje zmiany
     const appointmentId = req.params.id;
-    const { status } = req.body;
+    const { status: newStatus } = req.body;
 
-    // Podstawowa walidacja statusu
     const allowedStatuses = ['pending', 'confirmed', 'completed', 'canceled', 'no-show'];
-    if (!status || !allowedStatuses.includes(status)) {
+    if (!newStatus || !allowedStatuses.includes(newStatus)) {
         return res.status(400).json({ error: 'Invalid or missing status' });
     }
 
+    let pgClient;
     try {
-        const barberResult = await pool.query('SELECT id FROM barbers WHERE user_id = $1', [userId]);
-        if (barberResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Barber not found' });
-        }
-        const barberId = barberResult.rows[0].id;
+        pgClient = await pool.connect();
+        await pgClient.query('BEGIN');
 
-        const result = await pool.query(
-            'UPDATE appointments SET status = $1 WHERE id = $2 AND barber_id = $3 RETURNING *',
-            [status, appointmentId, barberId]
-        );
+        const barberPerformingActionResult = await pgClient.query('SELECT id, first_name, last_name FROM users WHERE id = $1', [barberPerformingActionUserId]);
+        if (barberPerformingActionResult.rows.length === 0) {
+            await pgClient.query('ROLLBACK');
+            return res.status(404).json({ error: 'Barber performing action (user) not found.' });
+        }
+        const barberPerformingAction = barberPerformingActionResult.rows[0];
+        const barberPerformingActionName = `${barberPerformingAction.first_name} ${barberPerformingAction.last_name}`;
+
+        // Pobierz ID barbera z tabeli barbers na podstawie user_id
+        const barberTableResult = await pgClient.query('SELECT id FROM barbers WHERE user_id = $1', [barberPerformingActionUserId]);
+        if (barberTableResult.rows.length === 0) {
+            await pgClient.query('ROLLBACK');
+            return res.status(404).json({ error: 'Barber (entity) not found for the user performing action.' });
+        }
+        const barberTableId = barberTableResult.rows[0].id; // ID barbera z tabeli 'barbers'
+
+        // Zaktualizuj status wizyty i pobierz potrzebne dane do powiadomień
+        const updateQuery = `
+            UPDATE appointments 
+            SET status = $1 
+            WHERE id = $2 AND barber_id = $3 
+            RETURNING id, client_id, barber_id, service_id, appointment_time, status,
+                      (SELECT name FROM services WHERE id = appointments.service_id) AS service_name,
+                      (SELECT first_name || ' ' || last_name FROM users WHERE id = appointments.client_id) AS client_name;
+        `;
+        const result = await pgClient.query(updateQuery, [newStatus, appointmentId, barberTableId,]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Appointment not found or not owned by barber' });
+            await pgClient.query('ROLLBACK');
+            return res.status(404).json({ error: 'Appointment not found or not assigned to this barber.' });
         }
-        res.json(result.rows[0]);
+
+        const updatedAppointment = result.rows[0];
+        const appointmentTimeFormatted = format(new Date(updatedAppointment.appointment_time), "MMM d, yyyy 'at' h:mm a");
+        const serviceName = updatedAppointment.service_name;
+        const clientName = updatedAppointment.client_name;
+        // Nazwa barbera przypisanego do wizyty (może być inna niż potwierdzający, jeśli admin by to robił)
+        const assignedBarberUserResult = await pgClient.query(
+            'SELECT u.first_name, u.last_name FROM users u JOIN barbers b ON u.id = b.user_id WHERE b.id = $1',
+            [updatedAppointment.barber_id]
+        );
+        const assignedBarberName = assignedBarberUserResult.rows.length > 0 ? `${assignedBarberUserResult.rows[0].first_name} ${assignedBarberUserResult.rows[0].last_name}` : 'Selected Barber';
+
+
+        if (newStatus === 'confirmed') {
+            // 1. Powiadomienie dla klienta
+            const clientNotificationTitle = "Appointment Confirmed!";
+            const clientMessage = `Your appointment for ${serviceName} with ${assignedBarberName} on ${appointmentTimeFormatted} has been confirmed.`;
+            await pgClient.query(
+                `INSERT INTO user_notifications (user_id, type, title, message, link, is_read, created_at)
+                 VALUES ($1, $2, $3, $4, $5, FALSE, NOW())`,
+                [updatedAppointment.client_id, 'appointment_confirmed', clientNotificationTitle, clientMessage, `/user-dashboard/appointments`]
+            );
+
+            // 2. Powiadomienie dla administratorów
+            const adminNotificationTitle = "Appointment Status Updated by Barber";
+            const adminMessage = `Appointment ID ${appointmentId} (Client: ${clientName}, Barber: ${assignedBarberName}, Service: ${serviceName}) status changed to ${newStatus.toUpperCase()} by barber ${barberPerformingActionName}.`;
+            const adminLink = `/admin-dashboard/appointments?appointmentId=${appointmentId}`;
+            const adminUsersResult = await pgClient.query("SELECT id FROM users WHERE role = 'admin'");
+            for (const admin of adminUsersResult.rows) {
+                await pgClient.query(
+                    `INSERT INTO admin_notifications (admin_user_id, type, title, message, link, related_appointment_id, related_client_id, related_barber_id, is_read, created_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW())`,
+                    [
+                        admin.id,
+                        'appointment_status_changed_by_barber',
+                        adminNotificationTitle,
+                        adminMessage,
+                        adminLink,
+                        appointmentId,
+                        updatedAppointment.client_id,
+                        updatedAppointment.barber_id // ID barbera z tabeli appointments (FK do barbers.id)
+                    ]
+                );
+            }
+        }
+        // Można dodać logikę powiadomień dla innych statusów (np. 'canceled', 'completed')
+
+        await pgClient.query('COMMIT');
+        res.json(updatedAppointment);
+
     } catch (err) {
-        console.error(err.stack);
-        res.status(500).json({ error: 'Server error' });
+        if (pgClient) {
+            await pgClient.query('ROLLBACK');
+        }
+        console.error("Error in updateAppointmentStatus (BarberController):", err.stack);
+        res.status(500).json({ error: 'Server error updating appointment status' });
+    } finally {
+        if (pgClient) {
+            pgClient.release();
+        }
     }
 };
-
-
 
 module.exports = {
     getBarberPortfolio,
