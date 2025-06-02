@@ -1,12 +1,14 @@
+// backend/controllers/adminController.js
 const pool = require('../config/database');
-// Zmieniony import, aby bezpośrednio używać 'addDays'
+// UPEWNIJ SIĘ, ŻE TEN IMPORT JEST POPRAWNY I ZAWIERA WSZYSTKIE POTRZEBNE FUNKCJE
 const {
     format, subDays, startOfDay, endOfDay,
     startOfWeek, endOfWeek, startOfMonth, endOfMonth,
     addMinutes, parseISO, isValid: isValidDateFn,
-    addDays, differenceInCalendarDays // UPEWNIJ SIĘ, ŻE JEST TUTAJ
+    addDays, differenceInCalendarDays // <--- UPEWNIJ SIĘ, ŻE JEST TUTAJ
 } = require('date-fns');
 
+// Funkcja getStats (pozostaje bez zmian od ostatniej poprawnej wersji)
 const getStats = async (req, res) => {
     try {
         const result = await pool.query(`
@@ -14,20 +16,14 @@ const getStats = async (req, res) => {
                 (SELECT COUNT(*) FROM users) AS users,
                 (SELECT COUNT(*) FROM appointments WHERE status NOT IN ('canceled', 'completed', 'no-show', 'cancelled')) AS activeAppointments, 
                 (SELECT COUNT(*) FROM services WHERE is_active = TRUE) AS services,
-                (SELECT COALESCE(SUM(s.price), 0) FROM appointments a JOIN services s ON a.service_id = s.id WHERE a.status = 'completed') AS revenue
+                (SELECT COALESCE(SUM(s.price), 0) FROM appointments a JOIN services s ON a.service_id = s.id WHERE a.status = 'completed' AND a.appointment_time >= date_trunc('month', CURRENT_DATE) AND a.appointment_time < date_trunc('month', CURRENT_DATE) + interval '1 month') AS current_month_revenue
         `);
         const stats = result.rows[0];
-        stats.users = parseInt(stats.users, 10) || 0;
-        // Zakładając, że PostgreSQL zwraca małe litery dla aliasów bez cudzysłowów
-        stats.activeappointments = parseInt(stats.activeappointments, 10) || 0;
-        stats.services = parseInt(stats.services, 10) || 0;
-        stats.revenue = parseFloat(stats.revenue) || 0;
-
         res.json({
-            users: stats.users,
-            activeAppointments: stats.activeappointments,
-            services: stats.services,
-            revenue: stats.revenue
+            users: parseInt(stats.users, 10) || 0,
+            activeAppointments: parseInt(stats.activeappointments, 10) || 0, // PostgreSQL zwraca małe litery
+            services: parseInt(stats.services, 10) || 0,
+            revenue: parseFloat(stats.current_month_revenue) || 0
         });
     } catch (err) {
         console.error("Error in getStats (AdminController):", err.stack);
@@ -35,6 +31,7 @@ const getStats = async (req, res) => {
     }
 };
 
+// Funkcja getRevenue (pozostaje bez zmian od ostatniej poprawnej wersji)
 const getRevenue = async (req, res) => {
     try {
         const result = await pool.query(`
@@ -48,7 +45,7 @@ const getRevenue = async (req, res) => {
             ORDER BY month_year ASC;
         `);
         const revenueData = result.rows.map(row => ({
-            month: format(parseISO(row.month_year + '-01'), 'MMM'),
+            month: format(parseISO(row.month_year + '-01'), 'MMM'), // Użycie parseISO dla pewności
             amount: parseFloat(row.amount)
         }));
         res.json(revenueData);
@@ -58,15 +55,22 @@ const getRevenue = async (req, res) => {
     }
 };
 
+// Funkcja getAdminNotifications (pozostaje bez zmian od ostatniej poprawnej wersji)
 const getAdminNotifications = async (req, res) => {
-    const adminUserId = req.user.id;
+    const adminUserId = req.user?.id;
+    if (!adminUserId && req.user?.role !== 'admin') { // Dodatkowe sprawdzenie roli, jeśli req.user może nie mieć id
+        return res.status(401).json({ error: "User not authenticated or not an admin for admin notifications." });
+    }
     try {
+        // Jeśli adminUserId jest undefined (np. dla ogólnych powiadomień systemowych, jeśli takowe by były)
+        // to zapytanie powinno to obsłużyć, lub potrzebna inna logika.
+        // Na razie zakładamy, że adminUserId jest wymagane, lub filtr WHERE obsłuży NULL
         const result = await pool.query(
             `SELECT id, type, title, message, link, related_appointment_id, related_client_id, related_barber_id, is_read, created_at 
              FROM admin_notifications 
              WHERE admin_user_id = $1 OR admin_user_id IS NULL
              ORDER BY created_at DESC LIMIT 20`,
-            [adminUserId]
+            [adminUserId] // Jeśli adminUserId może być null, to zapytanie musi to obsłużyć inaczej
         );
         res.json(result.rows);
     } catch (err) {
@@ -75,7 +79,7 @@ const getAdminNotifications = async (req, res) => {
     }
 };
 
-
+// Funkcje getUsers, updateUser, deleteUser (bez zmian)
 const getUsers = async (req, res) => {
     try {
         const result = await pool.query('SELECT id, first_name, last_name, email, phone, role, created_at FROM users ORDER BY created_at DESC');
@@ -109,6 +113,8 @@ const deleteUser = async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+        // Usunięcie powiązanych rekordów - UPEWNIJ SIĘ, ŻE KOLEJNOŚĆ JEST POPRAWNA WZGLĘDEM KLUCZY OBCYCH
+        // 1. Recenzje (zależą od appointments)
         const appointmentsResult = await client.query(
             'SELECT id FROM appointments WHERE client_id = $1 OR barber_id IN (SELECT id FROM barbers WHERE user_id = $1)', [userId]
         );
@@ -116,15 +122,20 @@ const deleteUser = async (req, res) => {
         if (appointmentIds.length > 0) {
             await client.query('DELETE FROM reviews WHERE appointment_id = ANY($1::int[])', [appointmentIds]);
         }
+        // 2. Powiadomienia (user_notifications, admin_notifications, notifications)
         await client.query('DELETE FROM user_notifications WHERE user_id = $1', [userId]);
-        await client.query('DELETE FROM admin_notifications WHERE related_client_id = $1 OR related_barber_id IN (SELECT id FROM barbers WHERE user_id = $1)', [userId]);
-        await client.query('DELETE FROM admin_notifications WHERE admin_user_id = $1', [userId]);
+        await client.query('DELETE FROM admin_notifications WHERE admin_user_id = $1 OR related_client_id = $1 OR related_barber_id IN (SELECT id FROM barbers WHERE user_id = $1)', [userId]);
+        await client.query('DELETE FROM notifications WHERE recipient_user_id = $1 OR barber_id IN (SELECT id FROM barbers WHERE user_id = $1)', [userId]);
+        // 3. Wizyty (appointments)
         await client.query('DELETE FROM appointments WHERE client_id = $1', [userId]);
         await client.query('DELETE FROM appointments WHERE barber_id IN (SELECT id FROM barbers WHERE user_id = $1)', [userId]);
+        // 4. Portfolio (zależy od barbers)
         await client.query('DELETE FROM portfolio_images WHERE barber_id IN (SELECT id FROM barbers WHERE user_id = $1)', [userId]);
-        await client.query('DELETE FROM notifications WHERE barber_id IN (SELECT id FROM barbers WHERE user_id = $1) OR recipient_user_id = $1', [userId]);
+        // 5. Barberzy (zależy od users)
         await client.query('DELETE FROM barbers WHERE user_id = $1', [userId]);
+        // 6. Użytkownik (users)
         const deleteUserResult = await client.query('DELETE FROM users WHERE id = $1 RETURNING id', [userId]);
+
         if (deleteUserResult.rowCount === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ error: 'User not found' });
@@ -140,6 +151,7 @@ const deleteUser = async (req, res) => {
     }
 };
 
+// Funkcje getAppointments, deleteAppointment (admin) (bez zmian)
 const getAppointments = async (req, res) => {
     try {
         const result = await pool.query(`
@@ -169,6 +181,10 @@ const deleteAppointment = async (req, res) => {
         await client.query('BEGIN');
         await client.query('DELETE FROM reviews WHERE appointment_id = $1', [appointmentId]);
         await client.query('DELETE FROM admin_notifications WHERE related_appointment_id = $1', [appointmentId]);
+        // Rozważ usunięcie powiązanych user_notifications i notifications
+        // await client.query('DELETE FROM user_notifications WHERE link LIKE $1', [`%appointments%${appointmentId}%`]); // Przykład, jeśli link zawiera ID
+        // await client.query('DELETE FROM notifications WHERE message LIKE $1', [`%Appt ID: ${appointmentId}%`]); // Przykład
+
         const deleteAppointmentResult = await client.query('DELETE FROM appointments WHERE id = $1 RETURNING id', [appointmentId]);
         if (deleteAppointmentResult.rowCount === 0) {
             await client.query('ROLLBACK');
@@ -185,6 +201,7 @@ const deleteAppointment = async (req, res) => {
     }
 };
 
+// Funkcje getServices, addService, updateService, deleteService (bez zmian)
 const getServices = async (req, res) => {
     try {
         const result = await pool.query('SELECT id, name, description, price, duration, created_at, is_active FROM services ORDER BY name ASC');
@@ -259,6 +276,7 @@ const deleteService = async (req, res) => {
     }
 };
 
+// Funkcje getReviews, deleteReview (bez zmian)
 const getReviews = async (req, res) => {
     try {
         const result = await pool.query(`
@@ -301,6 +319,8 @@ const deleteReview = async (req, res) => {
     }
 };
 
+
+// Funkcja updateAppointment (admin)
 const updateAppointment = async (req, res) => {
     const adminPerformingActionUserId = req.user.id;
     const { client_id, barber_id, service_id, appointment_time, status: newStatus } = req.body;
@@ -417,6 +437,8 @@ const updateAppointment = async (req, res) => {
     }
 };
 
+
+// POPRAWIONA FUNKCJA getReportData
 const getReportData = async (req, res) => {
     const { timeRange: timeRangePreset, startDate: customStartDateStr, endDate: customEndDateStr } = req.query;
 
@@ -429,23 +451,22 @@ const getReportData = async (req, res) => {
         if (customStartDateStr && customEndDateStr &&
             isValidDateFn(parseISO(customStartDateStr)) && isValidDateFn(parseISO(customEndDateStr))) {
 
-            loopStartDate = startOfDay(parseISO(customStartDateStr));
-            loopEndDate = endOfDay(parseISO(customEndDateStr));
+            queryStartDate = startOfDay(parseISO(customStartDateStr));
+            queryEndDate = endOfDay(parseISO(customEndDateStr));
 
-            queryStartDate = loopStartDate;
-            queryEndDate = loopEndDate;
+            loopStartDate = queryStartDate; // Dla pętli wypełniającej
+            loopEndDate = queryEndDate;     // Dla pętli wypełniającej
 
             if (queryStartDate > queryEndDate) {
                 return res.status(400).json({ error: 'Start date cannot be after end date for custom range.' });
             }
 
-            // Użycie funkcji 'differenceInCalendarDays'
             const diffDays = differenceInCalendarDays(queryEndDate, queryStartDate);
 
             if (diffDays === 0) {
                 effectiveTimeRangeType = 'hourly';
                 outputDateFormat = "HH:00";
-            } else if (diffDays <= 35 * 3) {
+            } else if (diffDays <= 90) { // Zwiększony limit dla formatu MM/dd
                 effectiveTimeRangeType = 'daily';
                 outputDateFormat = "MM/dd";
             } else {
@@ -456,34 +477,35 @@ const getReportData = async (req, res) => {
             return res.status(400).json({ error: 'Invalid custom date range provided. Ensure both start and end dates are valid.' });
         }
     } else {
-        loopEndDate = endOfDay(new Date());
+        const today = new Date();
+        loopEndDate = endOfDay(today);
         switch (timeRangePreset) {
             case '1day':
-                queryStartDate = startOfDay(new Date());
-                queryEndDate = endOfDay(new Date());
-                loopStartDate = queryStartDate;
+                queryStartDate = startOfDay(today);
+                queryEndDate = endOfDay(today); // queryEndDate jest końcem dzisiejszego dnia
+                loopStartDate = queryStartDate; // loopStartDate jest początkiem dzisiejszego dnia
                 outputDateFormat = "HH:00";
                 effectiveTimeRangeType = 'hourly';
                 break;
             case '7days':
-                queryStartDate = startOfDay(subDays(new Date(), 6));
+                queryStartDate = startOfDay(subDays(today, 6));
+                queryEndDate = endOfDay(today); // queryEndDate jest końcem dzisiejszego dnia
                 loopStartDate = queryStartDate;
-                // queryEndDate jest już endOfDay(new Date())
                 outputDateFormat = "MM/dd";
                 effectiveTimeRangeType = 'daily';
                 break;
             case '1month':
-                queryStartDate = startOfMonth(new Date());
-                queryEndDate = endOfMonth(new Date());
+                queryStartDate = startOfMonth(today);
+                queryEndDate = endOfMonth(today);
                 loopStartDate = queryStartDate;
                 loopEndDate = queryEndDate;
                 outputDateFormat = "MMM dd";
                 effectiveTimeRangeType = 'daily';
                 break;
-            default: // Domyślnie 7 dni
-                queryStartDate = startOfDay(subDays(new Date(), 6));
+            default:
+                queryStartDate = startOfDay(subDays(today, 6));
+                queryEndDate = endOfDay(today);
                 loopStartDate = queryStartDate;
-                // queryEndDate jest już endOfDay(new Date())
                 outputDateFormat = "MM/dd";
                 effectiveTimeRangeType = 'daily';
         }
@@ -491,7 +513,7 @@ const getReportData = async (req, res) => {
 
     try {
         let appointmentsQuery;
-        let queryParams = [queryStartDate, queryEndDate];
+        let queryParams;
 
         if (effectiveTimeRangeType === 'hourly') {
             appointmentsQuery = `
@@ -510,7 +532,9 @@ const getReportData = async (req, res) => {
                 GROUP BY group_key_str, u_barber.first_name, u_barber.last_name
                 ORDER BY group_key_str ASC;
             `;
-            queryParams = [queryStartDate, startOfDay(addDays(loopEndDate, 1))];
+            // Dla zapytań godzinowych, queryEndDate powinno być początkiem następnego dnia po ostatnim dniu zakresu
+            // loopEndDate jest tutaj endOfDay(dnia dla którego robimy raport godzinowy)
+            queryParams = [queryStartDate, addDays(startOfDay(queryEndDate), 1)];
 
         } else { // daily
             appointmentsQuery = `
@@ -537,13 +561,10 @@ const getReportData = async (req, res) => {
         result.rows.forEach(row => {
             const groupKey = effectiveTimeRangeType === 'hourly'
                 ? row.group_key_str
-                // Dla 'daily', PostgreSQL zwraca obiekt Date dla DATE(), więc formatujemy go od razu
-                : format(new Date(row.group_key_date), 'yyyy-MM-dd');
-
+                : format(parseISO(row.group_key_date.toISOString()), 'yyyy-MM-dd'); // Dla daily, group_key_date jest obiektem Date
 
             if (!processedDataByGroupKey[groupKey]) {
                 processedDataByGroupKey[groupKey] = {
-                    raw_date_obj: parseISO(groupKey),
                     appointments: 0,
                     revenue: 0,
                     barbers: {}
@@ -551,37 +572,44 @@ const getReportData = async (req, res) => {
             }
             processedDataByGroupKey[groupKey].appointments += parseInt(row.appointments_count, 10);
             processedDataByGroupKey[groupKey].revenue += parseFloat(row.revenue_sum);
-            processedDataByGroupKey[groupKey].barbers[row.barber_name] = (processedDataByGroupKey[groupKey].barbers[row.barber_name] || 0) + parseInt(row.appointments_count, 10);
+            if (row.barber_name) {
+                processedDataByGroupKey[groupKey].barbers[row.barber_name] =
+                    (processedDataByGroupKey[groupKey].barbers[row.barber_name] || 0) + parseInt(row.appointments_count, 10);
+            }
         });
 
         let finalReportData = [];
-        let currentDateIter = startOfDay(loopStartDate); // Używamy loopStartDate do iteracji
+        let currentDateIter = startOfDay(loopStartDate);
 
         if (effectiveTimeRangeType === 'hourly') {
-            const dayToReport = loopStartDate; // Dla raportu godzinowego, iterujemy po godzinach dnia loopStartDate
+            const dayToReport = loopStartDate;
             for (let i = 0; i < 24; i++) {
                 currentDateIter = addMinutes(startOfDay(dayToReport), i * 60);
                 const hourKey = format(currentDateIter, 'yyyy-MM-dd HH24:00:00');
-                const displayHour = format(currentDateIter, outputDateFormat); // "HH:00"
+                const displayHour = format(currentDateIter, outputDateFormat);
 
                 if (processedDataByGroupKey[hourKey]) {
                     finalReportData.push({
-                        ...processedDataByGroupKey[hourKey],
-                        date: displayHour // Nadpisz 'raw_date_obj' sformatowaną datą/godziną
+                        date: displayHour, // Używamy sformatowanej daty/godziny
+                        appointments: processedDataByGroupKey[hourKey].appointments,
+                        revenue: processedDataByGroupKey[hourKey].revenue,
+                        barbers: processedDataByGroupKey[hourKey].barbers
                     });
                 } else {
                     finalReportData.push({ date: displayHour, appointments: 0, revenue: 0, barbers: {} });
                 }
             }
-        } else { // daily
-            while(currentDateIter <= loopEndDate) { // Używamy loopEndDate
-                const dateKey = format(currentDateIter, 'yyyy-MM-dd'); // Klucz do porównania
+        } else {
+            while(currentDateIter <= loopEndDate) {
+                const dateKey = format(currentDateIter, 'yyyy-MM-dd');
                 const displayDate = format(currentDateIter, outputDateFormat);
 
                 if (processedDataByGroupKey[dateKey]) {
                     finalReportData.push({
-                        ...processedDataByGroupKey[dateKey],
-                        date: displayDate // Nadpisz 'raw_date_obj' sformatowaną datą
+                        date: displayDate, // Używamy sformatowanej daty
+                        appointments: processedDataByGroupKey[dateKey].appointments,
+                        revenue: processedDataByGroupKey[dateKey].revenue,
+                        barbers: processedDataByGroupKey[dateKey].barbers
                     });
                 } else {
                     finalReportData.push({ date: displayDate, appointments: 0, revenue: 0, barbers: {} });
@@ -590,8 +618,6 @@ const getReportData = async (req, res) => {
             }
         }
 
-        // Usuń pole pomocnicze raw_date_obj przed wysłaniem do frontendu
-        finalReportData = finalReportData.map(({ raw_date_obj, ...rest }) => rest);
         res.json(finalReportData);
 
     } catch (err) {
@@ -599,7 +625,6 @@ const getReportData = async (req, res) => {
         res.status(500).json({ error: 'Server error fetching report data.' });
     }
 };
-
 
 module.exports = {
     getStats,

@@ -43,7 +43,51 @@ exports.getAllBarberSummaries = async (req, res) => {
         res.status(500).json({ error: 'Server error fetching barber summaries' });
     }
 };
+exports.getAllPublicReviews = async (req, res) => {
+    try {
+        // Zapytanie JOIN do pobrania potrzebnych informacji
+        // Zakładamy, że chcemy wyświetlić imię autora (klienta), nazwę usługi i imię barbera.
+        // authorImage, helpful, unhelpful - na razie pomijamy, bo nie ma ich bezpośrednio w bazie.
+        const query = `
+            SELECT 
+                r.id, 
+                r.rating, 
+                r.comment, 
+                r.created_at AS date, 
+                (u_client.first_name || ' ' || u_client.last_name) AS author,
+                s.name AS service_name,
+                (u_barber.first_name || ' ' || u_barber.last_name) AS barber_name
+                -- Można dodać u_client.profile_image_url AS author_image, jeśli istnieje w tabeli users
+            FROM reviews r
+            JOIN users u_client ON r.client_id = u_client.id
+            JOIN appointments a ON r.appointment_id = a.id
+            JOIN services s ON a.service_id = s.id
+            JOIN barbers b ON r.barber_id = b.id
+            JOIN users u_barber ON b.user_id = u_barber.id
+            ORDER BY r.created_at DESC; 
+            -- Można dodać LIMIT np. LIMIT 50, jeśli recenzji jest bardzo dużo
+        `;
+        const result = await pool.query(query);
 
+        const reviews = result.rows.map(review => ({
+            id: review.id,
+            rating: parseInt(review.rating, 10),
+            comment: review.comment,
+            date: review.date, // Formatowanie daty lepiej zrobić na frontendzie
+            author: review.author,
+            // authorImage: review.author_image || 'URL_DO_DOMYSLNEGO_AWATARA', // Jeśli dodasz
+            service: review.service_name,
+            barber: review.barber_name,
+            helpful: 0, // Placeholder
+            unhelpful: 0, // Placeholder
+        }));
+
+        res.json(reviews);
+    } catch (err) {
+        console.error("Error in getAllPublicReviews:", err.stack);
+        res.status(500).json({ error: 'Server error fetching public reviews.' });
+    }
+};
 // Pobiera szczegółowe informacje o konkretnym barberze
 exports.getBarberDetailsById = async (req, res) => {
     const { barberId } = req.params;
