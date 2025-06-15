@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "typeRoots": ["./types", "node_modules/@types"],
-    "types": ["node"],
+    "types": ["node",
+      "vite-plugin-pwa/client"],
     "target": "ESNext",
     "useDefineForClassFields": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],

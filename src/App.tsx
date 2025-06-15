@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import ReloadPrompt from './components/ReloadPrompt'; // <-- 1. DODAJ IMPORT
 
 // Pages
 import Home from "./pages/Home";
@@ -35,6 +36,7 @@ const App = () => (
                 <TooltipProvider>
                     <Toaster />
                     <Sonner />
+                    <ReloadPrompt /> {/* <-- 2. DODAJ KOMPONENT TUTAJ */}
                     <Routes>
                         {/* Public Routes */}
                         <Route path="/" element={<Home />} />
