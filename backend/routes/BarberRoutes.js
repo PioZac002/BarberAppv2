@@ -16,7 +16,7 @@ const {
     getBarberAppointments,
     updateAppointmentStatus,
     getBarberSchedule
-} = require('../controllers/barberController');
+} = require('../controllers/BarberController');
 
 // Stosujemy middleware do wszystkich tras w tym routerze
 router.use(verifyToken, requireBarber);
