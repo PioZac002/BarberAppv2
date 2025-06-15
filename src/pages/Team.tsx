@@ -7,7 +7,7 @@ import {
     DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge"; // DODANO IMPORT
+import { Badge } from "@/components/ui/badge";
 import {
     Search,
     Mail,
@@ -16,15 +16,14 @@ import {
     Calendar as CalendarIcon,
     Award,
     CheckCircle,
-    User as UserIcon
+    User as UserIcon,
+    Camera // Dodano ikonę aparatu dla portfolio
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
-// Placeholder SVG
-const placeholderSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23e9ecef'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='18px' fill='%236c757d'%3EImage Unavailable%3C/text%3E%3C/svg%3E";
-
+// Typy i dane pozostają bez zmian
 type SpecializationId = "all" | "haircut" | "beard" | "coloring" | "shaving" | "kids";
 const specializationOptions = [
     { id: "all", name: "All Specializations" },
@@ -42,7 +41,7 @@ interface BarberSummary {
     rating: number;
     experience: number;
     specializations: string[];
-    image: string;
+    image: string | null;
 }
 
 interface BarberDetails extends BarberSummary {
@@ -50,7 +49,7 @@ interface BarberDetails extends BarberSummary {
     phone: string;
     bio: string;
     certifications: string[];
-    portfolioImages: string[];
+    portfolioImages: (string | null)[];
 }
 
 const Team = () => {
@@ -72,7 +71,7 @@ const Team = () => {
                     throw new Error("Failed to fetch team members");
                 }
                 const data = await response.json();
-                setTeamMembers(data.map((member: any) => ({ ...member, image: member.image || placeholderSvg })));
+                setTeamMembers(data);
             } catch (error) {
                 console.error("Error fetching team members:", error);
                 toast.error("Could not load team members. Please try again later.");
@@ -94,7 +93,7 @@ const Team = () => {
                         throw new Error(`Failed to fetch details for ${selectedMemberForModal.name}`);
                     }
                     const data = await response.json();
-                    setDetailedMemberProfile({ ...data, image: data.image || placeholderSvg });
+                    setDetailedMemberProfile(data);
                 } catch (error) {
                     console.error("Error fetching member details:", error);
                     toast.error(`Could not load details for ${selectedMemberForModal.name}.`);
@@ -109,29 +108,22 @@ const Team = () => {
     const filteredMembers = teamMembers.filter((member) => {
         const nameMatches = member.name.toLowerCase().includes(searchTerm.toLowerCase());
         const roleMatches = member.role.toLowerCase().includes(searchTerm.toLowerCase());
-
         const specializationMatches = selectedSpecialization === "all" ||
             (member.specializations && member.specializations.some(spec => spec.toLowerCase() === selectedSpecialization.toLowerCase()));
-
         return (nameMatches || roleMatches) && specializationMatches;
     });
 
     const renderStars = (rating: number) => {
         const fullStars = Math.floor(rating);
-        const halfStar = rating % 1 >= 0.25 && rating % 1 < 0.75; // Logika dla półgwiazdki (prosta)
+        const halfStar = rating % 1 >= 0.25 && rating % 1 < 0.75;
         const fullIfAlmost = rating % 1 >= 0.75;
         let renderedStars = [];
 
         for (let i = 0; i < 5; i++) {
-            if (i < fullStars) {
+            if (i < fullStars || (i === fullStars && fullIfAlmost)) {
                 renderedStars.push(<Star key={`full-${i}`} className="h-5 w-5 text-yellow-400 fill-yellow-400" />);
-            } else if (i === fullStars && fullIfAlmost) {
-                renderedStars.push(<Star key={`full-almost-${i}`} className="h-5 w-5 text-yellow-400 fill-yellow-400" />);
-            }
-            else if (i === fullStars && halfStar) {
-                // Dla uproszczenia, użyjemy pełnej gwiazdki z mniejszym wypełnieniem lub innej ikony
-                // Tutaj użyjemy tej samej logiki co dla prawie pełnej, lub text-yellow-400 bez fill
-                renderedStars.push(<Star key={`half-${i}`} className="h-5 w-5 text-yellow-400" />); // Półprzezroczysta lub tylko obrys
+            } else if (i === fullStars && halfStar) {
+                renderedStars.push(<Star key={`half-${i}`} className="h-5 w-5 text-yellow-400" />);
             } else {
                 renderedStars.push(<Star key={`empty-${i}`} className="h-5 w-5 text-gray-300" />);
             }
@@ -208,13 +200,16 @@ const Team = () => {
                                     onClick={() => setSelectedMemberForModal(member)}
                                     style={{ animationDelay: `${0.05 * index}s` }}
                                 >
-                                    <div className="h-64 overflow-hidden relative">
-                                        <img
-                                            src={member.image || placeholderSvg}
-                                            alt={member.name}
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            onError={(e) => { (e.target as HTMLImageElement).src = placeholderSvg; }}
-                                        />
+                                    <div className="h-64 overflow-hidden relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                        {member.image ? (
+                                            <img
+                                                src={member.image}
+                                                alt={member.name}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <UserIcon className="h-24 w-24 text-slate-400 dark:text-slate-500" />
+                                        )}
                                     </div>
                                     <div className="p-5">
                                         <h3 className="text-xl font-semibold mb-1 text-gray-800 group-hover:text-barber transition-colors">
@@ -263,8 +258,7 @@ const Team = () => {
             </section>
 
             <Dialog open={!!selectedMemberForModal} onOpenChange={(open) => !open && setSelectedMemberForModal(null)}>
-                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 sm:p-2"> {/* Dodano p-0 sm:p-2 dla lepszego wyglądu na mobilnych */}
-                    {/* Formalny DialogHeader dla dostępności, ukryty wizualnie */}
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
                     {detailedMemberProfile && (
                         <DialogHeader className="sr-only">
                             <DialogTitle>Details for {detailedMemberProfile.name}</DialogTitle>
@@ -280,93 +274,105 @@ const Team = () => {
                         </div>
                     ) : detailedMemberProfile ? (
                         <>
-                            <div className="relative h-56 md:h-72">
-                                <img src={detailedMemberProfile.image || placeholderSvg} alt={detailedMemberProfile.name} className="w-full h-full object-cover"
-                                     onError={(e) => { (e.target as HTMLImageElement).src = placeholderSvg; }}/>
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-                                <div className="absolute bottom-0 left-0 p-4 sm:p-6">
-                                    <h2 className="text-2xl sm:text-3xl font-bold text-white">
-                                        {detailedMemberProfile.name}
-                                    </h2>
-                                    <p className="text-md sm:text-lg text-gray-200">
-                                        {detailedMemberProfile.role} • {detailedMemberProfile.experience} Years Exp.
-                                    </p>
-                                    <div className="flex mt-1">{renderStars(detailedMemberProfile.rating)}</div>
+                            <div className="p-6">
+                                <div className="flex flex-col sm:flex-row items-start gap-5 mb-6">
+                                    <div className="flex-shrink-0">
+                                        {detailedMemberProfile.image ? (
+                                            <img
+                                                src={detailedMemberProfile.image}
+                                                alt={detailedMemberProfile.name}
+                                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
+                                            />
+                                        ) : (
+                                            <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border-4 border-white shadow-md">
+                                                <UserIcon className="w-12 h-12 text-slate-400 dark:text-slate-500" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-2 sm:mt-0">
+                                        <h2 className="text-3xl font-bold text-gray-900">{detailedMemberProfile.name}</h2>
+                                        <p className="text-lg text-gray-600 mt-1">
+                                            {detailedMemberProfile.role} • {detailedMemberProfile.experience} Years Exp.
+                                        </p>
+                                        <div className="flex mt-2">{renderStars(detailedMemberProfile.rating)}</div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-5 gap-6">
-                                <div className="md:col-span-3 space-y-6">
-                                    <div>
-                                        <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800">About {detailedMemberProfile.name.split(" ")[0]}</h3>
-                                        <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{detailedMemberProfile.bio || "No biography provided."}</p>
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-6">
+                                    <div className="md:col-span-3 space-y-6">
+                                        <div>
+                                            <h3 className="text-xl font-semibold mb-2 text-gray-800">About {detailedMemberProfile.name.split(" ")[0]}</h3>
+                                            <p className="text-base text-gray-600 leading-relaxed">{detailedMemberProfile.bio || "No biography provided."}</p>
+                                        </div>
+                                        {detailedMemberProfile.specializations && detailedMemberProfile.specializations.length > 0 && (
+                                            <div>
+                                                <h3 className="text-xl font-semibold mb-3 text-gray-800">Specializations</h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {detailedMemberProfile.specializations.map((spec) => (
+                                                        <Badge key={spec} variant="secondary" className="bg-barber/10 text-barber text-sm">{spec.charAt(0).toUpperCase() + spec.slice(1)}</Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {detailedMemberProfile.specializations && detailedMemberProfile.specializations.length > 0 && (
-                                        <div>
-                                            <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800">Specializations</h3>
-                                            <div className="flex flex-wrap gap-2">
-                                                {detailedMemberProfile.specializations.map((spec) => (
-                                                    <Badge key={spec} variant="secondary" className="bg-barber/10 text-barber text-xs sm:text-sm">{spec.charAt(0).toUpperCase() + spec.slice(1)}</Badge>
-                                                ))}
+                                    <div className="md:col-span-2 space-y-6">
+                                        {detailedMemberProfile.certifications && detailedMemberProfile.certifications.length > 0 && (
+                                            <div>
+                                                <h3 className="text-xl font-semibold mb-3 text-gray-800 flex items-center">
+                                                    <Award className="h-5 w-5 mr-2 text-barber" /> Certifications
+                                                </h3>
+                                                <ul className="space-y-1.5 text-sm text-gray-600">
+                                                    {detailedMemberProfile.certifications.map((cert, index) => (
+                                                        <li key={index} className="flex items-center">
+                                                            <CheckCircle className="h-4 w-4 mr-2 text-green-500 flex-shrink-0" /> {cert}
+                                                        </li>
+                                                    ))}
+                                                </ul>
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="md:col-span-2 space-y-6">
-                                    {detailedMemberProfile.certifications && detailedMemberProfile.certifications.length > 0 && (
+                                        )}
                                         <div>
-                                            <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800 flex items-center">
-                                                <Award className="h-5 w-5 mr-2 text-barber" /> Certifications
-                                            </h3>
-                                            <ul className="space-y-1.5 text-sm text-gray-600">
-                                                {detailedMemberProfile.certifications.map((cert, index) => (
-                                                    <li key={index} className="flex items-center">
-                                                        <CheckCircle className="h-4 w-4 mr-2 text-green-500 flex-shrink-0" /> {cert}
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                            <h3 className="text-xl font-semibold mb-3 text-gray-800">Contact</h3>
+                                            {detailedMemberProfile.email && (
+                                                <p className="flex items-center mb-1 text-sm">
+                                                    <Mail className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
+                                                    <a href={`mailto:${detailedMemberProfile.email}`} className="text-barber hover:underline truncate">
+                                                        {detailedMemberProfile.email}
+                                                    </a>
+                                                </p>
+                                            )}
+                                            {detailedMemberProfile.phone && (
+                                                <p className="flex items-center text-sm">
+                                                    <Phone className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
+                                                    <a href={`tel:${detailedMemberProfile.phone}`} className="text-barber hover:underline">
+                                                        {detailedMemberProfile.phone}
+                                                    </a>
+                                                </p>
+                                            )}
                                         </div>
-                                    )}
-                                    <div>
-                                        <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800">Contact</h3>
-                                        {detailedMemberProfile.email && (
-                                            <p className="flex items-center mb-1 text-sm">
-                                                <Mail className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
-                                                <a href={`mailto:${detailedMemberProfile.email}`} className="text-barber hover:underline truncate">
-                                                    {detailedMemberProfile.email}
-                                                </a>
-                                            </p>
-                                        )}
-                                        {detailedMemberProfile.phone && (
-                                            <p className="flex items-center text-sm">
-                                                <Phone className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
-                                                <a href={`tel:${detailedMemberProfile.phone}`} className="text-barber hover:underline">
-                                                    {detailedMemberProfile.phone}
-                                                </a>
-                                            </p>
-                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             {detailedMemberProfile.portfolioImages && detailedMemberProfile.portfolioImages.length > 0 && (
-                                <div className="px-4 sm:px-6 pb-6">
-                                    <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-800">Portfolio</h3>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                        {detailedMemberProfile.portfolioImages.slice(0, 8).map((img, index) => ( // Pokaż do 8 zdjęć
-                                            <div key={index} className="aspect-square rounded-lg overflow-hidden shadow-sm">
-                                                <img src={img || placeholderSvg} alt={`Portfolio ${index + 1}`} className="w-full h-full object-cover"
-                                                     onError={(e) => { (e.target as HTMLImageElement).src = placeholderSvg; }}/>
+                                <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-5">
+                                    <h3 className="text-xl font-semibold mb-4 text-gray-800">Portfolio</h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                        {detailedMemberProfile.portfolioImages.slice(0, 8).map((img, index) => (
+                                            <div key={index} className="aspect-square rounded-lg overflow-hidden shadow-sm bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                                                {img ? (
+                                                    <img src={img} alt={`Portfolio ${index + 1}`} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Camera className="w-8 h-8 text-slate-400 dark:text-slate-600" />
+                                                )}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            <div className="p-4 sm:p-6 border-t sticky bottom-0 bg-white"> {/* Przyklejony footer modala */}
-                                <Button asChild className="w-full bg-barber hover:bg-barber-muted text-white">
+                            <div className="p-4 border-t sticky bottom-0 bg-white/80 backdrop-blur-sm">
+                                <Button asChild className="w-full bg-barber hover:bg-barber-muted text-white text-lg py-6">
                                     <Link to={`/booking?barberId=${detailedMemberProfile.id}`}>
                                         <CalendarIcon className="h-5 w-5 mr-2" /> Book with {detailedMemberProfile.name.split(" ")[0]}
                                     </Link>

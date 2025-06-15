@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Card,
     CardContent,
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import MuiCalendar from "@/components/ui/mui-calendar";
 import {
     Table,
     TableBody,
@@ -15,7 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2, Filter, SortAsc, SortDesc, Calendar as CalendarIcon } from "lucide-react";
+import { Pencil, Trash2, Filter, X, Calendar as CalendarIcon } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -31,7 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -45,8 +46,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import Calendar from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
 
+// --- Typy i schematy ---
 interface Appointment {
     id: number;
     appointment_time: string;
@@ -58,123 +60,134 @@ interface Appointment {
     service_name: string;
     service_price: number;
     created_at: string;
-    client_id: number; // Zaktualizowane na wymagane pole
-    barber_id: number; // Zaktualizowane na wymagane pole
-    service_id: number; // Zaktualizowane na wymagane pole
+    client_id: number;
+    barber_id: number;
+    service_id: number;
+}
+
+interface SelectOption {
+    id: number;
+    first_name: string;
+    last_name: string;
+}
+
+interface ServiceOption {
+    id: number;
+    name: string;
 }
 
 const appointmentFormSchema = z.object({
     client_id: z.string().min(1, "Client is required"),
     barber_id: z.string().min(1, "Barber is required"),
     service_id: z.string().min(1, "Service is required"),
-    appointment_date: z.date(),
-    appointment_time: z.string().min(1, "Appointment time is required"),
-    status: z.enum(["pending", "confirmed", "completed", "canceled"]),
+    appointment_date: z.date({ required_error: "Date is required." }),
+    appointment_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:mm)"),
+    status: z.enum(["pending", "confirmed", "completed", "canceled", "no-show"]),
 });
 
+// --- Komponent główny ---
 const AdminAppointments = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [clients, setClients] = useState<any[]>([]);
-    const [barbers, setBarbers] = useState<any[]>([]);
-    const [services, setServices] = useState<any[]>([]);
-    const [statusFilter, setStatusFilter] = useState<string>("all");
-    const [sortField, setSortField] = useState<string>("appointment_time");
-    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+    const [clients, setClients] = useState<SelectOption[]>([]);
+    const [barbers, setBarbers] = useState<SelectOption[]>([]);
+    const [services, setServices] = useState<ServiceOption[]>([]);
+
+    const [filters, setFilters] = useState({
+        status: 'all',
+        clientId: 'all',
+        barberId: 'all',
+        serviceId: 'all',
+        date: null as Date | null,
+    });
+
     const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isFetching, setIsFetching] = useState(false);
 
     const form = useForm<z.infer<typeof appointmentFormSchema>>({
         resolver: zodResolver(appointmentFormSchema),
-        defaultValues: {
-            client_id: "",
-            barber_id: "",
-            service_id: "",
-            appointment_date: new Date(),
-            appointment_time: "",
-            status: "pending",
-        },
     });
 
+    // --- Pobieranie danych dla filtrów ---
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchFilterData = async () => {
             try {
-                const [appointmentsRes, clientsRes, barbersRes, servicesRes] = await Promise.all([
-                    fetch('http://localhost:3000/api/admin/appointments', {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                    }),
-                    fetch('http://localhost:3000/api/admin/users?role=client', { // Zakładam endpoint z filtrem roli
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                    }),
-                    fetch('http://localhost:3000/api/admin/users?role=barber', { // Zakładam endpoint z filtrem roli
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                    }),
-                    fetch('http://localhost:3000/api/admin/services', {
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                    }),
+                const token = localStorage.getItem('token');
+                const headers = { Authorization: `Bearer ${token}` };
+
+                const [clientsRes, barbersRes, servicesRes] = await Promise.all([
+                    fetch('http://localhost:3000/api/admin/users?role=user', { headers }),
+                    fetch('http://localhost:3000/api/admin/barbers-for-select', { headers }),
+                    fetch('http://localhost:3000/api/admin/services', { headers }),
                 ]);
 
-                if (!appointmentsRes.ok || !clientsRes.ok || !barbersRes.ok || !servicesRes.ok) {
-                    throw new Error('Failed to fetch data');
-                }
+                if (!clientsRes.ok || !barbersRes.ok || !servicesRes.ok) throw new Error('Failed to fetch filter data');
 
-                const appointmentsData = await appointmentsRes.json();
-                const clientsData = await clientsRes.json();
-                const barbersData = await barbersRes.json();
-                const servicesData = await servicesRes.json();
-
-                setAppointments(appointmentsData);
-                setClients(clientsData);
-                setBarbers(barbersData);
-                setServices(servicesData);
-                setLoading(false);
+                setClients(await clientsRes.json());
+                setBarbers(await barbersRes.json());
+                setServices(await servicesRes.json());
             } catch (error) {
-                console.error('Error fetching data:', error);
-                setLoading(false);
+                toast.error("Could not load filter options.");
+                console.error('Error fetching filter data:', error);
             }
         };
-
-        fetchData();
+        fetchFilterData();
     }, []);
 
-    const handleSortChange = (field: string) => {
-        if (sortField === field) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortField(field);
-            setSortDirection("asc");
+    // --- Pobieranie wizyt na podstawie filtrów ---
+    const fetchAppointments = useCallback(async () => {
+        setIsFetching(true);
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { Authorization: `Bearer ${token}` };
+
+            const params = new URLSearchParams();
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value && value !== 'all') {
+                    if (key === 'date' && value instanceof Date) {
+                        params.append(key, value.toISOString().split('T')[0]);
+                    } else if (key !== 'date') {
+                        params.append(key, String(value));
+                    }
+                }
+            });
+
+            const response = await fetch(`http://localhost:3000/api/admin/appointments?${params.toString()}`, { headers });
+            if (!response.ok) throw new Error('Failed to fetch appointments');
+
+            setAppointments(await response.json());
+
+        } catch (error) {
+            toast.error("Could not fetch appointments.");
+            console.error('Error fetching appointments:', error);
+        } finally {
+            setIsFetching(false);
+            setLoading(false);
         }
+    }, [filters]);
+
+    useEffect(() => {
+        fetchAppointments();
+    }, [fetchAppointments]);
+
+    const handleFilterChange = (filterName: keyof typeof filters, value: string | Date | null) => {
+        setFilters(prev => ({ ...prev, [filterName]: value }));
     };
 
-    const filteredAndSortedAppointments = [...appointments]
-        .filter(appointment => statusFilter === "all" || appointment.status === statusFilter)
-        .sort((a, b) => {
-            const valueA = a[sortField as keyof Appointment];
-            const valueB = b[sortField as keyof Appointment];
-            if (valueA < valueB) return sortDirection === "asc" ? -1 : 1;
-            if (valueA > valueB) return sortDirection === "asc" ? 1 : -1;
-            return 0;
-        });
-
+    // --- Logika edycji i usuwania ---
     const handleEditClick = (appointment: Appointment) => {
         setEditingAppointment(appointment);
-        const appointmentDate = new Date(appointment.appointment_time);
-        const hours = appointmentDate.getHours().toString().padStart(2, '0');
-        const minutes = appointmentDate.getMinutes().toString().padStart(2, '0');
+        const appointmentDate = parseISO(appointment.appointment_time);
         form.reset({
             client_id: appointment.client_id.toString(),
             barber_id: appointment.barber_id.toString(),
             service_id: appointment.service_id.toString(),
             appointment_date: appointmentDate,
-            appointment_time: `${hours}:${minutes}`,
-            status: appointment.status as "pending" | "confirmed" | "completed" | "canceled",
+            appointment_time: format(appointmentDate, "HH:mm"),
+            status: appointment.status as "pending" | "confirmed" | "completed" | "canceled" | "no-show",
         });
-    };
-
-    const handleDeleteClick = (appointment: Appointment) => {
-        setSelectedAppointment(appointment);
-        setIsDeleteModalOpen(true);
     };
 
     const onSubmit = async (data: z.infer<typeof appointmentFormSchema>) => {
@@ -183,331 +196,206 @@ const AdminAppointments = () => {
             const dateTime = new Date(data.appointment_date);
             const [hours, minutes] = data.appointment_time.split(':').map(Number);
             dateTime.setHours(hours, minutes, 0, 0);
-            const appointmentData = {
-                client_id: parseInt(data.client_id),
-                barber_id: parseInt(data.barber_id),
-                service_id: parseInt(data.service_id),
-                appointment_time: dateTime.toISOString(),
-                status: data.status,
-            };
+
             const response = await fetch(`http://localhost:3000/api/admin/appointments/${editingAppointment.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
-                body: JSON.stringify(appointmentData),
+                body: JSON.stringify({ ...data, appointment_time: dateTime.toISOString() }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to update appointment');
             }
-
             toast.success('Appointment updated successfully');
             setEditingAppointment(null);
-            const updatedAppointments = await fetch('http://localhost:3000/api/admin/appointments', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            }).then(res => res.json());
-            setAppointments(updatedAppointments);
+            fetchAppointments();
         } catch (error: any) {
-            console.error('Error updating appointment:', error.message);
             toast.error(`Error: ${error.message}`);
         }
     };
 
-    const handleDelete = async () => {
-        if (!selectedAppointment) return;
+    const handleDeleteClick = (appointment: Appointment) => {
+        setAppointmentToDelete(appointment);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!appointmentToDelete) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/appointments/${selectedAppointment.id}`, {
+            const response = await fetch(`http://localhost:3000/api/admin/appointments/${appointmentToDelete.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to delete appointment');
-            }
-
-            setAppointments(appointments.filter(appointment => appointment.id !== selectedAppointment.id));
-            setIsDeleteModalOpen(false);
-            setSelectedAppointment(null);
+            if (!response.ok) throw new Error('Failed to delete appointment');
             toast.success('Appointment deleted successfully');
+            setIsDeleteModalOpen(false);
+            setAppointmentToDelete(null);
+            fetchAppointments();
         } catch (error: any) {
-            console.error('Error deleting appointment:', error.message);
             toast.error(`Error: ${error.message}`);
         }
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
-            </div>
-        );
+        return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div></div>;
     }
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Appointments Management</CardTitle>
-                <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                    <div className="flex items-center">
-                        <Filter className="w-4 h-4 mr-2 text-gray-500" />
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[150px]">
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All statuses</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="confirmed">Confirmed</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="canceled">Canceled</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4 p-4 border rounded-lg bg-gray-50/50">
+                    <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+                        <SelectTrigger><SelectValue placeholder="Filter by status" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="canceled">Canceled</SelectItem>
+                            <SelectItem value="no-show">No-Show</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={filters.clientId} onValueChange={(value) => handleFilterChange('clientId', value)}>
+                        <SelectTrigger><SelectValue placeholder="Filter by client" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Clients</SelectItem>
+                            {clients.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.first_name} {c.last_name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filters.barberId} onValueChange={(value) => handleFilterChange('barberId', value)}>
+                        <SelectTrigger><SelectValue placeholder="Filter by barber" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Barbers</SelectItem>
+                            {barbers.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.first_name} {b.last_name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filters.serviceId} onValueChange={(value) => handleFilterChange('serviceId', value)}>
+                        <SelectTrigger><SelectValue placeholder="Filter by service" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Services</SelectItem>
+                            {services.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal relative">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {filters.date ? format(filters.date, "PPP") : <span>Filter by date</span>}
+                                {filters.date && <X className="h-4 w-4 absolute right-2 text-gray-500 hover:text-gray-800" onClick={(e) => { e.stopPropagation(); handleFilterChange('date', null); }} />}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <MuiCalendar
+                                value={filters.date}
+                                onChange={(date) => handleFilterChange('date', date)}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="hidden md:block overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="cursor-pointer" onClick={() => handleSortChange("appointment_time")}>
-                                    Date & Time
-                                    {sortField === "appointment_time" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
-                                </TableHead>
-                                <TableHead>Client</TableHead>
-                                <TableHead>Barber</TableHead>
-                                <TableHead>Service</TableHead>
-                                <TableHead className="text-right">Price</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => handleSortChange("status")}>
-                                    Status
-                                    {sortField === "status" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
-                                </TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => handleSortChange("created_at")}>
-                                    Created At
-                                    {sortField === "created_at" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
-                                </TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredAndSortedAppointments.map((appointment) => (
-                                <TableRow key={appointment.id}>
-                                    <TableCell>{format(new Date(appointment.appointment_time), 'MMM dd, yyyy HH:mm')}</TableCell>
-                                    <TableCell>{appointment.client_first_name} {appointment.client_last_name}</TableCell>
-                                    <TableCell>{appointment.barber_first_name} {appointment.barber_last_name}</TableCell>
-                                    <TableCell>{appointment.service_name}</TableCell>
-                                    <TableCell className="text-right">${appointment.service_price}</TableCell>
-                                    <TableCell>{appointment.status}</TableCell>
-                                    <TableCell>{format(new Date(appointment.created_at), 'MMM dd, yyyy')}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(appointment)}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteClick(appointment)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-                <div className="md:hidden space-y-4">
-                    {filteredAndSortedAppointments.map((appointment) => (
-                        <div key={appointment.id} className="border rounded-md p-4 space-y-3">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-medium">{format(new Date(appointment.appointment_time), 'MMM dd, yyyy HH:mm')}</h3>
-                                    <p className="text-sm text-gray-500">{appointment.service_name}</p>
-                                </div>
-                                <span className="px-2 py-1 rounded-full text-xs font-medium">{appointment.status}</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <p className="text-gray-500">Client:</p>
-                                    <p>{appointment.client_first_name} {appointment.client_last_name}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-500">Barber:</p>
-                                    <p>{appointment.barber_first_name} {appointment.barber_last_name}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-500">Price:</p>
-                                    <p>${appointment.service_price}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-500">Created:</p>
-                                    <p>{format(new Date(appointment.created_at), 'MMM dd, yyyy')}</p>
-                                </div>
-                            </div>
-                            <div className="flex justify-end space-x-2 pt-2 border-t">
-                                <Button variant="outline" size="sm" onClick={() => handleEditClick(appointment)}>
-                                    <Pencil className="h-4 w-4 mr-1" />
-                                    Edit
-                                </Button>
-                                <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDeleteClick(appointment)}>
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Delete
-                                </Button>
-                            </div>
+                {isFetching ? (
+                    <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div></div>
+                ) : (
+                    <>
+                        {/* WIDOK NA KOMPUTERY */}
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date & Time</TableHead>
+                                        <TableHead>Client</TableHead>
+                                        <TableHead>Barber</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead className="text-right">Price</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {appointments.length > 0 ? appointments.map((appointment) => (
+                                        <TableRow key={appointment.id}>
+                                            <TableCell>{format(parseISO(appointment.appointment_time), 'MMM dd, yyyy HH:mm')}</TableCell>
+                                            <TableCell>{appointment.client_first_name} {appointment.client_last_name}</TableCell>
+                                            <TableCell>{appointment.barber_first_name} {appointment.barber_last_name}</TableCell>
+                                            <TableCell>{appointment.service_name}</TableCell>
+                                            <TableCell className="text-right">${appointment.service_price.toFixed(2)}</TableCell>
+                                            <TableCell><Badge variant={appointment.status === 'completed' ? 'default' : appointment.status === 'canceled' ? 'destructive' : 'secondary'}>{appointment.status}</Badge></TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(appointment)}><Pencil className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteClick(appointment)}><Trash2 className="h-4 w-4" /></Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow><TableCell colSpan={7} className="text-center h-24">No appointments found for the selected filters.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </div>
-                    ))}
-                </div>
+
+                        {/* WIDOK NA URZĄDZENIA MOBILNE */}
+                        <div className="md:hidden space-y-4">
+                            {appointments.length > 0 ? appointments.map((appointment) => (
+                                <div key={appointment.id} className="border rounded-lg p-4 space-y-3 shadow-sm">
+                                    <div className="flex justify-between items-start font-medium">
+                                        <span className="text-gray-800">{appointment.client_first_name} {appointment.client_last_name}</span>
+                                        <Badge variant={appointment.status === 'completed' ? 'default' : appointment.status === 'canceled' ? 'destructive' : 'secondary'}>{appointment.status}</Badge>
+                                    </div>
+                                    <div className="text-sm text-gray-600 space-y-2">
+                                        <p><strong className="font-medium text-gray-700">Date:</strong> {format(parseISO(appointment.appointment_time), 'MMM dd, yyyy HH:mm')}</p>
+                                        <p><strong className="font-medium text-gray-700">Barber:</strong> {appointment.barber_first_name} {appointment.barber_last_name}</p>
+                                        <p><strong className="font-medium text-gray-700">Service:</strong> {appointment.service_name} (${appointment.service_price.toFixed(2)})</p>
+                                    </div>
+                                    <div className="flex justify-end space-x-2 pt-3 border-t mt-3">
+                                        <Button variant="outline" size="sm" onClick={() => handleEditClick(appointment)}>
+                                            <Pencil className="h-4 w-4 mr-1.5" /> Edit
+                                        </Button>
+                                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(appointment)}>
+                                            <Trash2 className="h-4 w-4 mr-1.5" /> Delete
+                                        </Button>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="text-center py-10 text-gray-500">
+                                    <p>No appointments found for the selected filters.</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </CardContent>
 
-            {/* Edit Appointment Dialog */}
+            {/* Edit Dialog */}
             <Dialog open={!!editingAppointment} onOpenChange={(open) => !open && setEditingAppointment(null)}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Edit Appointment</DialogTitle>
-                        <DialogDescription>Update appointment details.</DialogDescription>
-                    </DialogHeader>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Edit Appointment</DialogTitle></DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="client_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Client</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select client" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {clients.map((client) => (
-                                                    <SelectItem key={client.id} value={client.id.toString()}>
-                                                        {client.first_name} {client.last_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="barber_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Barber</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select barber" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {barbers.map((barber) => (
-                                                    <SelectItem key={barber.id} value={barber.id.toString()}>
-                                                        {barber.first_name} {barber.last_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="service_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Service</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select service" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {services.map((service) => (
-                                                    <SelectItem key={service.id} value={service.id.toString()}>
-                                                        {service.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="appointment_date"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Date</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={field.value}
-                                                    onSelect={field.onChange}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="appointment_time"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Time</FormLabel>
-                                        <FormControl>
-                                            <Input type="time" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="pending">Pending</SelectItem>
-                                                <SelectItem value="confirmed">Confirmed</SelectItem>
-                                                <SelectItem value="completed">Completed</SelectItem>
-                                                <SelectItem value="canceled">Canceled</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <FormField control={form.control} name="client_id" render={({ field }) => ( <FormItem><FormLabel>Client</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger></FormControl><SelectContent>{clients.map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.first_name} {c.last_name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name="barber_id" render={({ field }) => ( <FormItem><FormLabel>Barber</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select barber" /></SelectTrigger></FormControl><SelectContent>{barbers.map((b) => (<SelectItem key={b.id} value={String(b.id)}>{b.first_name} {b.last_name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name="service_id" render={({ field }) => ( <FormItem><FormLabel>Service</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select service" /></SelectTrigger></FormControl><SelectContent>{services.map((s) => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+
+                            <FormField control={form.control} name="appointment_date" render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Date</FormLabel>
+                                    <MuiCalendar
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                    />
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+
+                            <FormField control={form.control} name="appointment_time" render={({ field }) => ( <FormItem><FormLabel>Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl><SelectContent><SelectItem value="pending">Pending</SelectItem><SelectItem value="confirmed">Confirmed</SelectItem><SelectItem value="completed">Completed</SelectItem><SelectItem value="canceled">Canceled</SelectItem><SelectItem value="no-show">No-show</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setEditingAppointment(null)}>
-                                    Cancel
-                                </Button>
+                                <Button type="button" variant="outline" onClick={() => setEditingAppointment(null)}>Cancel</Button>
                                 <Button type="submit">Save Changes</Button>
                             </DialogFooter>
                         </form>
@@ -515,27 +403,13 @@ const AdminAppointments = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Delete Dialog */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Appointment</DialogTitle>
-                        <DialogDescription>Are you sure you want to delete this appointment? This action cannot be undone.</DialogDescription>
-                    </DialogHeader>
-                    {selectedAppointment && (
-                        <div>
-                            <p><strong>Client:</strong> {selectedAppointment.client_first_name} {selectedAppointment.client_last_name}</p>
-                            <p><strong>Barber:</strong> {selectedAppointment.barber_first_name} {selectedAppointment.barber_last_name}</p>
-                            <p><strong>Service:</strong> {selectedAppointment.service_name}</p>
-                        </div>
-                    )}
+                    <DialogHeader><DialogTitle>Delete Appointment</DialogTitle><DialogDescription>Are you sure? This action cannot be undone.</DialogDescription></DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={handleDelete}>
-                            Delete
-                        </Button>
+                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
