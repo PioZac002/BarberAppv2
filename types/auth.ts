@@ -7,7 +7,7 @@ export interface User {
     role: UserRole;
     firstName?: string;
     lastName?: string;
-    // phone?: string; // Backend zwraca phone, więc można go tu dodać, jeśli potrzebny w kontekście
+    phone?: string; // Backend zwraca phone, więc można go tu dodać, jeśli potrzebny w kontekście
 }
 
 export interface AuthContextType {

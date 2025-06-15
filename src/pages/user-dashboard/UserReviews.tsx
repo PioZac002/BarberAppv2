@@ -87,10 +87,10 @@ const UserReviews = () => {
             setIsLoading(true);
             try {
                 const [reviewsRes, appointmentsToReviewRes] = await Promise.all([
-                    fetch("http://localhost:3000/api/user/reviews", {
+                    fetch(`${import.meta.env.VITE_API_URL}/api/user/reviews`, {
                         headers: { Authorization: `Bearer ${token}` },
                     }),
-                    fetch("http://localhost:3000/api/user/appointments/completed-unreviewed", {
+                    fetch(`${import.meta.env.VITE_API_URL}/api/user/appointments/completed-unreviewed`, {
                         headers: { Authorization: `Bearer ${token}` },
                     }),
                 ]);
@@ -160,7 +160,7 @@ const UserReviews = () => {
         }
 
         try {
-            const response = await fetch("http://localhost:3000/api/user/reviews", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/reviews`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

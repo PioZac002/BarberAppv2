@@ -56,7 +56,7 @@ const UserAppointments = () => {
 
         const fetchAppointments = async () => {
             setIsDataLoading(true);
-            let url = "http://localhost:3000/api/user/appointments";
+            let url = `${import.meta.env.VITE_API_URL}/api/user/appointments`;
             if (filter !== "all") {
                 url += `?status=${filter}`;
             }
@@ -104,7 +104,7 @@ const UserAppointments = () => {
             return;
         }
         try {
-            const response = await fetch(`http://localhost:3000/api/user/appointments/${id}/cancel`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/appointments/${id}/cancel`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` },
             });

@@ -41,7 +41,7 @@ const UserNotifications = () => {
         const fetchNotifications = async () => {
             setIsDataLoading(true);
             try {
-                const response = await fetch("http://localhost:3000/api/user/notifications", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
@@ -66,7 +66,7 @@ const UserNotifications = () => {
     const markAsRead = async (id: number) => {
         if (!token) { toast.error("Authentication error."); return; }
         try {
-            const response = await fetch(`http://localhost:3000/api/user/notifications/${id}/read`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications/${id}/read`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -87,7 +87,7 @@ const UserNotifications = () => {
     const markAllAsRead = async () => {
         if (!token || unreadCount === 0) return;
         try {
-            const response = await fetch("http://localhost:3000/api/user/notifications/read-all", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications/read-all`, {
                 method: "PUT",
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -108,7 +108,7 @@ const UserNotifications = () => {
         if (!token) { toast.error("Authentication error."); return; }
         if (!window.confirm("Are you sure you want to delete this notification?")) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/user/notifications/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });

@@ -84,7 +84,7 @@ const Booking = () => {
             const fetchServices = async () => {
                 setIsLoadingServices(true);
                 try {
-                    const response = await fetch("http://localhost:3000/api/booking/services", {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/booking/services`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     if (!response.ok) throw new Error("Failed to fetch services");
@@ -106,7 +106,7 @@ const Booking = () => {
             const fetchBarbers = async () => {
                 setIsLoadingBarbers(true);
                 try {
-                    const response = await fetch("http://localhost:3000/api/booking/barbers", {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/booking/barbers`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     if (!response.ok) throw new Error("Failed to fetch barbers");
@@ -141,7 +141,7 @@ const Booking = () => {
                         serviceId: String(formData.serviceId),
                         barberId: String(formData.barberId),
                     });
-                    const response = await fetch(`http://localhost:3000/api/booking/availability?${queryParams.toString()}`, {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/booking/availability?${queryParams.toString()}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     if (!response.ok) throw new Error("Failed to fetch time slots");
@@ -233,7 +233,7 @@ const Booking = () => {
         };
 
         try {
-            const response = await fetch("http://localhost:3000/api/booking/create", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/booking/create`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

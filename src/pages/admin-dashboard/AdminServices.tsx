@@ -80,7 +80,7 @@ const AdminServices = () => {
     useEffect(() => {
         const fetchServices = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/admin/services', {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/services`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
                 if (!response.ok) throw new Error('Failed to fetch services');
@@ -115,7 +115,7 @@ const AdminServices = () => {
 
     const handleAddService = async (data: z.infer<typeof serviceFormSchema>) => {
         try {
-            const response = await fetch('http://localhost:3000/api/admin/services', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/services`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ const AdminServices = () => {
     const handleEditService = async (data: z.infer<typeof serviceFormSchema>) => {
         if (!selectedService) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/services/${selectedService.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/services/${selectedService.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -161,7 +161,7 @@ const AdminServices = () => {
     const handleDelete = async () => {
         if (!selectedService) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/services/${selectedService.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/services/${selectedService.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });

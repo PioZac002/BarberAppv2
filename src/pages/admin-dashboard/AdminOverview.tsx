@@ -84,9 +84,9 @@ const AdminOverview = () => {
             try {
                 const headers = { Authorization: `Bearer ${token}` };
                 const [statsRes, todaysDataRes, notificationsRes] = await Promise.all([
-                    fetch('http://localhost:3000/api/admin/stats', { headers }),
-                    fetch('http://localhost:3000/api/admin/reports-data?timeRange=1day', { headers }),
-                    fetch('http://localhost:3000/api/admin/notifications?limit=5', { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/stats`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/reports-data?timeRange=1day`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications?limit=5`, { headers }),
                 ]);
 
                 if (statsRes.ok) {

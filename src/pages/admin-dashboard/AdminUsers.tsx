@@ -82,7 +82,7 @@ const AdminUsers = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:3000/api/admin/users', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
             if (!response.ok) throw new Error('Failed to fetch users');
@@ -121,7 +121,7 @@ const AdminUsers = () => {
     const onSubmit = async (data: z.infer<typeof userFormSchema>) => {
         if (!editingUser) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/users/${editingUser.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${editingUser.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ const AdminUsers = () => {
     const handleDeleteConfirm = async () => {
         if (!userToDelete) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/users/${userToDelete.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userToDelete.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });

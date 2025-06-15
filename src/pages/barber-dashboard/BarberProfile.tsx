@@ -85,7 +85,7 @@ const BarberProfilePage = () => { // Zmieniono nazwę komponentu dla spójności
             if (!token) return;
             setIsLoadingData(true);
             try {
-                const response = await fetch("http://localhost:3000/api/barber/profile", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
@@ -131,7 +131,7 @@ const BarberProfilePage = () => { // Zmieniono nazwę komponentu dla spójności
                 specialties: editableBarberData.specialties.split(',').map(s => s.trim()).filter(s => s),
             };
 
-            const response = await fetch("http://localhost:3000/api/barber/profile", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/profile`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

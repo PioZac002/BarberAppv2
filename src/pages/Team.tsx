@@ -66,7 +66,7 @@ const Team = () => {
         const fetchTeamMembers = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch("http://localhost:3000/api/public/team/barbers");
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/public/team/barbers`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch team members");
                 }
@@ -88,7 +88,7 @@ const Team = () => {
                 setIsModalLoading(true);
                 setDetailedMemberProfile(null);
                 try {
-                    const response = await fetch(`http://localhost:3000/api/public/team/barbers/${selectedMemberForModal.id}/details`);
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/public/team/barbers/${selectedMemberForModal.id}/details`);
                     if (!response.ok) {
                         throw new Error(`Failed to fetch details for ${selectedMemberForModal.name}`);
                     }

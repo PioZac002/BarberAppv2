@@ -59,7 +59,7 @@ const AdminNotificationsPage = () => {
         if (!token) return;
         setIsLoading(true);
         try {
-            const response = await fetch("http://localhost:3000/api/admin/notifications", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) throw new Error("Nie udało się pobrać powiadomień");
@@ -91,7 +91,7 @@ const AdminNotificationsPage = () => {
         const originalNotifications = [...notifications];
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n)); // Optimistic update
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/notifications/${id}/read`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -108,7 +108,7 @@ const AdminNotificationsPage = () => {
         const originalNotifications = [...notifications];
         setNotifications(prev => prev.filter(n => n.id !== id)); // Optimistic update
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/notifications/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -125,7 +125,7 @@ const AdminNotificationsPage = () => {
         const originalNotifications = [...notifications];
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true }))); // Optimistic update
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/notifications/read-all`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications/read-all`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });

@@ -5,7 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCard } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
     ChartContainer,
@@ -106,7 +106,7 @@ const AdminReports = () => {
             }
 
             try {
-                const response = await fetch(`http://localhost:3000/api/admin/reports-data?${queryString}`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reports-data?${queryString}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
@@ -369,7 +369,7 @@ const AdminReports = () => {
                             onValueChange={(value: TimeRangePreset) => {
                                 setTimeRangePreset(value);
                                 if (value !== 'custom') {
-                                    setCustomDateRange([null, null]);
+                                    setCustomDateRange({ from: null, to: null });
                                 }
                             }}
                         >

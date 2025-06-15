@@ -74,9 +74,9 @@ const UserOverview = () => {
             try {
                 const headers = { Authorization: `Bearer ${token}` };
                 const [statsRes, nextApptRes, notifRes] = await Promise.all([
-                    fetch("http://localhost:3000/api/user/stats", { headers }),
-                    fetch("http://localhost:3000/api/user/appointments/next-upcoming", { headers }),
-                    fetch("http://localhost:3000/api/user/notifications", { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/user/stats`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/user/appointments/next-upcoming`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/user/notifications`, { headers }),
                 ]);
 
                 if (statsRes.ok) setUserStats(await statsRes.json());

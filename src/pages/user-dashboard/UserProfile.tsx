@@ -49,7 +49,7 @@ const UserProfile = () => {
         const fetchProfile = async () => {
             setIsDataLoading(true);
             try {
-                const response = await fetch("http://localhost:3000/api/user/profile", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
@@ -99,7 +99,7 @@ const UserProfile = () => {
             return;
         }
         try {
-            const response = await fetch("http://localhost:3000/api/user/profile", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

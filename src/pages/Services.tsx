@@ -65,7 +65,7 @@ const ServicesPage = () => { // Zmieniono nazwę komponentu
         const fetchServices = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch("http://localhost:3000/api/public/services");
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/public/services`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch services from API");
                 }

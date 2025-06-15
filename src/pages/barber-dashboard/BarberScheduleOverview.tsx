@@ -97,7 +97,7 @@ const BarberScheduleOverview = () => {
                 setIsLoadingAppointments(true);
                 const formattedDate = format(selectedDate, "yyyy-MM-dd");
                 try {
-                    const response = await fetch(`http://localhost:3000/api/barber/schedule?date=${formattedDate}`, {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/schedule?date=${formattedDate}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     if (!response.ok) {
@@ -126,7 +126,7 @@ const BarberScheduleOverview = () => {
             if(!token) return;
             setIsLoadingNotifications(true);
             try {
-                const response = await fetch("http://localhost:3000/api/barber/notifications?limit=5", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications?limit=5`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {

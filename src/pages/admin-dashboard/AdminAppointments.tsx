@@ -118,9 +118,9 @@ const AdminAppointments = () => {
                 const headers = { Authorization: `Bearer ${token}` };
 
                 const [clientsRes, barbersRes, servicesRes] = await Promise.all([
-                    fetch('http://localhost:3000/api/admin/users?role=user', { headers }),
-                    fetch('http://localhost:3000/api/admin/barbers-for-select', { headers }),
-                    fetch('http://localhost:3000/api/admin/services', { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/users?role=user`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/barbers-for-select`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/services`, { headers }),
                 ]);
 
                 if (!clientsRes.ok || !barbersRes.ok || !servicesRes.ok) throw new Error('Failed to fetch filter data');
@@ -154,7 +154,7 @@ const AdminAppointments = () => {
                 }
             });
 
-            const response = await fetch(`http://localhost:3000/api/admin/appointments?${params.toString()}`, { headers });
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/appointments?${params.toString()}`, { headers });
             if (!response.ok) throw new Error('Failed to fetch appointments');
 
             setAppointments(await response.json());
@@ -197,7 +197,7 @@ const AdminAppointments = () => {
             const [hours, minutes] = data.appointment_time.split(':').map(Number);
             dateTime.setHours(hours, minutes, 0, 0);
 
-            const response = await fetch(`http://localhost:3000/api/admin/appointments/${editingAppointment.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/appointments/${editingAppointment.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ const AdminAppointments = () => {
     const handleDeleteConfirm = async () => {
         if (!appointmentToDelete) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/appointments/${appointmentToDelete.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/appointments/${appointmentToDelete.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });

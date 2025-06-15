@@ -1,7 +1,7 @@
 // src/pages/barber-dashboard/BarberAppointments.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth"; // Zmieniono z useRequireAuth
-// import DashboardLayout from "@/components/dashboard/DashboardLayout"; // <-- USUNIĘTY IMPORT
+//import DashboardLayout from "@/components/dashboard/DashboardLayout"; // <-- USUNIĘTY IMPORT
 import {
     Card,
     CardContent,
@@ -10,12 +10,11 @@ import {
     CardDescription // Dodano CardDescription
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays as CalendarIcon, Filter, Check, X, User as UserIconLucide } from "lucide-react"; // Zmieniono alias dla User
+import { CalendarDays as CalendarIcon, Filter, Check, X, User as UserIconLucide, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCard } from "@/components/ui/table";
-import { Link } from "react-router-dom"; // Dodano, jeśli useRequireAuth przekierowuje
 import { isValid, format } from 'date-fns'; // Dodano isValid i format
 
 interface Appointment {
@@ -51,7 +50,7 @@ const BarberAppointmentsPage = () => { // Zmieniono nazwę komponentu
         const fetchAppointments = async () => {
             if (!token) return;
             setIsLoadingData(true);
-            let url = "http://localhost:3000/api/barber/appointments";
+            let url = `${import.meta.env.VITE_API_URL}/api/barber/appointments`;
             const params = new URLSearchParams();
             if (timeFilter !== "all") {
                 params.append("upcoming", timeFilter === "upcoming" ? "true" : "false");
@@ -87,16 +86,25 @@ const BarberAppointmentsPage = () => { // Zmieniono nazwę komponentu
         fetchAppointments();
     }, [authUser, token, timeFilter, authContextLoading]); // usunięto loading z useRequireAuth
 
-    const getStatusBadgeVariant = (status: string) => { /* ... bez zmian ... */ };
+    const getStatusBadgeVariant = (status: string) => {
+        switch (status) {
+            case 'confirmed': return 'bg-blue-100 text-blue-800';
+            case 'completed': return 'bg-green-100 text-green-800';
+            case 'cancelled': case 'canceled': return 'bg-red-100 text-red-800';
+            case 'pending': return 'bg-yellow-100 text-yellow-800';
+            case 'no-show': return 'bg-orange-100 text-orange-800';
+            default: return 'bg-gray-100 text-gray-800'; // Domyślna wartość
+        }
+    };
     const filteredAppointments = appointments.filter((appointment) =>
         statusFilter === "all" || appointment.status.toLowerCase() === statusFilter.toLowerCase()
     );
-    const handleStatusChange = async (appointmentId: number, newStatus: string) => { /* ... użyj token z useAuth ... */ };
+   // const handleStatusChange = async (appointmentId: number, newStatus: string) => { /* ... użyj token z useAuth ... */ };
 
     const handleStatusChangeUpdated = async (appointmentId: number, newStatus: string) => {
         if(!token) { toast.error("Authentication error."); return; }
         try {
-            const response = await fetch(`http://localhost:3000/api/barber/appointments/${appointmentId}/status`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/appointments/${appointmentId}/status`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -122,7 +130,7 @@ const BarberAppointmentsPage = () => { // Zmieniono nazwę komponentu
 
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    const mobileRender = (appointment: Appointment) => { /* ... bez zmian, ale użyj handleStatusChangeUpdated ... */ };
+   // const mobileRender = (appointment: Appointment) => { /* ... bez zmian, ale użyj handleStatusChangeUpdated ... */ };
     const mobileRenderUpdated = (appointment: Appointment) => (
         <TableCard key={appointment.id}>
             <div className="flex flex-col space-y-2 p-4">

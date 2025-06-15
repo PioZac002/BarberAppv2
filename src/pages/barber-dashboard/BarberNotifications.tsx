@@ -102,7 +102,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
             setIsLoading(true);
             try {
                 // Endpoint dla powiadomień barbera
-                const response = await fetch("http://localhost:3000/api/barber/notifications", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
@@ -151,7 +151,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
     const markAsRead = async (id: number) => {
         if (!token) { sonnerToast.error("Błąd autoryzacji."); return; }
         try {
-            const response = await fetch(`http://localhost:3000/api/barber/notifications/${id}/read`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -175,7 +175,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
         if (!token) { sonnerToast.error("Błąd autoryzacji."); return; }
         if (!window.confirm("Are you sure you want to delete this notification?")) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/barber/notifications/${id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -193,7 +193,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
     const markAllAsRead = async () => {
         if (!token || unreadCount === 0) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/barber/notifications/read-all`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications/read-all`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -280,7 +280,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                                     >
                                         <div className={`flex items-start gap-3 ${isMobile ? "p-2.5" : "p-3"}`}>
                                             <div className={`mt-1 flex flex-col items-center space-y-1 opacity-80 ${isMobile ? "hidden sm:flex" : "flex"}`}>
-                                                {getNotificationIcon(notification.type)} {/* Użycie displayType */}
+                                                {getNotificationIcon(notification.displayType)} {/* Użycie displayType */}
                                                 {/* Można usunąć getCategoryIcon, jeśli kategorie nie są tu tak istotne */}
                                             </div>
                                             <div className="flex-1 min-w-0">

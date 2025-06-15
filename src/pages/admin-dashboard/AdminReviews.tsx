@@ -50,7 +50,7 @@ const AdminReviews = () => {
     useEffect(() => {
         const fetchReviews = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/admin/reviews', {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reviews`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
                 if (!response.ok) throw new Error('Failed to fetch reviews');
@@ -96,7 +96,7 @@ const AdminReviews = () => {
     const handleDelete = async () => {
         if (!selectedReview) return;
         try {
-            const response = await fetch(`http://localhost:3000/api/admin/reviews/${selectedReview.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reviews/${selectedReview.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });

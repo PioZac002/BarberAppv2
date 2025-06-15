@@ -70,7 +70,7 @@ const BarberPortfolioPage = () => {
             if(!token) return;
             setIsLoading(true);
             try {
-                const response = await fetch("http://localhost:3000/api/barber/portfolio", {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/portfolio`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
@@ -105,7 +105,7 @@ const BarberPortfolioPage = () => {
         if (!token) { toast.error("Authentication error."); return; }
 
         try {
-            const response = await fetch("http://localhost:3000/api/barber/portfolio", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/portfolio`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -147,7 +147,7 @@ const BarberPortfolioPage = () => {
             return;
         }
         try {
-            const response = await fetch(`http://localhost:3000/api/barber/portfolio/${imageToDelete.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/portfolio/${imageToDelete.id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });

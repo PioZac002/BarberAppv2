@@ -51,7 +51,7 @@ const ReviewsPage = () => { // Zmieniono nazwę komponentu na ReviewsPage dla ja
             setIsLoading(true);
             try {
                 // Używamy endpointu z publicTeamRoutes
-                const response = await fetch("http://localhost:3000/api/public/team/reviews");
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/public/team/reviews`);
                 if (!response.ok) {
                     throw new Error("Failed to fetch reviews from API");
                 }

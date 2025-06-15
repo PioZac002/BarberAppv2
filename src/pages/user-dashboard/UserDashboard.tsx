@@ -1,8 +1,9 @@
 // src/pages/user-dashboard/UserDashboard.tsx
-import { Routes, Route, useParams, Link } from "react-router-dom"; // Dodano Routes, Route
+import { Routes, Route, Link } from "react-router-dom"; // Dodano Routes, Route
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { Button } from "@/components/ui/button";
 
 // Komponenty podstron
 import UserProfile from "./UserProfile";
