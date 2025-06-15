@@ -7,8 +7,8 @@ import { AuthContextType, User } from '../../types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Pobierz adres API ze zmiennych środowiskowych
-const API_URL = import.meta.env.VITE_API_URL;
+
+
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setToken(storedToken);
                 try {
                     // ZMIANA TUTAJ
-                    const response = await fetch(`${API_URL}/api/verify-token`, {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/verify-token`, {
                         headers: { Authorization: `Bearer ${storedToken}` },
                     });
                     if (response.ok) {
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const login = async (email: string, password: string) => {
         try {
             // ZMIANA TUTAJ
-            const response = await fetch(`${API_URL}/api/login`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const register = async (data: { firstName: string; lastName: string; email: string; phone: string; password: string }) => {
         try {
             // ZMIANA TUTAJ
-            const response = await fetch(`${API_URL}/api/register`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
