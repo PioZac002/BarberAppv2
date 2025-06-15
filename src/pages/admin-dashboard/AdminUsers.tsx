@@ -4,6 +4,7 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
+    CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -21,7 +22,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogDescription,
+    DialogDescription as DialogDesc,
     DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -31,7 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { format, parseISO } from "date-fns"; // Dodano parseISO
+import { format, parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -45,6 +46,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface User {
     id: number;
@@ -57,9 +59,9 @@ interface User {
 }
 
 const userFormSchema = z.object({
-    first_name: z.string().min(2, "First name must be at least 2 characters"),
-    last_name: z.string().min(2, "Last name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
+    first_name: z.string().min(2, "First name must be at least 2 characters."),
+    last_name: z.string().min(2, "Last name must be at least 2 characters."),
+    email: z.string().email("Invalid email address."),
     phone: z.string().optional(),
     role: z.enum(["user", "barber", "admin"]),
 });
@@ -71,6 +73,7 @@ const AdminUsers = () => {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const isMobile = useIsMobile();
 
     const form = useForm<z.infer<typeof userFormSchema>>({
         resolver: zodResolver(userFormSchema),
@@ -132,7 +135,7 @@ const AdminUsers = () => {
             }
             toast.success('User updated successfully');
             setEditingUser(null);
-            fetchUsers(); // Odśwież listę użytkowników
+            fetchUsers();
         } catch (error: any) {
             toast.error(`Update failed: ${error.message}`);
         }
@@ -149,7 +152,7 @@ const AdminUsers = () => {
             toast.success('User deleted successfully');
             setIsDeleteModalOpen(false);
             setUserToDelete(null);
-            fetchUsers(); // Odśwież listę
+            fetchUsers();
         } catch (error) {
             toast.error('Failed to delete user');
         }
@@ -159,14 +162,23 @@ const AdminUsers = () => {
         return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div></div>;
     }
 
+    const getRoleBadgeVariant = (role: string) => {
+        switch(role) {
+            case 'admin': return 'destructive';
+            case 'barber': return 'outline';
+            default: return 'secondary';
+        }
+    }
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Users Management</CardTitle>
-                <div className="flex items-center gap-3 mt-4">
+                <CardDescription>View, edit, and manage all users in the system.</CardDescription>
+                <div className="flex items-center gap-3 pt-4">
                     <Filter className="w-4 h-4 text-gray-500" />
                     <Select value={roleFilter} onValueChange={setRoleFilter}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Filter by role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -179,7 +191,8 @@ const AdminUsers = () => {
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
+                {/* WIDOK DLA KOMPUTERÓW */}
+                <div className="hidden md:block">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -197,24 +210,41 @@ const AdminUsers = () => {
                                     <TableCell>{user.first_name} {user.last_name}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>{user.phone || 'N/A'}</TableCell>
-                                    <TableCell><Badge variant={user.role === 'admin' ? 'default' : user.role === 'barber' ? 'outline' : 'secondary'}>{user.role}</Badge></TableCell>
-                                    <TableCell>
-                                        {/* POPRAWKA BŁĘDU DATY */}
-                                        {user.created_at ? format(parseISO(user.created_at), 'MMM dd, yyyy') : 'N/A'}
-                                    </TableCell>
+                                    <TableCell><Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge></TableCell>
+                                    <TableCell>{user.created_at ? format(parseISO(user.created_at), 'MMM dd, yyyy') : 'N/A'}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)}>
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteClick(user)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)}><Pencil className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteClick(user)}><Trash2 className="h-4 w-4" /></Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
                 </div>
+
+                {/* WIDOK DLA URZĄDZEŃ MOBILNYCH */}
+                <div className="md:hidden space-y-4">
+                    {filteredUsers.map((user) => (
+                        <div key={user.id} className="border rounded-lg p-4 space-y-3 shadow-sm">
+                            <div className="flex justify-between items-start">
+                                <h3 className="font-semibold text-base">{user.first_name} {user.last_name}</h3>
+                                <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
+                            </div>
+                            <div className="text-sm text-gray-600 space-y-1">
+                                <p>{user.email}</p>
+                                <p>Phone: {user.phone || 'N/A'}</p>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-muted-foreground pt-2 border-t">
+                                <span>Created: {user.created_at ? format(parseISO(user.created_at), 'MMM dd, yyyy') : 'N/A'}</span>
+                                <div className="flex gap-1">
+                                    <Button size="sm" variant="outline" onClick={() => handleEditClick(user)}><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant="destructive" onClick={() => handleDeleteClick(user)}><Trash2 className="h-4 w-4" /></Button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
             </CardContent>
 
             {/* Edit User Dialog */}
@@ -222,10 +252,10 @@ const AdminUsers = () => {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit User</DialogTitle>
-                        <DialogDescription>Update user details and role.</DialogDescription>
+                        <DialogDesc>Update user details and role.</DialogDesc>
                     </DialogHeader>
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                             <FormField control={form.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -256,7 +286,8 @@ const AdminUsers = () => {
             {/* Delete Confirmation Dialog */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Delete User</DialogTitle><DialogDescription>Are you sure? This action cannot be undone.</DialogDescription></DialogHeader>
+                    <DialogHeader><DialogTitle>Delete User</DialogTitle><DialogDesc>Are you sure? This action cannot be undone.</DialogDesc></DialogHeader>
+                    {userToDelete && <div className="py-4"><strong>Name:</strong> {userToDelete.first_name} {userToDelete.last_name}</div>}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
                         <Button variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>

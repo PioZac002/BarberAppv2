@@ -120,17 +120,7 @@ const Login = () => {
                                 </div>
                             </form>
 
-                            <div className="mt-4">
-                                <p className="text-sm text-center text-gray-500">
-                                    Do celów demonstracyjnych użyj:
-                                </p>
-                                <ul className="text-xs text-center text-gray-500 mt-1">
-                                    <li>client@example.com (klient)</li>
-                                    <li>barber@example.com (fryzjer)</li>
-                                    <li>admin@example.com (admin)</li>
-                                    <li>Hasło może być dowolne</li>
-                                </ul>
-                            </div>
+
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4">
                             <div className="relative w-full">
