@@ -11,8 +11,14 @@ require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const corsOptions = {
+    origin: 'https://barberappv2.onrender.com', // Adres frontendu
+    optionsSuccessStatus: 200
+};
 
-app.use(cors());
+app.use(cors(corsOptions));
+
+//app.use(cors());
 app.use(express.json());
 
 app.use('/api', authRoutes);
