@@ -1,26 +1,28 @@
-// hooks/useAuth.tsx
+// src/hooks/useAuth.tsx
+
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // Dodano useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AuthContextType, User } from '../../types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Pobierz adres API ze zmiennych środowiskowych
+const API_URL = import.meta.env.VITE_API_URL;
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(() => localStorage.getItem('token')); // Inicjalizacja tokenu z localStorage
-    const [loading, setLoading] = useState(true); // Główne ładowanie stanu autoryzacji
+    const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const location = useLocation(); // Aby przekierować po zalogowaniu
+    const location = useLocation();
 
-    // Funkcja do aktualizacji danych użytkownika w kontekście (np. po edycji profilu)
+    // ... reszta Twoich funkcji (updateUserContext, useEffect) bez zmian ...
     const updateUserContext = useCallback((updatedUserData: Partial<User>) => {
         setUser(prevUser => {
             if (prevUser) {
                 const newUser = { ...prevUser, ...updatedUserData };
-                // Można rozważyć aktualizację localStorage, jeśli przechowujesz tam cały obiekt usera
-                // localStorage.setItem('user', JSON.stringify(newUser)); // Opcjonalne
                 return newUser;
             }
             return null;
@@ -31,41 +33,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const verifyTokenOnLoad = async () => {
             const storedToken = localStorage.getItem('token');
             if (storedToken) {
-                // Ustaw token w stanie, nawet przed weryfikacją, aby komponenty miały do niego dostęp
-                // Jeśli weryfikacja się nie powiedzie, zostanie usunięty
                 setToken(storedToken);
                 try {
-                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/verify-token`, {
+                    // ZMIANA TUTAJ
+                    const response = await fetch(`${API_URL}/api/verify-token`, {
                         headers: { Authorization: `Bearer ${storedToken}` },
                     });
                     if (response.ok) {
                         const { user: userData } = await response.json();
                         setUser(userData);
                         setIsAuthenticated(true);
-                        // Token już jest ustawiony, nie trzeba go ponownie ustawiać
                     } else {
+                        // Jeśli token jest nieważny, wyczyść stan
                         localStorage.removeItem('token');
                         setIsAuthenticated(false);
                         setUser(null);
-                        setToken(null); // Usuń token ze stanu
+                        setToken(null);
                     }
                 } catch (error) {
-                    console.error('Błąd weryfikacji tokenu przy ładowaniu:', error);
+                    console.error('Token verification error:', error);
                     localStorage.removeItem('token');
                     setIsAuthenticated(false);
                     setUser(null);
-                    setToken(null); // Usuń token ze stanu
+                    setToken(null);
                 }
             }
-            setLoading(false); // Zakończ główne ładowanie stanu autoryzacji
+            setLoading(false);
         };
-
         verifyTokenOnLoad();
-    }, []); // Uruchom tylko raz przy montowaniu komponentu
+    }, []);
+
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
+            // ZMIANA TUTAJ
+            const response = await fetch(`${API_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -77,13 +79,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const { token: apiToken, user: userData } = await response.json();
 
             localStorage.setItem('token', apiToken);
-            setToken(apiToken); // Ustaw token w stanie
+            setToken(apiToken);
             setUser(userData);
             setIsAuthenticated(true);
-
             toast.success('Zalogowano pomyślnie!');
 
-            // Przekierowanie po logowaniu
             const from = (location.state as any)?.from?.pathname || (
                 userData.role === 'admin' ? '/admin-dashboard' :
                     userData.role === 'barber' ? '/barber-dashboard' :
@@ -93,22 +93,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         } catch (error: any) {
             toast.error(error.message || 'Logowanie nie powiodło się. Spróbuj ponownie.');
-            throw error; // Rzuć błąd dalej, aby obsłużyć w formularzu logowania
+            throw error;
         }
-    };
-
-    const logout = () => {
-        localStorage.removeItem('token');
-        setToken(null); // Wyczyść token ze stanu
-        setUser(null);
-        setIsAuthenticated(false);
-        navigate('/login');
-        toast.info("Wylogowano pomyślnie.");
     };
 
     const register = async (data: { firstName: string; lastName: string; email: string; phone: string; password: string }) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/register`, {
+            // ZMIANA TUTAJ
+            const response = await fetch(`${API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
@@ -117,9 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Rejestracja nie powiodła się');
             }
-            // Backend nie zwraca tokenu/usera przy rejestracji, tylko wiadomość
             await response.json();
-
             toast.success('Rejestracja zakończona sukcesem! Możesz się teraz zalogować.');
             navigate('/login');
         } catch (error: any) {
@@ -128,9 +118,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const logout = () => {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        navigate('/login');
+        toast.info("Wylogowano pomyślnie.");
+    };
+
     return (
         <AuthContext.Provider value={{ isAuthenticated, user, token, loading, login, logout, register, updateUserContext }}>
-            {!loading && children} {/* Renderuj children dopiero po zakończeniu inicjalnego ładowania */}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };
