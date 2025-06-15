@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 // Jeśli weryfikacja się nie powiedzie, zostanie usunięty
                 setToken(storedToken);
                 try {
-                    const response = await fetch('http://localhost:3000/api/verify-token', {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/verify-token`, {
                         headers: { Authorization: `Bearer ${storedToken}` },
                     });
                     if (response.ok) {
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await fetch('http://localhost:3000/api/login', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -108,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const register = async (data: { firstName: string; lastName: string; email: string; phone: string; password: string }) => {
         try {
-            const response = await fetch('http://localhost:3000/api/register', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
