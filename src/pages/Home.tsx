@@ -34,8 +34,8 @@ const Home = () => {
                             </Button>
                             <Button
                                 asChild
-                                variant="outline"
-                                className="border-white text-white hover:bg-white/10 text-lg px-8 py-6"
+                                size="lg" // Używamy predefiniowanego rozmiaru dla większego przycisku
+                                className="bg-barber hover:bg-barber-muted text-white text-lg px-8 py-6 transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                             >
                                 <Link to="/services">Our Services</Link>
                             </Button>
