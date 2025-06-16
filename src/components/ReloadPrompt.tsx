@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 function ReloadPrompt() {
@@ -15,11 +16,15 @@ function ReloadPrompt() {
         },
     });
 
+    const close = () => {
+        setNeedRefresh(false);
+    };
+
     React.useEffect(() => {
         if (needRefresh) {
             const toastId = toast.info('Nowa wersja aplikacji jest dostępna!', {
                 position: 'top-center',
-                duration: Infinity, // Czekaj na akcję użytkownika
+                duration: Infinity,
                 action: {
                     label: 'Odśwież',
                     onClick: () => {
@@ -30,7 +35,7 @@ function ReloadPrompt() {
                 cancel: {
                     label: 'Później',
                     onClick: () => {
-                        setNeedRefresh(false);
+                        close();
                         toast.dismiss(toastId);
                     }
                 },
@@ -38,7 +43,7 @@ function ReloadPrompt() {
         }
     }, [needRefresh, updateServiceWorker, setNeedRefresh]);
 
-    return null; // Komponent nie renderuje nic widocznego, tylko obsługuje toasty
+    return null;
 }
 
 export default ReloadPrompt;
