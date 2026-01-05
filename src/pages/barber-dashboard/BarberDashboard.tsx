@@ -30,8 +30,8 @@ const BarberDashboard = () => {
         return (
             <DashboardLayout title="Authentication Error">
                 <div className="p-6 text-center">
-                    <p className="text-red-500">Authentication error. Please log in to continue.</p>
-                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Go to Login</Link></Button>
+                    <p className="text-red-500">Błąd autoryzacji. Zaloguj się.</p>
+                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Przejdź do logowania</Link></Button>
                 </div>
             </DashboardLayout>
         );

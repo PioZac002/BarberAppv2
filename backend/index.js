@@ -12,7 +12,8 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 const corsOptions = {
-    origin: 'https://barberappv2.onrender.com', // Adres frontendu
+    origin:'http://localhost:5178',
+        //'https://barberappv2.onrender.com', // Adres frontendu
     optionsSuccessStatus: 200
 };
 

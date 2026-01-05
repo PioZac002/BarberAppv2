@@ -41,10 +41,10 @@ interface Service {
 }
 
 const serviceFormSchema = z.object({
-    name: z.string().min(2, "Service name must be at least 2 characters"),
-    description: z.string().min(10, "Description must be at least 10 characters"),
-    price: z.coerce.number().positive("Price must be positive"),
-    duration: z.coerce.number().int("Duration must be a whole number").positive("Duration must be positive"),
+    name: z.string().min(2, "Nazwa usługi musi mieć co najmniej 2 znaki"),
+    description: z.string().min(10, "Opis musi mieć co najmniej 10 znaków"),
+    price: z.coerce.number().positive("Cena musi być dodatnia"),
+    duration: z.coerce.number().int("Czas trwania musi być liczbą całkowitą").positive("Czas trwania musi być dodatni"),
 });
 
 const AdminServices = () => {
@@ -128,10 +128,10 @@ const AdminServices = () => {
             setServices([...services, newService]);
             setIsAddModalOpen(false);
             addForm.reset();
-            toast.success('Service added successfully');
+            toast.success('Usługa została dodana pomyślnie');
         } catch (error) {
             console.error('Error adding service:', error);
-            toast.error('Failed to add service');
+            toast.error('Nie udało się dodać usługi');
         }
     };
 
@@ -151,10 +151,10 @@ const AdminServices = () => {
             setServices(services.map(service => service.id === updatedService.id ? updatedService : service));
             setIsEditModalOpen(false);
             setSelectedService(null);
-            toast.success('Service updated successfully');
+            toast.success('Usługa została zaktualizowana pomyślnie');
         } catch (error) {
             console.error('Error updating service:', error);
-            toast.error('Failed to update service');
+            toast.error('Nie udało się zaktualizować usługi');
         }
     };
 
@@ -169,10 +169,10 @@ const AdminServices = () => {
             setServices(services.filter(service => service.id !== selectedService.id));
             setIsDeleteModalOpen(false);
             setSelectedService(null);
-            toast.success('Service deleted successfully');
+            toast.success('Usługa została usunięta pomyślnie');
         } catch (error) {
             console.error('Error deleting service:', error);
-            toast.error('Failed to delete service');
+            toast.error('Nie udało się usunąć usługi');
         }
     };
 
@@ -188,13 +188,13 @@ const AdminServices = () => {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                    <span>Services Management</span>
+                    <span>Zarządzanie Usługami</span>
                     <Button
                         onClick={() => setIsAddModalOpen(true)}
                         className="bg-barber hover:bg-barber-muted"
                     >
                         <Plus className="h-4 w-4 mr-1" />
-                        Add New Service
+                        Dodaj Nową Usługę
                     </Button>
                 </CardTitle>
             </CardHeader>
@@ -204,23 +204,23 @@ const AdminServices = () => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("name")}>
-                                    Name
+                                    Nazwa
                                     {sortField === "name" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
-                                <TableHead>Description</TableHead>
+                                <TableHead>Opis</TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("price")}>
-                                    Price
+                                    Cena
                                     {sortField === "price" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("duration")}>
-                                    Duration (min)
+                                    Czas trwania (min)
                                     {sortField === "duration" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("created_at")}>
-                                    Created At
+                                    Utworzono
                                     {sortField === "created_at" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
-                                <TableHead>Actions</TableHead>
+                                <TableHead>Akcje</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -228,7 +228,7 @@ const AdminServices = () => {
                                 <TableRow key={service.id}>
                                     <TableCell>{service.name}</TableCell>
                                     <TableCell>{service.description}</TableCell>
-                                    <TableCell>${service.price}</TableCell>
+                                    <TableCell>{service.price} zł</TableCell>
                                     <TableCell>{service.duration}</TableCell>
                                     <TableCell>{new Date(service.created_at).toLocaleString()}</TableCell>
                                     <TableCell>
@@ -267,15 +267,15 @@ const AdminServices = () => {
                                     <h3 className="font-medium">{service.name}</h3>
                                     <p className="text-sm text-gray-500">{service.description}</p>
                                 </div>
-                                <span className="px-2 py-1 rounded-full text-xs font-medium">${service.price}</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-medium">{service.price} zł</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
-                                    <p className="text-gray-500">Duration:</p>
+                                    <p className="text-gray-500">Czas trwania:</p>
                                     <p>{service.duration} min</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-500">Created:</p>
+                                    <p className="text-gray-500">Utworzono:</p>
                                     <p>{new Date(service.created_at).toLocaleString()}</p>
                                 </div>
                             </div>
@@ -289,14 +289,14 @@ const AdminServices = () => {
                                     setIsEditModalOpen(true);
                                 }}>
                                     <Pencil className="h-4 w-4 mr-1" />
-                                    Edit
+                                    Edytuj
                                 </Button>
                                 <Button variant="outline" size="sm" className="text-red-500" onClick={() => {
                                     setSelectedService(service);
                                     setIsDeleteModalOpen(true);
                                 }}>
                                     <Trash2 className="h-4 w-4 mr-1" />
-                                    Delete
+                                    Usuń
                                 </Button>
                             </div>
                         </div>
@@ -308,41 +308,41 @@ const AdminServices = () => {
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add New Service</DialogTitle>
-                        <DialogDescription>Fill in the details below to add a new service.</DialogDescription>
+                        <DialogTitle>Dodaj Nową Usługę</DialogTitle>
+                        <DialogDescription>Wypełnij poniższe dane, aby dodać nową usługę.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={addForm.handleSubmit(handleAddService)} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Service Name</Label>
+                            <Label htmlFor="name">Nazwa Usługi</Label>
                             <Input id="name" {...addForm.register("name")} />
                             {addForm.formState.errors.name && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.name.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">Opis</Label>
                             <Textarea id="description" {...addForm.register("description")} />
                             {addForm.formState.errors.description && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.description.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="price">Price ($)</Label>
+                            <Label htmlFor="price">Cena (zł)</Label>
                             <Input id="price" type="number" {...addForm.register("price")} />
                             {addForm.formState.errors.price && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.price.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="duration">Duration (minutes)</Label>
+                            <Label htmlFor="duration">Czas trwania (minuty)</Label>
                             <Input id="duration" type="number" {...addForm.register("duration")} />
                             {addForm.formState.errors.duration && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.duration.message}</p>
                             )}
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-                            <Button type="submit">Add Service</Button>
+                            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Anuluj</Button>
+                            <Button type="submit">Dodaj Usługę</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -352,41 +352,41 @@ const AdminServices = () => {
             <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit Service</DialogTitle>
-                        <DialogDescription>Modify the service details below.</DialogDescription>
+                        <DialogTitle>Edytuj Usługę</DialogTitle>
+                        <DialogDescription>Zmodyfikuj poniższe dane usługi.</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={editForm.handleSubmit(handleEditService)} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Service Name</Label>
+                            <Label htmlFor="name">Nazwa Usługi</Label>
                             <Input id="name" {...editForm.register("name")} />
                             {editForm.formState.errors.name && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.name.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">Opis</Label>
                             <Textarea id="description" {...editForm.register("description")} />
                             {editForm.formState.errors.description && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.description.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="price">Price ($)</Label>
+                            <Label htmlFor="price">Cena (zł)</Label>
                             <Input id="price" type="number" {...editForm.register("price")} />
                             {editForm.formState.errors.price && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.price.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="duration">Duration (minutes)</Label>
+                            <Label htmlFor="duration">Czas trwania (minuty)</Label>
                             <Input id="duration" type="number" {...editForm.register("duration")} />
                             {editForm.formState.errors.duration && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.duration.message}</p>
                             )}
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-                            <Button type="submit">Save Changes</Button>
+                            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Anuluj</Button>
+                            <Button type="submit">Zapisz Zmiany</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -396,18 +396,18 @@ const AdminServices = () => {
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete Service</DialogTitle>
-                        <DialogDescription>Are you sure you want to delete this service? This action cannot be undone.</DialogDescription>
+                        <DialogTitle>Usuń Usługę</DialogTitle>
+                        <DialogDescription>Czy na pewno chcesz usunąć tę usługę? Ta akcja jest nieodwracalna.</DialogDescription>
                     </DialogHeader>
                     {selectedService && (
                         <div>
-                            <p><strong>Name:</strong> {selectedService.name}</p>
-                            <p><strong>Price:</strong> ${selectedService.price}</p>
+                            <p><strong>Nazwa:</strong> {selectedService.name}</p>
+                            <p><strong>Cena:</strong> {selectedService.price} zł</p>
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Anuluj</Button>
+                        <Button variant="destructive" onClick={handleDelete}>Usuń</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

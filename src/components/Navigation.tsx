@@ -47,11 +47,11 @@ const Navigation = () => {
     };
 
     const navLinks = [
-        { name: "Home", path: "/" },
-        { name: "Services", path: "/services" },
-        { name: "Team", path: "/team" },
-        { name: "Reviews", path: "/reviews" },
-        { name: "Book Now", path: "/booking", isButton: true },
+        { name: "Strona główna", path: "/" },
+        { name: "Usługi", path: "/services" },
+        { name: "Zespół", path: "/team" },
+        { name: "Opinie", path: "/reviews" },
+        { name: "Zarezerwuj wizytę", path: "/booking", isButton: true },
     ];
 
     const getDashboardUrl = () => {
@@ -68,11 +68,11 @@ const Navigation = () => {
     };
 
     const adminSubMenu = [
-        { name: "Overview", path: "/admin-dashboard" },
-        { name: "Users", path: "/admin-dashboard/users" },
-        { name: "Appointments", path: "/admin-dashboard/appointments" },
-        { name: "Services", path: "/admin-dashboard/services" },
-        { name: "Reviews", path: "/admin-dashboard/reviews" },
+        { name: "Przegląd", path: "/admin-dashboard" },
+        { name: "Użytkownicy", path: "/admin-dashboard/users" },
+        { name: "Wizyty", path: "/admin-dashboard/appointments" },
+        { name: "Usługi", path: "/admin-dashboard/services" },
+        { name: "Opinie", path: "/admin-dashboard/reviews" },
     ];
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -122,13 +122,13 @@ const Navigation = () => {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className="flex items-center text-white">
                                         <User className="mr-2 h-4 w-4" />
-                                        <span>Account</span>
+                                        <span>Konto</span>
                                         <ChevronDown className="ml-1 h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem asChild>
-                                        <Link to="/profile">Profile</Link>
+                                        <Link to="/profile">Profil</Link>
                                     </DropdownMenuItem>
                                     {userRole === "admin" ? (
                                         adminSubMenu.map((subLink) => (
@@ -138,24 +138,24 @@ const Navigation = () => {
                                         ))
                                     ) : (
                                         <DropdownMenuItem asChild>
-                                            <Link to={getDashboardUrl()}>Dashboard</Link>
+                                            <Link to={getDashboardUrl()}>Panel</Link>
                                         </DropdownMenuItem>
                                     )}
                                     <DropdownMenuItem onClick={handleLogout}>
-                                        Logout
+                                        Wyloguj
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
                             <>
                                 <Button asChild variant="ghost" className="text-white">
-                                    <Link to="/login">Login</Link>
+                                    <Link to="/login">Zaloguj się</Link>
                                 </Button>
                                 <Button
                                     asChild
                                     className="bg-barber hover:bg-barber-muted text-white btn-hover"
                                 >
-                                    <Link to="/register">Register</Link>
+                                    <Link to="/register">Zarejestruj się</Link>
                                 </Button>
                             </>
                         )}
@@ -165,7 +165,7 @@ const Navigation = () => {
                 <button
                     className="md:hidden text-white"
                     onClick={toggleMenu}
-                    aria-label="Toggle menu"
+                    aria-label="Przełącz menu"
                 >
                     {isMenuOpen ? (
                         <X className="h-6 w-6" />
@@ -200,7 +200,7 @@ const Navigation = () => {
                                     className="text-xl text-white"
                                     onClick={closeMenu}
                                 >
-                                    Profile
+                                    Profil
                                 </Link>
                                 {userRole === "admin" ? (
                                     adminSubMenu.map((subLink) => (
@@ -219,7 +219,7 @@ const Navigation = () => {
                                         className="text-xl text-white"
                                         onClick={closeMenu}
                                     >
-                                        Dashboard
+                                        Panel
                                     </Link>
                                 )}
                                 <button
@@ -229,7 +229,7 @@ const Navigation = () => {
                                         closeMenu();
                                     }}
                                 >
-                                    Logout
+                                    Wyloguj
                                 </button>
                             </>
                         ) : (
@@ -239,14 +239,14 @@ const Navigation = () => {
                                     className="text-xl text-white"
                                     onClick={closeMenu}
                                 >
-                                    Login
+                                    Zaloguj się
                                 </Link>
                                 <Link
                                     to="/register"
                                     className="text-xl text-white bg-barber px-6 py-2 rounded-md"
                                     onClick={closeMenu}
                                 >
-                                    Register
+                                    Zarejestruj się
                                 </Link>
                             </>
                         )}

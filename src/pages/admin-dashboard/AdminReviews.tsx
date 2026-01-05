@@ -53,12 +53,12 @@ const AdminReviews = () => {
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reviews`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
-                if (!response.ok) throw new Error('Failed to fetch reviews');
+                if (!response.ok) throw new Error('Nie udało się pobrać opinii');
                 const data = await response.json();
                 setReviews(data);
             } catch (error) {
                 console.error('Error fetching reviews:', error);
-                toast.error('Failed to fetch reviews');
+                toast.error('Nie udało się pobrać opinii');
             } finally {
                 setLoading(false);
             }
@@ -100,14 +100,14 @@ const AdminReviews = () => {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
-            if (!response.ok) throw new Error('Failed to delete review');
+            if (!response.ok) throw new Error('Nie udało się usunąć opinii');
             setReviews(reviews.filter((review) => review.id !== selectedReview.id));
             setIsDeleteModalOpen(false);
             setSelectedReview(null);
-            toast.success('Review deleted successfully');
+            toast.success('Opinia została pomyślnie usunięta');
         } catch (error) {
             console.error('Error deleting review:', error);
-            toast.error('Failed to delete review');
+            toast.error('Nie udało się usunąć opinii');
         }
     };
 
@@ -135,10 +135,10 @@ const AdminReviews = () => {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Reviews Management</CardTitle>
+                <CardTitle>Zarządzanie opiniami</CardTitle>
                 {/* POPRAWKA: Zastąpiono DialogDescription zwykłym paragrafem */}
                 <p className="text-sm text-muted-foreground">
-                    Browse and manage all customer reviews.
+                    Przeglądaj oraz zarządzaj opiniami klientów.
                 </p>
             </CardHeader>
             <CardContent>
@@ -149,12 +149,20 @@ const AdminReviews = () => {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="cursor-pointer" onClick={() => handleSort('client_name')}>Client {sortField === 'client_name' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}</TableHead>
-                                        <TableHead className="cursor-pointer" onClick={() => handleSort('barber_name')}>Barber {sortField === 'barber_name' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}</TableHead>
-                                        <TableHead>Comment</TableHead>
-                                        <TableHead className="cursor-pointer" onClick={() => handleSort('rating')}>Rating {sortField === 'rating' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}</TableHead>
-                                        <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>Date {sortField === 'created_at' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead className="cursor-pointer" onClick={() => handleSort('client_name')}>
+                                            Klient {sortField === 'client_name' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}
+                                        </TableHead>
+                                        <TableHead className="cursor-pointer" onClick={() => handleSort('barber_name')}>
+                                            Barber {sortField === 'barber_name' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}
+                                        </TableHead>
+                                        <TableHead>Komentarz</TableHead>
+                                        <TableHead className="cursor-pointer" onClick={() => handleSort('rating')}>
+                                            Ocena {sortField === 'rating' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}
+                                        </TableHead>
+                                        <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>
+                                            Data {sortField === 'created_at' && (sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 inline ml-1" /> : <ArrowDown className="h-4 w-4 inline ml-1" />)}
+                                        </TableHead>
+                                        <TableHead className="text-right">Akcje</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -192,8 +200,8 @@ const AdminReviews = () => {
                                     <p className="text-sm text-gray-600 italic">"{review.comment}"</p>
                                     <div className="text-xs text-gray-500 pt-2 border-t space-y-1">
                                         <p><strong>Barber:</strong> {review.barber_name}</p>
-                                        <p><strong>Service:</strong> {review.service_name}</p>
-                                        <p><strong>Date:</strong> {new Date(review.created_at).toLocaleDateString()}</p>
+                                        <p><strong>Usługa:</strong> {review.service_name}</p>
+                                        <p><strong>Data:</strong> {new Date(review.created_at).toLocaleDateString()}</p>
                                     </div>
                                     <div className="flex justify-end pt-2">
                                         <Button
@@ -202,7 +210,7 @@ const AdminReviews = () => {
                                             onClick={() => handleDeleteClick(review)}
                                         >
                                             <Trash2 className="h-4 w-4 mr-1.5" />
-                                            Delete
+                                            Usuń
                                         </Button>
                                     </div>
                                 </div>
@@ -211,7 +219,7 @@ const AdminReviews = () => {
                     </>
                 ) : (
                     <div className="text-center py-16">
-                        <p className="text-gray-500">No reviews found.</p>
+                        <p className="text-gray-500">Nie znaleziono żadnych opinii</p>
                     </div>
                 )}
             </CardContent>
@@ -219,25 +227,25 @@ const AdminReviews = () => {
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete Review</DialogTitle>
+                        <DialogTitle>Usuń opinię</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete this review? This action cannot be undone.
+                            Czy na pewno chcesz usunąć tę recenzję? Tej czynności nie można cofnąć.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedReview && (
                         <div className="py-4 space-y-2 border-t border-b">
-                            <p><strong>Client:</strong> {selectedReview.client_name}</p>
+                            <p><strong>Klient:</strong> {selectedReview.client_name}</p>
                             <p><strong>Barber:</strong> {selectedReview.barber_name}</p>
-                            <p><strong>Rating:</strong> {selectedReview.rating} / 5</p>
+                            <p><strong>Ocena:</strong> {selectedReview.rating} / 5</p>
                             <p className="italic">"{selectedReview.comment}"</p>
                         </div>
                     )}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-                            Cancel
+                            Anuluj
                         </Button>
                         <Button variant="destructive" onClick={handleDelete}>
-                            Delete
+                            Usuń
                         </Button>
                     </DialogFooter>
                 </DialogContent>

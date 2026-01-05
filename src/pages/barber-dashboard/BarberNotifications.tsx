@@ -1,12 +1,12 @@
 // src/pages/barber-dashboard/BarberNotificationsPage.tsx
-import { useState, useEffect, useMemo } from "react"; // Dodano useMemo
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
     Card,
     CardContent,
     CardHeader,
     CardTitle,
-    CardDescription, // <-- DODANO IMPORT CardDescription
+    CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ import {
     AlertTriangle,
     CheckCircle,
     Info,
-    CalendarDays, // Użyjemy CalendarDays dla spójności z innymi miejscami
+    CalendarDays,
     Users as UsersIcon,
     DollarSign,
     Clock,
@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import { formatDistanceToNow, isValid as isValidDateFn } from "date-fns";
+import { pl } from "date-fns/locale";
 import { Link as RouterLink } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -47,31 +48,28 @@ interface AdminNotificationFE extends AdminNotificationBackend {
     timestamp: Date;
 }
 
-const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby pasowała do nazwy pliku
-    const { token, loading: authContextLoading, user: authUser } = useAuth(); // Dodano authUser
+const BarberNotificationsPage = () => {
+    const { token, loading: authContextLoading, user: authUser } = useAuth();
     const isMobile = useIsMobile();
-    const [activeTab, setActiveTab] = useState("all"); // Domyślnie 'all'
-    const [notifications, setNotifications] = useState<AdminNotificationFE[]>([]); // Użyjemy AdminNotificationFE dla spójności
+    const [activeTab, setActiveTab] = useState("all");
+    const [notifications, setNotifications] = useState<AdminNotificationFE[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Funkcja mapująca typy backendowe na frontendowe (przykładowa, dostosuj do swoich potrzeb)
     const mapBackendNotificationToFrontend = (notif: AdminNotificationBackend): AdminNotificationFE => {
         let displayType: AdminNotificationFE["displayType"] = "info";
         let category: AdminNotificationFE["category"] = "other";
 
-        // Załóżmy, że typy powiadomień barbera są podobne do admina, dostosuj jeśli inne
-        switch (notif.type.toLowerCase()) { // Dodano toLowerCase dla pewności
+        switch (notif.type.toLowerCase()) {
             case "new_booking_barber":
             case "appointment_confirmed_by_admin_staff":
             case "appointment_status_changed_by_barber":
                 displayType = "info";
                 category = "appointments";
                 break;
-            case "new_review": // Przykładowy typ dla barbera
+            case "new_review":
                 displayType = "success";
-                category = "users"; // Lub "system"
+                category = "users";
                 break;
-            // Dodaj inne mapowania dla typów powiadomień barbera
             default:
                 displayType = "info";
                 category = "system";
@@ -90,7 +88,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
             setIsLoading(true);
             return;
         }
-        if (!token || !authUser) { // Sprawdź też authUser
+        if (!token || !authUser) {
             setIsLoading(false);
             setNotifications([]);
             if (!authContextLoading) sonnerToast.error("Błąd autoryzacji. Proszę się zalogować.");
@@ -98,10 +96,9 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
         }
 
         const fetchNotifications = async () => {
-            if(!token) return;
+            if (!token) return;
             setIsLoading(true);
             try {
-                // Endpoint dla powiadomień barbera
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
@@ -109,7 +106,7 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                     const errorData = await response.json().catch(() => ({ error: "Nie udało się pobrać powiadomień barbera" }));
                     throw new Error(errorData.error || "Nie udało się pobrać powiadomień barbera");
                 }
-                const data: AdminNotificationBackend[] = await response.json(); // Użyj AdminNotificationBackend jako typ danych z API
+                const data: AdminNotificationBackend[] = await response.json();
                 setNotifications(data.map(mapBackendNotificationToFrontend));
             } catch (error: any) {
                 sonnerToast.error(error.message);
@@ -119,16 +116,18 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
             }
         };
         fetchNotifications();
-    }, [token, authUser, authContextLoading]); // Dodano authUser do zależności
+    }, [token, authUser, authContextLoading]);
 
     const getFilteredNotifications = () => {
         if (activeTab === "all") return notifications;
         if (activeTab === "unread") return notifications.filter(n => !n.is_read);
-        // Dla barbera kategorie mogą być inne, na razie uproszczone filtrowanie
         return notifications.filter(n => n.category === activeTab || n.type.toLowerCase().includes(activeTab));
     };
 
-    const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
+    const unreadCount = useMemo(
+        () => notifications.filter(n => !n.is_read).length,
+        [notifications]
+    );
 
     const getNotificationIcon = (type: AdminNotificationFE["displayType"]) => {
         switch (type) {
@@ -143,21 +142,24 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
         switch (category) {
             case "appointments": return <CalendarDays className="h-4 w-4 text-gray-500" />;
             case "users": return <UsersIcon className="h-4 w-4 text-gray-500" />;
-            case "revenue": return <DollarSign className="h-4 w-4 text-gray-500" />; // Raczej nie dla barbera
+            case "revenue": return <DollarSign className="h-4 w-4 text-gray-500" />;
             default: return <Bell className="h-4 w-4 text-gray-500" />;
         }
     };
 
     const markAsRead = async (id: number) => {
-        if (!token) { sonnerToast.error("Błąd autoryzacji."); return; }
+        if (!token) {
+            sonnerToast.error("Błąd autoryzacji.");
+            return;
+        }
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({error: "Failed to mark as read"}));
-                throw new Error(errorData.error || "Błąd podczas oznaczania jako przeczytane.");
+                const errorData = await response.json().catch(() => ({ error: "Nie udało się oznaczyć jako przeczytane" }));
+                throw new Error(errorData.error || "Nie udało się oznaczyć powiadomienia jako przeczytane.");
             }
             setNotifications(prev =>
                 prev.map(notification =>
@@ -167,26 +169,29 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                 )
             );
         } catch (error: any) {
-            sonnerToast.error(error.message || "Błąd podczas oznaczania jako przeczytane.");
+            sonnerToast.error(error.message || "Nie udało się oznaczyć powiadomienia jako przeczytane.");
         }
     };
 
     const deleteNotificationFE = async (id: number) => {
-        if (!token) { sonnerToast.error("Błąd autoryzacji."); return; }
-        if (!window.confirm("Are you sure you want to delete this notification?")) return;
+        if (!token) {
+            sonnerToast.error("Błąd autoryzacji.");
+            return;
+        }
+        if (!window.confirm("Czy na pewno chcesz usunąć to powiadomienie?")) return;
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({error: "Failed to delete"}));
-                throw new Error(errorData.error || "Błąd podczas usuwania powiadomienia.");
+                const errorData = await response.json().catch(() => ({ error: "Nie udało się usunąć powiadomienia" }));
+                throw new Error(errorData.error || "Nie udało się usunąć powiadomienia.");
             }
             setNotifications(prev => prev.filter(n => n.id !== id));
-            sonnerToast.success("Powiadomienie usunięte");
+            sonnerToast.success("Powiadomienie usunięte.");
         } catch (error: any) {
-            sonnerToast.error(error.message || "Błąd podczas usuwania powiadomienia.");
+            sonnerToast.error(error.message || "Nie udało się usunąć powiadomienia.");
         }
     };
 
@@ -198,18 +203,17 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({error: "Failed to mark all as read"}));
-                throw new Error(errorData.error || "Błąd podczas oznaczania wszystkich jako przeczytane.");
+                const errorData = await response.json().catch(() => ({ error: "Nie udało się oznaczyć wszystkich jako przeczytane" }));
+                throw new Error(errorData.error || "Nie udało się oznaczyć wszystkich jako przeczytane.");
             }
             setNotifications(prev =>
                 prev.map(notification => ({ ...notification, is_read: true }))
             );
-            sonnerToast.success("Wszystkie oznaczono jako przeczytane");
+            sonnerToast.success("Wszystkie powiadomienia oznaczono jako przeczytane.");
         } catch (error: any) {
-            sonnerToast.error(error.message || "Błąd podczas oznaczania wszystkich jako przeczytane.");
+            sonnerToast.error(error.message || "Nie udało się oznaczyć wszystkich jako przeczytane.");
         }
     };
-
 
     if (authContextLoading || isLoading) {
         return (
@@ -222,7 +226,6 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
     const filteredNotifications = getFilteredNotifications();
 
     return (
-        // Komponent NIE renderuje DashboardLayout
         <div className="space-y-4 md:space-y-6 p-1">
             <Card className="shadow-sm">
                 <CardHeader className="border-b pb-4">
@@ -230,10 +233,10 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                         <div className="flex items-center gap-2">
                             <Bell className="h-6 w-6 text-barber" />
                             <CardTitle className="text-xl md:text-2xl">
-                                My Notifications
+                                Moje powiadomienia
                                 {unreadCount > 0 && (
                                     <Badge variant="destructive" className="ml-2 text-xs px-1.5 py-0.5">
-                                        {unreadCount} NEW
+                                        {unreadCount} NOWE
                                     </Badge>
                                 )}
                             </CardTitle>
@@ -246,20 +249,29 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                                 className={isMobile ? "w-full mt-2 sm:mt-0" : ""}
                             >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Mark All as Read
+                                Oznacz wszystkie jako przeczytane
                             </Button>
                         )}
                     </div>
                     <CardDescription className="mt-1 text-xs md:text-sm">
-                        View and manage your work-related notifications.
+                        Przeglądaj i zarządzaj powiadomieniami związanymi z Twoją pracą.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-3 sm:p-4">
-                    {/* Uproszczone Taby dla Barbera - można rozbudować, jeśli potrzebne kategorie */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-2'} h-auto sm:h-10 mb-4`}>
-                            <TabsTrigger value="all" className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "all" ? "bg-primary text-primary-foreground" : ""}`}>All</TabsTrigger>
-                            <TabsTrigger value="unread" className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "unread" ? "bg-primary text-primary-foreground" : ""}`}>Unread</TabsTrigger>
+                        <TabsList className={`grid w-full grid-cols-2 h-auto sm:h-10 mb-4`}>
+                            <TabsTrigger
+                                value="all"
+                                className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "all" ? "bg-primary text-primary-foreground" : ""}`}
+                            >
+                                Wszystkie
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="unread"
+                                className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "unread" ? "bg-primary text-primary-foreground" : ""}`}
+                            >
+                                Nieprzeczytane
+                            </TabsTrigger>
                         </TabsList>
 
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
@@ -267,7 +279,9 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                                 <div className="py-10 text-center">
                                     <Info className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                     <p className="text-gray-500">
-                                        {activeTab === "unread" ? "All notifications have been read." : "No notifications in this category."}
+                                        {activeTab === "unread"
+                                            ? "Wszystkie powiadomienia zostały przeczytane."
+                                            : "Brak powiadomień w tej kategorii."}
                                     </p>
                                 </div>
                             ) : (
@@ -275,17 +289,22 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                                     <div
                                         key={notification.id}
                                         className={`border rounded-lg overflow-hidden transition-all hover:shadow-md ${
-                                            !notification.is_read ? 'border-l-4 border-barber bg-barber/5' : 'bg-card'
+                                            !notification.is_read
+                                                ? 'border-l-4 border-barber bg-barber/5'
+                                                : 'bg-card'
                                         }`}
                                     >
                                         <div className={`flex items-start gap-3 ${isMobile ? "p-2.5" : "p-3"}`}>
                                             <div className={`mt-1 flex flex-col items-center space-y-1 opacity-80 ${isMobile ? "hidden sm:flex" : "flex"}`}>
-                                                {getNotificationIcon(notification.displayType)} {/* Użycie displayType */}
-                                                {/* Można usunąć getCategoryIcon, jeśli kategorie nie są tu tak istotne */}
+                                                {getNotificationIcon(notification.displayType)}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-0.5">
-                                                    <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} ${!notification.is_read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                    <h4
+                                                        className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} ${
+                                                            !notification.is_read ? 'text-foreground' : 'text-muted-foreground'
+                                                        }`}
+                                                    >
                                                         {notification.title}
                                                     </h4>
                                                     {!notification.is_read && (
@@ -298,22 +317,44 @@ const BarberNotificationsPage = () => { // Zmieniono nazwę komponentu, aby paso
                                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                     <div className="flex items-center gap-1">
                                                         <Clock className="h-3 w-3" />
-                                                        <span>{isValidDateFn(new Date(notification.created_at)) ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true }) : "Invalid date"}</span>
+                                                        <span>
+                                                            {isValidDateFn(new Date(notification.created_at))
+                                                                ? formatDistanceToNow(new Date(notification.created_at), {
+                                                                    addSuffix: true,
+                                                                    locale: pl,
+                                                                })
+                                                                : "Nieprawidłowa data"}
+                                                        </span>
                                                     </div>
                                                     {notification.link && (
-                                                        <RouterLink to={notification.link} className="text-primary hover:underline flex items-center gap-1">
-                                                            <LinkIconUI className="h-3 w-3" /> Details
+                                                        <RouterLink
+                                                            to={notification.link}
+                                                            className="text-primary hover:underline flex items-center gap-1"
+                                                        >
+                                                            <LinkIconUI className="h-3 w-3" /> Szczegóły
                                                         </RouterLink>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="flex flex-col items-center gap-0.5 ml-2">
                                                 {!notification.is_read && (
-                                                    <Button onClick={() => markAsRead(notification.id)} size="icon" variant="ghost" className={`text-green-600 hover:bg-green-100 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`} title="Mark as read">
+                                                    <Button
+                                                        onClick={() => markAsRead(notification.id)}
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className={`text-green-600 hover:bg-green-100 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`}
+                                                        title="Oznacz jako przeczytane"
+                                                    >
                                                         <CheckCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
                                                     </Button>
                                                 )}
-                                                <Button onClick={() => deleteNotificationFE(notification.id)} size="icon" variant="ghost" className={`text-destructive hover:bg-destructive/10 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`} title="Delete notification">
+                                                <Button
+                                                    onClick={() => deleteNotificationFE(notification.id)}
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className={`text-destructive hover:bg-destructive/10 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`}
+                                                    title="Usuń powiadomienie"
+                                                >
                                                     <Trash2 className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
                                                 </Button>
                                             </div>

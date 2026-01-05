@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User, Mail, Phone, Save, Edit, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 
 interface ProfileData {
@@ -19,7 +18,6 @@ interface ProfileData {
 
 const UserProfile = () => {
     const { user: authUser, token, loading: authContextLoading, updateUserContext } = useAuth();
-    // useRequireAuth głównie do ochrony trasy
     useRequireAuth({ allowedRoles: ["client"] });
 
     const [isEditing, setIsEditing] = useState(false);
@@ -42,7 +40,7 @@ const UserProfile = () => {
             setIsDataLoading(false);
             setProfileData({ firstName: "", lastName: "", email: "", phone: "" });
             setInitialProfileData(null);
-            toast.error("User not authenticated. Cannot load profile.");
+            toast.error("Nie udało się uwierzytelnić użytkownika. Nie można wczytać profilu.");
             return;
         }
 
@@ -53,8 +51,11 @@ const UserProfile = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
-                    let errorMsg = "Failed to fetch profile";
-                    try{ const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch(e) {/*ignore*/}
+                    let errorMsg = "Nie udało się pobrać profilu";
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) {/*ignore*/}
                     throw new Error(errorMsg);
                 }
                 const data = await response.json();
@@ -67,12 +68,12 @@ const UserProfile = () => {
                 setProfileData(fetchedData);
                 setInitialProfileData(fetchedData);
             } catch (error: any) {
-                toast.error(error.message || "Failed to load profile data.");
+                toast.error(error.message || "Nie udało się wczytać danych profilu.");
                 const fallbackData = {
                     firstName: authUser.firstName || "",
                     lastName: authUser.lastName || "",
                     email: authUser.email || "",
-                    phone: authUser.phone || "" // Zakładając, że user z kontekstu może mieć phone
+                    phone: authUser.phone || "",
                 };
                 setProfileData(fallbackData);
                 setInitialProfileData(fallbackData);
@@ -90,12 +91,11 @@ const UserProfile = () => {
 
     const handleSave = async () => {
         if (!token) {
-            toast.error("Authentication error. Please log in again.");
+            toast.error("Błąd uwierzytelniania. Zaloguj się ponownie.");
             return;
         }
-        // Prosta walidacja
         if (!profileData.firstName || !profileData.lastName || !profileData.email) {
-            toast.error("First name, last name, and email are required.");
+            toast.error("Imię, nazwisko i adres e-mail są wymagane.");
             return;
         }
         try {
@@ -108,8 +108,11 @@ const UserProfile = () => {
                 body: JSON.stringify(profileData),
             });
             if (!response.ok) {
-                let errorMsg = "Failed to update profile";
-                try{ const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch(e) {/*ignore*/}
+                let errorMsg = "Nie udało się zaktualizować profilu";
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) {/*ignore*/}
                 throw new Error(errorMsg);
             }
             const updatedData = await response.json();
@@ -122,19 +125,19 @@ const UserProfile = () => {
             setProfileData(newProfileData);
             setInitialProfileData(newProfileData);
             setIsEditing(false);
-            toast.success("Profile updated successfully!");
+            toast.success("Profil został pomyślnie zaktualizowany!");
 
             if (updateUserContext && authUser) {
-                updateUserContext({ // Aktualizuj tylko te pola, które są w User interfejsie AuthContextType
-                    id: authUser.id, // Przekaż ID, aby wiedzieć którego usera aktualizować w kontekście
+                updateUserContext({
+                    id: authUser.id,
                     firstName: newProfileData.firstName,
                     lastName: newProfileData.lastName,
                     email: newProfileData.email,
-                    // phone: newProfileData.phone, // Jeśli User w AuthContextType ma phone
+                    // phone: newProfileData.phone, // jeśli jest w typie User
                 });
             }
         } catch (error: any) {
-            toast.error(error.message || "Failed to save profile.");
+            toast.error(error.message || "Nie udało się zapisać profilu.");
         }
     };
 
@@ -156,130 +159,128 @@ const UserProfile = () => {
     if (!authContextLoading && !authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">User not authenticated. Cannot display profile.</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Go to Login</Link></Button>
+                <p className="text-red-500">Nie udało się uwierzytelnić użytkownika. Nie można wyświetlić profilu.</p>
+                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                    <Link to="/login">Przejdź do logowania</Link>
+                </Button>
             </div>
         );
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <User className="h-5 w-5 mr-2 text-barber" />
-                            Profile Picture
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                        <Avatar className="w-32 h-32 mx-auto mb-4 border-2 border-barber">
-                            <AvatarFallback className="bg-barber text-white text-4xl">
-                                {profileData.firstName?.[0]?.toUpperCase()}
-                                {profileData.lastName?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                        </Avatar>
-                        <Button variant="outline" className="w-full" disabled>
-                            Change Photo (soon)
+        <div className="max-w-3xl mx-auto">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Dane osobowe</CardTitle>
+                    {!isEditing ? (
+                        <Button
+                            onClick={() => setIsEditing(true)}
+                            className="bg-barber hover:bg-barber-muted"
+                        >
+                            <Edit className="h-4 w-4 mr-1.5" />
+                            Edytuj profil
                         </Button>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="lg:col-span-2">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Personal Information</CardTitle>
-                        {!isEditing ? (
+                    ) : (
+                        <div className="flex space-x-2">
                             <Button
-                                onClick={() => setIsEditing(true)}
+                                onClick={handleSave}
                                 className="bg-barber hover:bg-barber-muted"
                             >
-                                <Edit className="h-4 w-4 mr-1.5" />
-                                Edit Profile
+                                <Save className="h-4 w-4 mr-1.5" />
+                                Zapisz
                             </Button>
-                        ) : (
-                            <div className="flex space-x-2">
-                                <Button
-                                    onClick={handleSave}
-                                    className="bg-barber hover:bg-barber-muted"
-                                >
-                                    <Save className="h-4 w-4 mr-1.5" />
-                                    Save
-                                </Button>
-                                <Button variant="outline" onClick={handleCancel}>
-                                    <XCircle className="h-4 w-4 mr-1.5" />
-                                    Cancel
-                                </Button>
-                            </div>
-                        )}
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="firstName">First Name</Label>
-                                <div className="flex items-center">
-                                    <User className="h-4 w-4 mr-2 text-gray-400" />
-                                    <Input
-                                        id="firstName"
-                                        name="firstName" // Dodane dla spójności
-                                        value={profileData.firstName}
-                                        onChange={handleInputChange}
-                                        disabled={!isEditing}
-                                        className={!isEditing ? "bg-gray-100 cursor-not-allowed border-none text-gray-700" : ""}
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="lastName">Last Name</Label>
-                                <div className="flex items-center">
-                                    <User className="h-4 w-4 mr-2 text-gray-400" />
-                                    <Input
-                                        id="lastName"
-                                        name="lastName"
-                                        value={profileData.lastName}
-                                        onChange={handleInputChange}
-                                        disabled={!isEditing}
-                                        className={!isEditing ? "bg-gray-100 cursor-not-allowed border-none text-gray-700" : ""}
-                                    />
-                                </div>
-                            </div>
+                            <Button variant="outline" onClick={handleCancel}>
+                                <XCircle className="h-4 w-4 mr-1.5" />
+                                Anuluj
+                            </Button>
                         </div>
-
+                    )}
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="firstName">Imię</Label>
                             <div className="flex items-center">
-                                <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                <User className="h-4 w-4 mr-2 text-gray-400" />
                                 <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={profileData.email}
+                                    id="firstName"
+                                    name="firstName"
+                                    value={profileData.firstName}
                                     onChange={handleInputChange}
                                     disabled={!isEditing}
-                                    className={!isEditing ? "bg-gray-100 cursor-not-allowed border-none text-gray-700" : ""}
+                                    className={
+                                        !isEditing
+                                            ? "bg-gray-100 cursor-not-allowed border-none text-gray-700"
+                                            : ""
+                                    }
                                 />
                             </div>
                         </div>
-
                         <div className="space-y-1.5">
-                            <Label htmlFor="phone">Phone Number</Label>
+                            <Label htmlFor="lastName">Nazwisko</Label>
                             <div className="flex items-center">
-                                <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                                <User className="h-4 w-4 mr-2 text-gray-400" />
                                 <Input
-                                    id="phone"
-                                    name="phone"
-                                    value={profileData.phone || ""}
+                                    id="lastName"
+                                    name="lastName"
+                                    value={profileData.lastName}
                                     onChange={handleInputChange}
                                     disabled={!isEditing}
-                                    placeholder={isEditing ? "Enter phone number" : "Not provided"}
-                                    className={!isEditing ? "bg-gray-100 cursor-not-allowed border-none text-gray-700" : ""}
+                                    className={
+                                        !isEditing
+                                            ? "bg-gray-100 cursor-not-allowed border-none text-gray-700"
+                                            : ""
+                                    }
                                 />
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label htmlFor="email">E-mail</Label>
+                        <div className="flex items-center">
+                            <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={profileData.email}
+                                onChange={handleInputChange}
+                                disabled={!isEditing}
+                                className={
+                                    !isEditing
+                                        ? "bg-gray-100 cursor-not-allowed border-none text-gray-700"
+                                        : ""
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label htmlFor="phone">Numer telefonu</Label>
+                        <div className="flex items-center">
+                            <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                            <Input
+                                id="phone"
+                                name="phone"
+                                value={profileData.phone || ""}
+                                onChange={handleInputChange}
+                                disabled={!isEditing}
+                                placeholder={
+                                    isEditing
+                                        ? "Wprowadź numer telefonu"
+                                        : "Brak"
+                                }
+                                className={
+                                    !isEditing
+                                        ? "bg-gray-100 cursor-not-allowed border-none text-gray-700"
+                                        : ""
+                                }
+                            />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };

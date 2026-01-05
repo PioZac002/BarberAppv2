@@ -26,13 +26,13 @@ const Login = () => {
         const newErrors: { email?: string; password?: string } = {};
 
         if (!email) {
-            newErrors.email = "Email is required";
+            newErrors.email = "Adres e‑mail jest wymagany";
         } else if (!/\S+@\S+\.\S+/.test(email)) {
-            newErrors.email = "Email is invalid";
+            newErrors.email = "Adres e‑mail jest nieprawidłowy";
         }
 
         if (!password) {
-            newErrors.password = "Password is required";
+            newErrors.password = "Hasło jest wymagane";
         }
 
         setErrors(newErrors);
@@ -50,7 +50,7 @@ const Login = () => {
 
         try {
             await login(email, password);
-            // Usunięto toast.success, bo jest w useAuth.tsx
+            // toast.success jest w useAuth.tsx
         } catch (error) {
             toast.error("Logowanie nie powiodło się. Sprawdź dane i spróbuj ponownie.");
         } finally {
@@ -64,16 +64,18 @@ const Login = () => {
                 <div className="w-full max-w-md px-4">
                     <Card className="animate-fade-in">
                         <CardHeader className="space-y-1 text-center">
-                            <CardTitle className="text-3xl font-bold text-barber-dark">Witaj ponownie</CardTitle>
+                            <CardTitle className="text-3xl font-bold text-barber-dark">
+                                Witaj ponownie
+                            </CardTitle>
                             <CardDescription>
-                                Wprowadź email i hasło, aby zalogować się na swoje konto
+                                Wprowadź adres e‑mail i hasło, aby zalogować się na swoje konto
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit}>
                                 <div className="grid gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email">E‑mail</Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -119,8 +121,6 @@ const Login = () => {
                                     </Button>
                                 </div>
                             </form>
-
-
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4">
                             <div className="relative w-full">

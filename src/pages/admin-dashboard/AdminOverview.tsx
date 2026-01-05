@@ -21,9 +21,22 @@ import {
     Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDistanceToNow, isValid as isValidDate, format, parseISO } from "date-fns"; // Dodano format i parseISO
+import {
+    formatDistanceToNow,
+    isValid as isValidDate,
+} from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from 'recharts';
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    ResponsiveContainer,
+    Legend,
+    ComposedChart,
+    Line,
+} from "recharts";
 import {
     ChartContainer,
     ChartTooltip,
@@ -34,14 +47,14 @@ interface StatsData {
     users: number;
     activeAppointments: number;
     services: number;
-    revenue: number; // To jest miesięczny przychód (lub inny zagregowany) z /api/admin/stats
+    revenue: number;
 }
 
 interface HourlyReportDataItem {
-    date: string; // Format "HH:00"
+    date: string; // "HH:00"
     appointments: number;
     revenue: number;
-    barbers?: { [barberName: string]: number }; // Opcjonalne, jeśli backend to zwraca
+    barbers?: { [barberName: string]: number };
 }
 
 interface AdminNotification {
@@ -73,7 +86,7 @@ const AdminOverview = () => {
             setLoadingStats(false);
             setLoadingTodaysData(false);
             setLoadingNotifications(false);
-            toast.error("Authentication error. Please log in.");
+            toast.error("Błąd autoryzacji. Proszę się zalogować.");
             return;
         }
 
@@ -83,39 +96,62 @@ const AdminOverview = () => {
             setLoadingNotifications(true);
             try {
                 const headers = { Authorization: `Bearer ${token}` };
-                const [statsRes, todaysDataRes, notificationsRes] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/stats`, { headers }),
-                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/reports-data?timeRange=1day`, { headers }),
-                    fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications?limit=5`, { headers }),
-                ]);
+                const [statsRes, todaysDataRes, notificationsRes] =
+                    await Promise.all([
+                        fetch(
+                            `${import.meta.env.VITE_API_URL}/api/admin/stats`,
+                            { headers }
+                        ),
+                        fetch(
+                            `${import.meta.env.VITE_API_URL}/api/admin/reports-data?timeRange=1day`,
+                            { headers }
+                        ),
+                        fetch(
+                            `${import.meta.env.VITE_API_URL}/api/admin/notifications?limit=5`,
+                            { headers }
+                        ),
+                    ]);
 
                 if (statsRes.ok) {
                     const statsData = await statsRes.json();
                     setStats(statsData);
                 } else {
-                    console.error('Failed to fetch stats. Status:', statsRes.status);
-                    toast.error('Failed to load general stats.');
+                    console.error(
+                        "Failed to fetch stats. Status:",
+                        statsRes.status
+                    );
+                    toast.error("Nie udało się wczytać statystyk ogólnych.");
                 }
 
                 if (todaysDataRes.ok) {
-                    const reportData: HourlyReportDataItem[] = await todaysDataRes.json();
+                    const reportData: HourlyReportDataItem[] =
+                        await todaysDataRes.json();
                     setTodaysHourlyData(reportData);
                 } else {
-                    console.error("Failed to fetch today's hourly data. Status:", todaysDataRes.status);
-                    toast.error("Failed to load today's activity.");
+                    console.error(
+                        "Failed to fetch today's hourly data. Status:",
+                        todaysDataRes.status
+                    );
+                    toast.error(
+                        "Nie udało się wczytać dzisiejszej aktywności."
+                    );
                 }
 
                 if (notificationsRes.ok) {
                     const notifData = await notificationsRes.json();
-                    setAdminNotifications(notifData); // Zakładamy, że backend obsłużył limit
+                    setAdminNotifications(notifData);
                 } else {
-                    console.error('Failed to fetch admin notifications. Status:', notificationsRes.status);
-                    toast.error('Failed to load notifications.');
+                    console.error(
+                        "Failed to fetch admin notifications. Status:",
+                        notificationsRes.status
+                    );
+                    toast.error("Nie udało się wczytać powiadomień.");
                 }
-
             } catch (error: any) {
-                console.error('Error fetching dashboard data:', error);
-                toast.error(error.message || "Failed to load dashboard data.");
+                console.error("Error fetching dashboard data:", error);
+                toast.error(
+                    error.message || "Nie udało się wczytać danych panelu."
+                );
             } finally {
                 setLoadingStats(false);
                 setLoadingTodaysData(false);
@@ -127,29 +163,43 @@ const AdminOverview = () => {
     }, [token, authLoading]);
 
     const getNotificationIcon = (type: string) => {
-        // ... (bez zmian)
         switch (type.toLowerCase()) {
-            case 'new_appointment_booked':
-            case 'appointment_status_changed':
-            case 'appointment_confirmed_by_admin':
-            case 'appointment_confirmed_log':
-            case 'appointment_confirmed_by_admin_staff':
-            case 'appointment_status_changed_by_barber':
+            case "new_appointment_booked":
+            case "appointment_status_changed":
+            case "appointment_confirmed_by_admin":
+            case "appointment_confirmed_log":
+            case "appointment_confirmed_by_admin_staff":
+            case "appointment_status_changed_by_barber":
                 return <Calendar className="h-5 w-5 text-blue-500" />;
-            case 'new_user_registered':
+            case "new_user_registered":
                 return <Users className="h-5 w-5 text-green-500" />;
             default:
                 return <Bell className="h-5 w-5 text-gray-500" />;
         }
     };
 
-    const todaysChartConfig = useMemo(() => ({
-        appointments: { label: "Wizyty", color: "hsl(var(--chart-1))" }, // Użyj kolorów z theme
-        revenue: { label: "Przychód (PLN)", color: "hsl(var(--chart-2))" },
-    }), []);
+    const todaysChartConfig = useMemo(
+        () => ({
+            appointments: {
+                label: "Wizyty (liczba)",
+                color: "hsl(var(--chart-1))",
+            },
+            revenue: {
+                label: "Przychód (PLN)",
+                color: "hsl(var(--chart-2))",
+            },
+        }),
+        []
+    );
 
-
-    const pageLoading = authLoading || (loadingStats && loadingTodaysData && loadingNotifications && !stats && todaysHourlyData.length === 0 && adminNotifications.length === 0) ;
+    const pageLoading =
+        authLoading ||
+        (loadingStats &&
+            loadingTodaysData &&
+            loadingNotifications &&
+            !stats &&
+            todaysHourlyData.length === 0 &&
+            adminNotifications.length === 0);
 
     if (pageLoading) {
         return (
@@ -166,119 +216,325 @@ const AdminOverview = () => {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-medium text-gray-500">Total Users</p><h4 className="text-3xl font-bold text-barber-dark mt-1">{stats?.users ?? 0}</h4></div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center"><Users className="h-6 w-6 text-barber" /></div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    Użytkownicy
+                                </p>
+                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                    {stats?.users ?? 0}
+                                </h4>
+                            </div>
+                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
+                                <Users className="h-6 w-6 text-barber" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-medium text-gray-500">Active Appointments</p><h4 className="text-3xl font-bold text-barber-dark mt-1">{stats?.activeAppointments ?? 0}</h4></div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center"><Calendar className="h-6 w-6 text-barber" /></div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    Aktywne Wizyty
+                                </p>
+                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                    {stats?.activeAppointments ?? 0}
+                                </h4>
+                            </div>
+                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
+                                <Calendar className="h-6 w-6 text-barber" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-medium text-gray-500">Total Services</p><h4 className="text-3xl font-bold text-barber-dark mt-1">{stats?.services ?? 0}</h4></div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center"><Scissors className="h-6 w-6 text-barber" /></div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    Wszystkie usługi
+                                </p>
+                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                    {stats?.services ?? 0}
+                                </h4>
+                            </div>
+                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
+                                <Scissors className="h-6 w-6 text-barber" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-medium text-gray-500">Revenue (This Month)</p><h4 className="text-3xl font-bold text-barber-dark mt-1">${stats?.revenue ? stats.revenue.toFixed(2) : '0.00'}</h4></div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center"><DollarSign className="h-6 w-6 text-barber" /></div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    Miesięczny przychód
+                                </p>
+                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                    {stats?.revenue
+                                        ? `${stats.revenue.toFixed(2)} PLN`
+                                        : "0.00 PLN"}
+                                </h4>
+                            </div>
+                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
+                                <DollarSign className="h-6 w-6 text-barber" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Wykres godzinowy */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
                             <Clock className="h-5 w-5 mr-2 text-barber" />
-                            Today's Activity (Completed)
+                            Zakończone wizyty dzisiaj
                         </CardTitle>
-                        <CardDescription>Hourly breakdown of appointments and revenue for today.</CardDescription>
+                        <CardDescription>
+                            Godzinowe zestawienie liczby zakończonych wizyt
+                            (status „completed”) i przychodów z nich
+                            wygenerowanych.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {loadingTodaysData && todaysHourlyData.length === 0 ? (
                             <div className="h-80 flex items-center justify-center">
-                                <Loader2 className="h-10 w-10 text-barber animate-spin"/>
+                                <Loader2 className="h-10 w-10 text-barber animate-spin" />
                             </div>
                         ) : todaysHourlyData.length > 0 ? (
-                            <ChartContainer config={todaysChartConfig} className="h-[320px] w-full">
+                            <ChartContainer
+                                config={todaysChartConfig}
+                                className="h-[320px] w-full"
+                            >
                                 <ResponsiveContainer>
-                                    <BarChart data={todaysHourlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-                                        <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                                        <YAxis yAxisId="left" stroke={todaysChartConfig.appointments.color} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <YAxis yAxisId="right" orientation="right" stroke={todaysChartConfig.revenue.color} fontSize={10} tickLine={false} axisLine={false} />
-                                        <ChartTooltip
-                                            cursor={false}
-                                            content={<ChartTooltipContent
-                                                indicator="dot"
-                                                labelFormatter={(value) => `Hour: ${value}`}
-                                                formatter={(value, name) => {
-                                                    if (name === 'Revenue (PLN)') return [`${Number(value).toFixed(2)} PLN`, name];
-                                                    return [value, name];
-                                                }}
-                                            />}
+                                    <ComposedChart
+                                        data={todaysHourlyData}
+                                        margin={{
+                                            top: 10,
+                                            right: 20,
+                                            left: 0,
+                                            bottom: 20,
+                                        }}
+                                    >
+                                        <CartesianGrid
+                                            strokeDasharray="3 3"
+                                            vertical={false}
                                         />
-                                        <Legend verticalAlign="top" height={36} />
-                                        <Bar yAxisId="left" dataKey="appointments" fill={todaysChartConfig.appointments.color} radius={[4, 4, 0, 0]} name="Appointments" />
-                                        <Bar yAxisId="right" dataKey="revenue" fill={todaysChartConfig.revenue.color} radius={[4, 4, 0, 0]} name="Revenue (PLN)" />
-                                    </BarChart>
+                                        <XAxis
+                                            dataKey="date"
+                                            fontSize={11}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            interval="preserveStartEnd"
+                                            label={{
+                                                value: "Godzina",
+                                                position: "insideBottom",
+                                                offset: -10,
+                                                fontSize: 12,
+                                            }}
+                                        />
+                                        <YAxis
+                                            yAxisId="left"
+                                            stroke={
+                                                todaysChartConfig.appointments
+                                                    .color
+                                            }
+                                            fontSize={11}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            allowDecimals={false}
+                                            tickFormatter={value =>
+                                                `${value}`
+                                            }
+                                            label={{
+                                                value: "Liczba wizyt",
+                                                angle: -90,
+                                                position: "insideLeft",
+                                                offset: 10,
+                                                fontSize: 12,
+                                            }}
+                                        />
+                                        <YAxis
+                                            yAxisId="right"
+                                            orientation="right"
+                                            stroke={
+                                                todaysChartConfig.revenue.color
+                                            }
+                                            fontSize={11}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickFormatter={value =>
+                                                `${value} zł`
+                                            }
+                                            label={{
+                                                value: "Przychód (PLN)",
+                                                angle: 90,
+                                                position: "insideRight",
+                                                offset: 10,
+                                                fontSize: 12,
+                                            }}
+                                        />
+                                        <ChartTooltip
+                                            cursor={{ fill: "rgba(0,0,0,0.04)" }}
+                                            content={
+                                                <ChartTooltipContent
+                                                    indicator="dot"
+                                                    labelFormatter={value =>
+                                                        `Godzina: ${value}`
+                                                    }
+                                                    formatter={(value, name) => {
+                                                        if (
+                                                            name ===
+                                                            "Przychód (PLN)"
+                                                        ) {
+                                                            return [
+                                                                `${Number(
+                                                                    value
+                                                                ).toFixed(
+                                                                    2
+                                                                )} PLN`,
+                                                                name,
+                                                            ];
+                                                        }
+                                                        return [value, name];
+                                                    }}
+                                                />
+                                            }
+                                        />
+                                        <Legend
+                                            verticalAlign="top"
+                                            height={32}
+                                            iconType="circle"
+                                        />
+                                        <Bar
+                                            yAxisId="left"
+                                            dataKey="appointments"
+                                            fill={
+                                                todaysChartConfig.appointments
+                                                    .color
+                                            }
+                                            radius={[4, 4, 0, 0]}
+                                            name="Wizyty (completed)"
+                                            barSize={18}
+                                        />
+                                        <Line
+                                            yAxisId="right"
+                                            type="monotone"
+                                            dataKey="revenue"
+                                            stroke={
+                                                todaysChartConfig.revenue.color
+                                            }
+                                            strokeWidth={2}
+                                            dot={{ r: 2 }}
+                                            activeDot={{ r: 4 }}
+                                            name="Przychód (PLN)"
+                                        />
+                                    </ComposedChart>
                                 </ResponsiveContainer>
                             </ChartContainer>
                         ) : (
-                            <div className="h-80 flex flex-col items-center justify-center text-gray-500">
-                                <Info className="h-10 w-10 mb-2"/>
-                                No completed appointments or revenue recorded for today yet.
+                            <div className="h-80 flex flex-col items-center justify-center text-gray-500 text-center px-4">
+                                <Info className="h-10 w-10 mb-2" />
+                                Na dziś nie odnotowano jeszcze żadnych
+                                zakończonych wizyt ani przychodów.
+                                <p className="mt-1 text-xs text-gray-400">
+                                    (Wykres opiera się na danych zwracanych
+                                    przez endpoint raportowy – upewnij się, że
+                                    API liczy tylko wizyty o statusie
+                                    „completed”.)
+                                </p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
 
+                {/* Powiadomienia */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
                             <Bell className="h-5 w-5 mr-2 text-barber" />
-                            Admin Notifications
+                            Powiadomienia
                         </CardTitle>
                         <CardDescription>
-                            Latest important system events and alerts.
+                            Ostatnie najważniejsze powiadomienia.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {loadingNotifications && adminNotifications.length === 0 ? (
+                        {loadingNotifications &&
+                        adminNotifications.length === 0 ? (
                             <div className="flex items-center justify-center h-40">
-                                <Loader2 className="h-8 w-8 text-barber animate-spin"/>
+                                <Loader2 className="h-8 w-8 text-barber animate-spin" />
                             </div>
                         ) : adminNotifications.length > 0 ? (
-                            <div className="space-y-4 max-h-[280px] overflow-y-auto pr-2"> {/* Ograniczenie wysokości i scroll */}
-                                {adminNotifications.map((notification) => (
-                                    <div key={notification.id} className={`p-3 rounded-md border ${notification.is_read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
+                            <div className="space-y-4 max-h-[280px] overflow-y-auto pr-2">
+                                {adminNotifications.map(notification => (
+                                    <div
+                                        key={notification.id}
+                                        className={`p-3 rounded-md border ${
+                                            notification.is_read
+                                                ? "bg-gray-50 border-gray-200"
+                                                : "bg-blue-50 border-blue-200"
+                                        }`}
+                                    >
                                         <div className="flex items-start space-x-3">
-                                            <div className={`flex-shrink-0 p-2 rounded-full ${notification.is_read ? "bg-gray-200" : "bg-white shadow-sm"}`}>
-                                                {getNotificationIcon(notification.type)}
+                                            <div
+                                                className={`flex-shrink-0 p-2 rounded-full ${
+                                                    notification.is_read
+                                                        ? "bg-gray-200"
+                                                        : "bg-white shadow-sm"
+                                                }`}
+                                            >
+                                                {getNotificationIcon(
+                                                    notification.type
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between">
-                                                    <h4 className={`text-sm font-medium ${notification.is_read ? "text-gray-700" : "text-gray-900"} truncate`}>{notification.title}</h4>
-                                                    {!notification.is_read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse ml-2"></div>}
+                                                    <h4
+                                                        className={`text-sm font-medium ${
+                                                            notification.is_read
+                                                                ? "text-gray-700"
+                                                                : "text-gray-900"
+                                                        } truncate`}
+                                                    >
+                                                        {notification.title}
+                                                    </h4>
+                                                    {!notification.is_read && (
+                                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse ml-2"></div>
+                                                    )}
                                                 </div>
-                                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{notification.message}</p>
+                                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                                                    {notification.message}
+                                                </p>
                                                 <div className="text-xs text-gray-400 mt-1 flex justify-between items-center">
-                                                    <span>{isValidDate(new Date(notification.created_at)) ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true }) : "Invalid date"}</span>
+                                                    <span>
+                                                        {isValidDate(
+                                                            new Date(
+                                                                notification.created_at
+                                                            )
+                                                        )
+                                                            ? formatDistanceToNow(
+                                                                new Date(
+                                                                    notification.created_at
+                                                                ),
+                                                                {
+                                                                    addSuffix:
+                                                                        true,
+                                                                }
+                                                            )
+                                                            : "Nieprawidłowa data"}
+                                                    </span>
                                                     {notification.link && (
-                                                        <Link to={notification.link} className="text-barber hover:underline text-xs">
-                                                            View
+                                                        <Link
+                                                            to={
+                                                                notification.link
+                                                            }
+                                                            className="text-barber hover:underline text-xs"
+                                                        >
+                                                            Pokaż
                                                         </Link>
                                                     )}
                                                 </div>
@@ -286,18 +542,25 @@ const AdminOverview = () => {
                                         </div>
                                     </div>
                                 ))}
-                                {adminNotifications.length >= 5 && ( // Pokaż tylko jeśli jest więcej niż 5 pobranych (lub jeśli backend zawsze zwraca max 5, to zmień logikę)
+                                {adminNotifications.length >= 5 && (
                                     <Link to="/admin-dashboard/notifications" className="block mt-4">
-                                        <Button variant="outline" size="sm" className="w-full">
-                                            View All Notifications <ArrowRight className="h-4 w-4 ml-2"/>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full"
+                                        >
+                                            Pokaż{" "}
+                                            <ArrowRight className="h-4 w-4 ml-2" />
                                         </Button>
                                     </Link>
                                 )}
                             </div>
                         ) : (
                             <div className="text-center py-10">
-                                <Info className="h-10 w-10 text-gray-400 mx-auto mb-3"/>
-                                <p className="text-sm text-gray-500">No new admin notifications.</p>
+                                <Info className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                                <p className="text-sm text-gray-500">
+                                    Brak nowych powiadomień
+                                </p>
                             </div>
                         )}
                     </CardContent>

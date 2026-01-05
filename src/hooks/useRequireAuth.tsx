@@ -23,13 +23,13 @@ export const useRequireAuth = (options: RequireAuthOptions = {}) => {
         }
 
         if (!isAuthenticated) {
-            toast.error('You need to be logged in to access this page');
+            toast.error('Dostęp tylko dla zalogowanych użytkowników');
             navigate(redirectTo);
             return;
         }
 
         if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-            toast.error('You do not have permission to access this page');
+            toast.error('Nie masz wystarczających uprawnień, aby otworzyć tą stronę');
             navigate('/'); // Przekieruj na stronę główną, jeśli rola się nie zgadza
         }
     }, [isAuthenticated, user, loading, navigate, redirectTo, allowedRoles]);

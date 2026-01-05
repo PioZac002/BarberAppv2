@@ -13,13 +13,14 @@ import {
     Plus,
     ListFilter,
     Info,
-    Star, // Upewniono się, że Star jest zaimportowane
+    Star,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { isValid, format } from "date-fns";
+import { pl } from "date-fns/locale";
 
 interface Appointment {
     id: number;
@@ -33,13 +34,55 @@ interface Appointment {
     appointment_timestamp: string;
 }
 
+const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+        case "confirmed": return "bg-green-100 text-green-800";
+        case "pending": return "bg-yellow-100 text-yellow-800";
+        case "completed": return "bg-blue-100 text-blue-800";
+        case "canceled":
+        case "cancelled": return "bg-red-100 text-red-800";
+        case "no-show": return "bg-orange-100 text-orange-800";
+        default: return "bg-gray-100 text-gray-800";
+    }
+};
+
+const getStatusLabel = (status: string) => {
+    switch (status.toLowerCase()) {
+        case "confirmed": return "Potwierdzona";
+        case "pending": return "Oczekująca";
+        case "completed": return "Zrealizowana";
+        case "canceled":
+        case "cancelled": return "Anulowana";
+        case "no-show": return "Nieobecność";
+        default: return status;
+    }
+};
+
+const getFilterLabel = (status: string) => {
+    switch (status) {
+        case "all": return "Wszystkie wizyty";
+        case "confirmed": return "Potwierdzone";
+        case "pending": return "Oczekujące";
+        case "completed": return "Zrealizowane";
+        case "canceled": return "Anulowane";
+        case "no-show": return "Nieobecność";
+        default: return status;
+    }
+};
+
+const formatPricePln = (price: string) => {
+    const value = parseFloat(price);
+    if (isNaN(value)) return price;
+    return `${value.toFixed(2)} PLN`;
+};
+
 const UserAppointments = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
-    useRequireAuth({ allowedRoles: ["client"] }); // Ochrona trasy
+    useRequireAuth({ allowedRoles: ["client"] });
 
     const [appointmentList, setAppointmentList] = useState<Appointment[]>([]);
     const [filter, setFilter] = useState("all");
-    const [isDataLoading, setIsDataLoading] = useState(true); // Lokalne ładowanie danych
+    const [isDataLoading, setIsDataLoading] = useState(true);
 
     useEffect(() => {
         if (authContextLoading) {
@@ -50,7 +93,6 @@ const UserAppointments = () => {
         if (!token || !authUser) {
             setIsDataLoading(false);
             setAppointmentList([]);
-            // toast.error("Authentication required to view appointments."); // Można odkomentować w razie potrzeby
             return;
         }
 
@@ -66,17 +108,23 @@ const UserAppointments = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
-                    let errorMsg = "Failed to fetch appointments";
-                    try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) { /* ignore */ }
+                    let errorMsg = "Nie udało się pobrać wizyt";
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                    } catch (e) { /* ignore */ }
                     throw new Error(errorMsg);
                 }
                 const data: Appointment[] = await response.json();
-                // Sortowanie po dacie wizyty, od najnowszej (lub najbliższej, zależy od preferencji)
-                data.sort((a, b) => new Date(b.appointment_timestamp).getTime() - new Date(a.appointment_timestamp).getTime());
+                data.sort(
+                    (a, b) =>
+                        new Date(b.appointment_timestamp).getTime() -
+                        new Date(a.appointment_timestamp).getTime()
+                );
                 setAppointmentList(data);
             } catch (error: any) {
-                toast.error(error.message || "Failed to load appointments.");
-                setAppointmentList([]); // Wyczyść w razie błędu
+                toast.error(error.message || "Nie udało się wczytać wizyt.");
+                setAppointmentList([]);
             } finally {
                 setIsDataLoading(false);
             }
@@ -84,42 +132,42 @@ const UserAppointments = () => {
         fetchAppointments();
     }, [authUser, token, filter, authContextLoading]);
 
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case "confirmed": return "bg-green-100 text-green-800";
-            case "pending": return "bg-yellow-100 text-yellow-800";
-            case "completed": return "bg-blue-100 text-blue-800";
-            case "canceled": case "cancelled": return "bg-red-100 text-red-800";
-            case "no-show": return "bg-orange-100 text-orange-800";
-            default: return "bg-gray-100 text-gray-800";
-        }
-    };
-
     const handleCancelAppointment = async (id: number) => {
         if (!token) {
-            toast.error("Authentication error. Cannot cancel appointment.");
+            toast.error("Błąd uwierzytelniania. Nie można anulować wizyty.");
             return;
         }
-        if (!window.confirm("Are you sure you want to cancel this appointment?")) {
+        if (!window.confirm("Czy na pewno chcesz anulować tę wizytę?")) {
             return;
         }
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/appointments/${id}/cancel`, {
-                method: "PUT",
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/user/appointments/${id}/cancel`,
+                {
+                    method: "PUT",
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to cancel appointment");
+                const errorData = await response.json().catch(() => ({ error: "Nie udało się anulować wizyty" }));
+                throw new Error(errorData.error || "Nie udało się anulować wizyty");
             }
             setAppointmentList(prev =>
-                prev.map(appointment =>
-                    appointment.id === id ? { ...appointment, status: "canceled" } : appointment
-                ).sort((a, b) => new Date(b.appointment_timestamp).getTime() - new Date(a.appointment_timestamp).getTime())
+                prev
+                    .map(appointment =>
+                        appointment.id === id
+                            ? { ...appointment, status: "canceled" }
+                            : appointment
+                    )
+                    .sort(
+                        (a, b) =>
+                            new Date(b.appointment_timestamp).getTime() -
+                            new Date(a.appointment_timestamp).getTime()
+                    )
             );
-            toast.success("Appointment cancelled successfully");
+            toast.success("Wizyta została pomyślnie anulowana.");
         } catch (error: any) {
-            toast.error(error.message || "Could not cancel appointment.");
+            toast.error(error.message || "Nie udało się anulować wizyty.");
         }
     };
 
@@ -131,13 +179,15 @@ const UserAppointments = () => {
         );
     }
 
-    // Ten warunek powinien być obsłużony przez useRequireAuth (przekierowanie)
-    // ale zostawiamy jako dodatkowe zabezpieczenie przed renderowaniem pustej strony
     if (!authContextLoading && !authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">Could not authenticate user to view appointments.</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Go to Login</Link></Button>
+                <p className="text-red-500">
+                    Nie udało się uwierzytelnić użytkownika, aby wyświetlić wizyty.
+                </p>
+                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                    <Link to="/login">Przejdź do logowania</Link>
+                </Button>
             </div>
         );
     }
@@ -146,31 +196,39 @@ const UserAppointments = () => {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900">My Appointments</h2>
-                    <p className="text-sm text-gray-600">Manage your upcoming and past appointments.</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Moje wizyty</h2>
+                    <p className="text-sm text-gray-600">
+                        Zarządzaj swoimi nadchodzącymi i przeszłymi wizytami.
+                    </p>
                 </div>
                 <Button asChild className="bg-barber hover:bg-barber-muted w-full sm:w-auto">
                     <Link to="/booking">
                         <Plus className="h-4 w-4 mr-2" />
-                        Book New Appointment
+                        Zarezerwuj nową wizytę
                     </Link>
                 </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-2">
-                <Label htmlFor="status-filter" className="text-sm font-medium flex items-center whitespace-nowrap">
-                    <ListFilter className="h-4 w-4 mr-1.5 text-gray-500"/> Filter by status:
+                <Label
+                    htmlFor="status-filter"
+                    className="text-sm font-medium flex items-center whitespace-nowrap"
+                >
+                    <ListFilter className="h-4 w-4 mr-1.5 text-gray-500" />
+                    Filtruj wg statusu:
                 </Label>
                 <Select value={filter} onValueChange={setFilter}>
-                    <SelectTrigger className="w-full sm:w-[180px]" id="status-filter">
-                        <SelectValue placeholder="Select status" />
+                    <SelectTrigger className="w-full sm:w-[220px]" id="status-filter">
+                        <SelectValue placeholder="Wybierz status" />
                     </SelectTrigger>
                     <SelectContent>
-                        {["all", "confirmed", "pending", "completed", "canceled", "no-show"].map((status) => (
-                            <SelectItem key={status} value={status}>
-                                {status === "all" ? "All Appointments" : status.charAt(0).toUpperCase() + status.slice(1)}
-                            </SelectItem>
-                        ))}
+                        {["all", "confirmed", "pending", "completed", "canceled", "no-show"].map(
+                            (status) => (
+                                <SelectItem key={status} value={status}>
+                                    {getFilterLabel(status)}
+                                </SelectItem>
+                            )
+                        )}
                     </SelectContent>
                 </Select>
             </div>
@@ -178,14 +236,23 @@ const UserAppointments = () => {
             <div className="space-y-4">
                 {appointmentList.length > 0 ? (
                     appointmentList.map((appointment) => (
-                        <Card key={appointment.id} className="hover:shadow-lg transition-shadow duration-200">
+                        <Card
+                            key={appointment.id}
+                            className="hover:shadow-lg transition-shadow duration-200"
+                        >
                             <CardContent className="p-4 sm:p-6">
                                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                                     <div className="flex-1 space-y-2">
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-y-1">
-                                            <h3 className="font-semibold text-md sm:text-lg text-gray-800">{appointment.service}</h3>
-                                            <Badge className={`${getStatusColor(appointment.status)} text-xs sm:text-sm`}>
-                                                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                                            <h3 className="font-semibold text-md sm:text-lg text-gray-800">
+                                                {appointment.service}
+                                            </h3>
+                                            <Badge
+                                                className={`${getStatusColor(
+                                                    appointment.status
+                                                )} text-xs sm:text-sm`}
+                                            >
+                                                {getStatusLabel(appointment.status)}
                                             </Badge>
                                         </div>
 
@@ -196,30 +263,41 @@ const UserAppointments = () => {
                                             </div>
                                             <div className="flex items-center">
                                                 <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                                                {/* Poprawione formatowanie daty */}
-                                                <span>{isValid(new Date(appointment.date)) ? format(new Date(appointment.date), "MMM d, yyyy") : "Invalid date"}</span>
+                                                <span>
+                                                    {isValid(new Date(appointment.date))
+                                                        ? format(new Date(appointment.date), "PPP", {
+                                                            locale: pl,
+                                                        })
+                                                        : "Nieprawidłowa data"}
+                                                </span>
                                             </div>
                                             <div className="flex items-center sm:col-span-2">
                                                 <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                                                <span>{appointment.time} (Duration: {appointment.duration})</span>
+                                                <span>
+                                                    {appointment.time} (Czas trwania:{" "}
+                                                    {appointment.duration})
+                                                </span>
                                             </div>
                                         </div>
 
                                         <div className="text-md sm:text-lg font-semibold text-barber pt-1">
-                                            Price: {appointment.price}
+                                            Cena: {formatPricePln(appointment.price)}
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 mt-2 lg:mt-0 lg:ml-4 shrink-0 w-full sm:w-auto lg:w-[150px]">
-                                        {(appointment.status.toLowerCase() === "confirmed" || appointment.status.toLowerCase() === "pending") && (
+                                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 mt-2 lg:mt-0 lg:ml-4 shrink-0 w-full sm:w-auto lg:w-[170px]">
+                                        {(appointment.status.toLowerCase() === "confirmed" ||
+                                            appointment.status.toLowerCase() === "pending") && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => handleCancelAppointment(appointment.id)}
+                                                onClick={() =>
+                                                    handleCancelAppointment(appointment.id)
+                                                }
                                                 className="w-full border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
                                             >
                                                 <Trash2 className="h-4 w-4 mr-1.5" />
-                                                Cancel
+                                                Anuluj wizytę
                                             </Button>
                                         )}
                                         {appointment.status.toLowerCase() === "confirmed" && (
@@ -228,10 +306,10 @@ const UserAppointments = () => {
                                                 size="sm"
                                                 disabled
                                                 className="w-full border-barber text-barber hover:bg-barber/10"
-                                                title="Reschedule (coming soon)"
+                                                title="Przełożenie wizyty – wkrótce dostępne"
                                             >
                                                 <Edit className="h-4 w-4 mr-1.5" />
-                                                Reschedule
+                                                Przełóż wizytę
                                             </Button>
                                         )}
                                         {appointment.status.toLowerCase() === "completed" && (
@@ -240,10 +318,10 @@ const UserAppointments = () => {
                                                 size="sm"
                                                 disabled
                                                 className="w-full border-barber text-barber hover:bg-barber/10"
-                                                title="Leave Review (coming soon)"
+                                                title="Dodanie opinii – wkrótce dostępne"
                                             >
                                                 <Star className="h-4 w-4 mr-1.5" />
-                                                Leave Review
+                                                Dodaj opinię
                                             </Button>
                                         )}
                                     </div>
@@ -256,16 +334,15 @@ const UserAppointments = () => {
                         <CardContent className="text-center py-12">
                             <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <h3 className="text-lg font-medium text-gray-900 mb-1">
-                                No appointments found
+                                Nie znaleziono wizyt
                             </h3>
                             <p className="text-gray-500 mb-4">
                                 {filter === "all"
-                                    ? "You haven't booked any appointments yet."
-                                    : `You have no ${filter} appointments.`
-                                }
+                                    ? "Nie masz jeszcze żadnych zarezerwowanych wizyt."
+                                    : `Nie masz wizyt ze statusem: ${getFilterLabel(filter).toLowerCase()}.`}
                             </p>
                             <Button asChild className="bg-barber hover:bg-barber-muted">
-                                <Link to="/booking">Book Your First Appointment</Link>
+                                <Link to="/booking">Zarezerwuj swoją pierwszą wizytę</Link>
                             </Button>
                         </CardContent>
                     </Card>
