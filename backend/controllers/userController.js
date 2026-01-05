@@ -13,7 +13,6 @@ exports.getUserAppointments = async (req, res) => {
                 s.duration AS service_duration,
                 s.price AS service_price,
                 (barber_user.first_name || ' ' || barber_user.last_name) AS barber_name,
-                -- Usunięto b.address AS location
                 a.appointment_time, 
                 a.status
             FROM appointments a
@@ -24,8 +23,16 @@ exports.getUserAppointments = async (req, res) => {
         `;
         const queryParams = [clientId];
 
-        if (statusFilter && ['pending', 'confirmed', 'completed', 'canceled', 'cancelled', 'no-show'].includes(statusFilter.toLowerCase())) {
-            const dbStatus = statusFilter.toLowerCase() === 'cancelled' ? 'canceled' : statusFilter.toLowerCase();
+        if (
+            statusFilter &&
+            ['pending', 'confirmed', 'completed', 'canceled', 'cancelled', 'no-show'].includes(
+                statusFilter.toLowerCase()
+            )
+        ) {
+            const dbStatus =
+                statusFilter.toLowerCase() === 'cancelled'
+                    ? 'canceled'
+                    : statusFilter.toLowerCase();
             query += ` AND a.status = $${queryParams.length + 1}`;
             queryParams.push(dbStatus);
         }
@@ -39,18 +46,23 @@ exports.getUserAppointments = async (req, res) => {
             service: apt.service_name,
             barber: apt.barber_name,
             date: new Date(apt.appointment_time).toISOString().split('T')[0],
-            time: new Date(apt.appointment_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+            time: new Date(apt.appointment_time).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+            }),
             status: apt.status,
             duration: `${apt.service_duration} min`,
-            price: `$${parseFloat(apt.service_price).toFixed(2)}`,
-            // location: apt.location, // Usunięto
-            appointment_timestamp: apt.appointment_time
+            price: `${parseFloat(apt.service_price).toFixed(2)} PLN`,
+            appointment_timestamp: apt.appointment_time,
         }));
 
         res.json(appointments);
     } catch (err) {
-        console.error("Error in getUserAppointments:", err.stack);
-        res.status(500).json({ error: 'Server error fetching user appointments' });
+        console.error('Error in getUserAppointments:', err.stack);
+        res
+            .status(500)
+            .json({ error: 'Błąd serwera podczas pobierania wizyt użytkownika.' });
     }
 };
 
@@ -65,12 +77,17 @@ exports.cancelUserAppointment = async (req, res) => {
         );
 
         if (appointmentResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Appointment not found or you do not have permission to cancel it.' });
+            return res.status(404).json({
+                error:
+                    'Wizyta nie została znaleziona lub nie masz uprawnień, aby ją anulować.',
+            });
         }
 
         const appointment = appointmentResult.rows[0];
         if (appointment.status !== 'pending' && appointment.status !== 'confirmed') {
-            return res.status(400).json({ error: `Cannot cancel appointment with status: ${appointment.status}` });
+            return res.status(400).json({
+                error: `Nie można anulować wizyty ze statusem: ${appointment.status}`,
+            });
         }
         // Można dodać logikę, np. anulowanie możliwe tylko X godzin przed wizytą
 
@@ -80,15 +97,16 @@ exports.cancelUserAppointment = async (req, res) => {
         );
         res.json(result.rows[0]);
     } catch (err) {
-        console.error("Error in cancelUserAppointment:", err.stack);
-        res.status(500).json({ error: 'Server error canceling appointment' });
+        console.error('Error in cancelUserAppointment:', err.stack);
+        res.status(500).json({ error: 'Błąd serwera podczas anulowania wizyty.' });
     }
 };
 
 exports.getNextUpcomingAppointment = async (req, res) => {
     const clientId = req.user.id;
     try {
-        const result = await pool.query(`
+        const result = await pool.query(
+            `
             SELECT 
                 a.id, 
                 s.name AS service_name, 
@@ -98,17 +116,25 @@ exports.getNextUpcomingAppointment = async (req, res) => {
             JOIN services s ON a.service_id = s.id
             JOIN barbers b ON a.barber_id = b.id
             JOIN users barber_user ON b.user_id = barber_user.id
-            WHERE a.client_id = $1 AND a.status IN ('pending', 'confirmed') AND a.appointment_time >= CURRENT_TIMESTAMP
+            WHERE a.client_id = $1 
+              AND a.status IN ('pending', 'confirmed') 
+              AND a.appointment_time >= CURRENT_TIMESTAMP
             ORDER BY a.appointment_time ASC
             LIMIT 1;
-        `, [clientId]);
+        `,
+            [clientId]
+        );
 
         if (result.rows.length > 0) {
             const apt = result.rows[0];
             res.json({
                 id: apt.id,
                 date: new Date(apt.appointment_time).toISOString().split('T')[0],
-                time: new Date(apt.appointment_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                time: new Date(apt.appointment_time).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                }),
                 service: apt.service_name,
                 barber: apt.barber_name,
             });
@@ -116,21 +142,27 @@ exports.getNextUpcomingAppointment = async (req, res) => {
             res.json(null);
         }
     } catch (err) {
-        console.error("Error in getNextUpcomingAppointment:", err.stack);
-        res.status(500).json({ error: 'Server error fetching next upcoming appointment' });
+        console.error('Error in getNextUpcomingAppointment:', err.stack);
+        res.status(500).json({
+            error: 'Błąd serwera podczas pobierania najbliższej nadchodzącej wizyty.',
+        });
     }
 };
-
 
 // --- Kontrolery Powiadomień Klienta ---
 exports.getUserNotifications = async (req, res) => {
     const userId = req.user.id;
     try {
-        const result = await pool.query('SELECT id, type, title, message, link, is_read, created_at FROM user_notifications WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+        const result = await pool.query(
+            'SELECT id, type, title, message, link, is_read, created_at FROM user_notifications WHERE user_id = $1 ORDER BY created_at DESC',
+            [userId]
+        );
         res.json(result.rows);
     } catch (err) {
-        console.error("Error in getUserNotifications:", err.stack);
-        res.status(500).json({ error: 'Server error fetching user notifications' });
+        console.error('Error in getUserNotifications:', err.stack);
+        res.status(500).json({
+            error: 'Błąd serwera podczas pobierania powiadomień użytkownika.',
+        });
     }
 };
 
@@ -143,23 +175,38 @@ exports.markUserNotificationAsRead = async (req, res) => {
             [notificationId, userId]
         );
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Notification not found or not owned by user' });
+            return res.status(404).json({
+                error:
+                    'Powiadomienie nie zostało znalezione lub nie należy do tego użytkownika.',
+            });
         }
         res.json(result.rows[0]);
     } catch (err) {
-        console.error("Error in markUserNotificationAsRead:", err.stack);
-        res.status(500).json({ error: 'Server error marking notification as read' });
+        console.error('Error in markUserNotificationAsRead:', err.stack);
+        res.status(500).json({
+            error:
+                'Błąd serwera podczas oznaczania powiadomienia jako przeczytane.',
+        });
     }
 };
 
 exports.markAllUserNotificationsAsRead = async (req, res) => {
     const userId = req.user.id;
     try {
-        await pool.query('UPDATE user_notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE', [userId]);
-        res.json({ message: 'All user notifications marked as read' });
+        await pool.query(
+            'UPDATE user_notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE',
+            [userId]
+        );
+        res.json({
+            message:
+                'Wszystkie powiadomienia użytkownika zostały oznaczone jako przeczytane.',
+        });
     } catch (err) {
-        console.error("Error in markAllUserNotificationsAsRead:", err.stack);
-        res.status(500).json({ error: 'Server error marking all notifications as read' });
+        console.error('Error in markAllUserNotificationsAsRead:', err.stack);
+        res.status(500).json({
+            error:
+                'Błąd serwera podczas oznaczania wszystkich powiadomień jako przeczytane.',
+        });
     }
 };
 
@@ -167,14 +214,22 @@ exports.deleteUserNotification = async (req, res) => {
     const userId = req.user.id;
     const { notificationId } = req.params;
     try {
-        const result = await pool.query('DELETE FROM user_notifications WHERE id = $1 AND user_id = $2 RETURNING id', [notificationId, userId]);
+        const result = await pool.query(
+            'DELETE FROM user_notifications WHERE id = $1 AND user_id = $2 RETURNING id',
+            [notificationId, userId]
+        );
         if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Notification not found or not owned by user' });
+            return res.status(404).json({
+                error:
+                    'Powiadomienie nie zostało znalezione lub nie należy do tego użytkownika.',
+            });
         }
-        res.json({ message: 'User notification deleted' });
+        res.json({ message: 'Powiadomienie użytkownika zostało usunięte.' });
     } catch (err) {
-        console.error("Error in deleteUserNotification:", err.stack);
-        res.status(500).json({ error: 'Server error deleting user notification' });
+        console.error('Error in deleteUserNotification:', err.stack);
+        res.status(500).json({
+            error: 'Błąd serwera podczas usuwania powiadomienia użytkownika.',
+        });
     }
 };
 
@@ -182,61 +237,75 @@ exports.deleteUserNotification = async (req, res) => {
 exports.getUserProfile = async (req, res) => {
     const userId = req.user.id;
     try {
-        // Pobieramy tylko te pola, które są w tabeli users
         const result = await pool.query(
             'SELECT id, first_name, last_name, email, phone FROM users WHERE id = $1',
             [userId]
         );
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User profile not found' });
+            return res
+                .status(404)
+                .json({ error: 'Profil użytkownika nie został znaleziony.' });
         }
         const profile = result.rows[0];
         res.json({
-            // Mapowanie do nazw używanych w frontendzie, jeśli są inne
             id: profile.id,
             firstName: profile.first_name,
             lastName: profile.last_name,
             email: profile.email,
             phone: profile.phone,
-            // address i dateOfBirth usunięte
         });
     } catch (err) {
-        console.error("Error in getUserProfile:", err.stack);
-        res.status(500).json({ error: 'Server error fetching user profile' });
+        console.error('Error in getUserProfile:', err.stack);
+        res.status(500).json({
+            error: 'Błąd serwera podczas pobierania profilu użytkownika.',
+        });
     }
 };
 
 exports.updateUserProfile = async (req, res) => {
     const userId = req.user.id;
-    // Z request body bierzemy tylko te pola, które użytkownik może edytować i są w tabeli users
     const { firstName, lastName, email, phone } = req.body;
 
     if (!firstName || !lastName || !email) {
-        return res.status(400).json({ error: 'First name, last name, and email are required' });
+        return res.status(400).json({
+            error: 'Imię, nazwisko i adres e‑mail są wymagane.',
+        });
     }
-    // Można dodać walidację formatu email, phone
 
     try {
         // Sprawdzenie unikalności emaila, jeśli jest zmieniany
         if (email) {
-            const currentUser = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
+            const currentUser = await pool.query(
+                'SELECT email FROM users WHERE id = $1',
+                [userId]
+            );
             if (currentUser.rows.length > 0 && currentUser.rows[0].email !== email) {
-                const existingUser = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
+                const existingUser = await pool.query(
+                    'SELECT id FROM users WHERE email = $1 AND id != $2',
+                    [email, userId]
+                );
                 if (existingUser.rows.length > 0) {
-                    return res.status(400).json({ error: 'Email already in use by another account.' });
+                    return res.status(400).json({
+                        error: 'Adres e‑mail jest już używany przez inne konto.',
+                    });
                 }
             }
         }
 
         const result = await pool.query(
-            `UPDATE users 
-             SET first_name = $1, last_name = $2, email = $3, phone = $4
-             WHERE id = $5 RETURNING id, first_name, last_name, email, phone`, // Zwracamy zaktualizowane pola
+            `
+            UPDATE users 
+            SET first_name = $1, last_name = $2, email = $3, phone = $4
+            WHERE id = $5 
+            RETURNING id, first_name, last_name, email, phone
+        `,
             [firstName, lastName, email, phone, userId]
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not found for update' });
+            return res
+                .status(404)
+                .json({ error: 'Nie znaleziono użytkownika do aktualizacji.' });
         }
         const updatedProfile = result.rows[0];
         res.json({
@@ -246,11 +315,15 @@ exports.updateUserProfile = async (req, res) => {
             phone: updatedProfile.phone,
         });
     } catch (err) {
-        console.error("Error in updateUserProfile:", err.stack);
+        console.error('Error in updateUserProfile:', err.stack);
         if (err.code === '23505' && err.constraint === 'users_email_key') {
-            return res.status(400).json({ error: 'Email already exists.' });
+            return res
+                .status(400)
+                .json({ error: 'Adres e‑mail już istnieje w systemie.' });
         }
-        res.status(500).json({ error: 'Server error updating user profile' });
+        res.status(500).json({
+            error: 'Błąd serwera podczas aktualizowania profilu użytkownika.',
+        });
     }
 };
 
@@ -266,7 +339,7 @@ exports.getUserReviewsWritten = async (req, res) => {
                 r.created_at AS date, 
                 s.name AS service_name,
                 (b_user.first_name || ' ' || b_user.last_name) AS barber_name,
-                a.appointment_time -- Dodatkowe info o dacie wizyty
+                a.appointment_time
             FROM reviews r
             JOIN appointments a ON r.appointment_id = a.id
             JOIN services s ON a.service_id = s.id
@@ -277,22 +350,23 @@ exports.getUserReviewsWritten = async (req, res) => {
         `;
         const result = await pool.query(query, [clientId]);
 
-        // Mapowanie do formatu oczekiwanego przez frontend (jeśli konieczne)
         const reviews = result.rows.map(review => ({
             id: review.id,
             rating: review.rating,
             comment: review.comment,
-            date: new Date(review.date).toISOString().split('T')[0], // Data wystawienia recenzji
+            date: new Date(review.date).toISOString().split('T')[0],
             service: review.service_name,
             barber: review.barber_name,
-            appointmentDate: new Date(review.appointment_time).toLocaleDateString(), // Data samej wizyty
-            // helpful: 0, // Placeholder, jeśli frontend tego oczekuje
-            // canEdit: false, // Placeholder
+            appointmentDate: new Date(
+                review.appointment_time
+            ).toLocaleDateString(),
         }));
         res.json(reviews);
     } catch (err) {
-        console.error("Error in getUserReviewsWritten:", err.stack);
-        res.status(500).json({ error: 'Server error fetching user reviews' });
+        console.error('Error in getUserReviewsWritten:', err.stack);
+        res.status(500).json({
+            error: 'Błąd serwera podczas pobierania recenzji użytkownika.',
+        });
     }
 };
 
@@ -318,16 +392,22 @@ exports.getCompletedUnreviewedAppointments = async (req, res) => {
             ORDER BY a.appointment_time DESC;
         `;
         const result = await pool.query(query, [clientId]);
-        res.json(result.rows.map(apt => ({
-            appointment_id: apt.appointment_id,
-            service_name: apt.service_name,
-            barber_name: apt.barber_name,
-            // Formatowanie daty wizyty dla czytelności w dropdownie
-            display_text: `${apt.service_name} with ${apt.barber_name} on ${new Date(apt.appointment_time).toLocaleDateString()}`
-        })));
+        res.json(
+            result.rows.map(apt => ({
+                appointment_id: apt.appointment_id,
+                service_name: apt.service_name,
+                barber_name: apt.barber_name,
+                display_text: `${apt.service_name} u ${apt.barber_name} dnia ${new Date(
+                    apt.appointment_time
+                ).toLocaleDateString()}`,
+            }))
+        );
     } catch (err) {
-        console.error("Error in getCompletedUnreviewedAppointments:", err.stack);
-        res.status(500).json({ error: 'Server error fetching appointments to review' });
+        console.error('Error in getCompletedUnreviewedAppointments:', err.stack);
+        res.status(500).json({
+            error:
+                'Błąd serwera podczas pobierania wizyt oczekujących na recenzję.',
+        });
     }
 };
 
@@ -337,37 +417,45 @@ exports.submitReview = async (req, res) => {
     const { appointment_id, rating, comment } = req.body;
 
     if (!appointment_id || rating === undefined || !comment) {
-        return res.status(400).json({ error: 'Appointment ID, rating, and comment are required.' });
+        return res.status(400).json({
+            error: 'Identyfikator wizyty, ocena i komentarz są wymagane.',
+        });
     }
     if (typeof rating !== 'number' || rating < 1 || rating > 5) {
-        return res.status(400).json({ error: 'Rating must be a number between 1 and 5.' });
+        return res
+            .status(400)
+            .json({ error: 'Ocena musi być liczbą od 1 do 5.' });
     }
 
     try {
-        // Krok 1: Sprawdź, czy wizyta istnieje, należy do klienta i jest 'completed'
         const appointmentCheck = await pool.query(
             'SELECT id, client_id, barber_id, service_id, status FROM appointments WHERE id = $1 AND client_id = $2',
             [appointment_id, clientId]
         );
 
         if (appointmentCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Appointment not found or does not belong to you.' });
+            return res.status(404).json({
+                error:
+                    'Wizyta nie została znaleziona lub nie należy do zalogowanego użytkownika.',
+            });
         }
         const appointment = appointmentCheck.rows[0];
         if (appointment.status !== 'completed') {
-            return res.status(400).json({ error: 'You can only review completed appointments.' });
+            return res.status(400).json({
+                error: 'Możesz ocenić tylko zakończone wizyty.',
+            });
         }
 
-        // Krok 2: Sprawdź, czy recenzja dla tej wizyty już nie istnieje
         const existingReview = await pool.query(
             'SELECT id FROM reviews WHERE appointment_id = $1 AND client_id = $2',
             [appointment_id, clientId]
         );
         if (existingReview.rows.length > 0) {
-            return res.status(400).json({ error: 'You have already reviewed this appointment.' });
+            return res.status(400).json({
+                error: 'Ta wizyta została już przez Ciebie oceniona.',
+            });
         }
 
-        // Krok 3: Dodaj recenzję
         const insertQuery = `
             INSERT INTO reviews (appointment_id, client_id, barber_id, service_id, rating, comment)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -379,16 +467,22 @@ exports.submitReview = async (req, res) => {
             appointment.barber_id,
             appointment.service_id,
             rating,
-            comment
+            comment,
         ]);
 
-        // Pobierz dodatkowe dane do zwrócenia (nazwa usługi, barbera)
-        const serviceResult = await pool.query('SELECT name FROM services WHERE id = $1', [appointment.service_id]);
-        const barberUserResult = await pool.query(`
+        const serviceResult = await pool.query(
+            'SELECT name FROM services WHERE id = $1',
+            [appointment.service_id]
+        );
+        const barberUserResult = await pool.query(
+            `
             SELECT (u.first_name || ' ' || u.last_name) AS name 
-            FROM users u JOIN barbers b ON u.id = b.user_id 
+            FROM users u 
+            JOIN barbers b ON u.id = b.user_id 
             WHERE b.id = $1
-        `, [appointment.barber_id]);
+        `,
+            [appointment.barber_id]
+        );
 
         const createdReview = newReviewResult.rows[0];
         res.status(201).json({
@@ -396,17 +490,26 @@ exports.submitReview = async (req, res) => {
             rating: createdReview.rating,
             comment: createdReview.comment,
             date: new Date(createdReview.created_at).toISOString().split('T')[0],
-            service: serviceResult.rows.length > 0 ? serviceResult.rows[0].name : 'Unknown Service',
-            barber: barberUserResult.rows.length > 0 ? barberUserResult.rows[0].name : 'Unknown Barber',
+            service:
+                serviceResult.rows.length > 0
+                    ? serviceResult.rows[0].name
+                    : 'Nieznana usługa',
+            barber:
+                barberUserResult.rows.length > 0
+                    ? barberUserResult.rows[0].name
+                    : 'Nieznany barber',
         });
-
     } catch (err) {
-        console.error("Error in submitReview:", err.stack);
-        // Sprawdzenie, czy błąd nie jest spowodowany np. naruszeniem unikalnego klucza (jeśli taki by istniał)
-        if (err.code === '23505') { // PostgreSQL unique violation
-            return res.status(400).json({ error: 'A review for this appointment might already exist or another constraint was violated.' });
+        console.error('Error in submitReview:', err.stack);
+        if (err.code === '23505') {
+            return res.status(400).json({
+                error:
+                    'Recenzja dla tej wizyty prawdopodobnie już istnieje lub naruszono inne ograniczenie.',
+            });
         }
-        res.status(500).json({ error: 'Server error submitting review' });
+        res.status(500).json({
+            error: 'Błąd serwera podczas dodawania recenzji.',
+        });
     }
 };
 
@@ -418,23 +521,26 @@ exports.getUserStats = async (req, res) => {
             "SELECT COUNT(*) AS total_appointments FROM appointments WHERE client_id = $1 AND status NOT IN ('canceled', 'cancelled')",
             [clientId]
         );
-        const totalAppointments = parseInt(appointmentsCountResult.rows[0].total_appointments, 10) || 0;
+        const totalAppointments =
+            parseInt(appointmentsCountResult.rows[0].total_appointments, 10) || 0;
 
         const reviewsResult = await pool.query(
-            "SELECT ROUND(AVG(rating), 1) as avg_rating_given FROM reviews WHERE client_id = $1",
+            'SELECT ROUND(AVG(rating), 1) as avg_rating_given FROM reviews WHERE client_id = $1',
             [clientId]
         );
-        // AVG może zwrócić null, jeśli nie ma recenzji, co parseFloat zamieni na NaN.
-        const avgRatingGiven = reviewsResult.rows[0].avg_rating_given ? parseFloat(reviewsResult.rows[0].avg_rating_given) : null;
-
+        const avgRatingGiven = reviewsResult.rows[0].avg_rating_given
+            ? parseFloat(reviewsResult.rows[0].avg_rating_given)
+            : null;
 
         res.json({
             totalAppointments,
-            hoursSaved: "N/A",
+            hoursSaved: 'brak danych',
             avgRatingGiven: avgRatingGiven,
         });
     } catch (err) {
-        console.error("Error in getUserStats:", err.stack);
-        res.status(500).json({ error: 'Server error fetching user stats' });
+        console.error('Error in getUserStats:', err.stack);
+        res.status(500).json({
+            error: 'Błąd serwera podczas pobierania statystyk użytkownika.',
+        });
     }
 };

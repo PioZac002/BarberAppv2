@@ -42,31 +42,31 @@ const Register = () => {
         const newErrors: Partial<FormData> = {};
 
         if (!formData.firstName) {
-            newErrors.firstName = "First name is required";
+            newErrors.firstName = "Imię jest wymagane";
         }
 
         if (!formData.lastName) {
-            newErrors.lastName = "Last name is required";
+            newErrors.lastName = "Nazwisko jest wymagane";
         }
 
         if (!formData.email) {
-            newErrors.email = "Email is required";
+            newErrors.email = "Adres e‑mail jest wymagany";
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = "Email is invalid";
+            newErrors.email = "Adres e‑mail jest nieprawidłowy";
         }
 
         if (!formData.phone) {
-            newErrors.phone = "Phone number is required";
+            newErrors.phone = "Numer telefonu jest wymagany";
         }
 
         if (!formData.password) {
-            newErrors.password = "Password is required";
+            newErrors.password = "Hasło jest wymagane";
         } else if (formData.password.length < 6) {
-            newErrors.password = "Password must be at least 6 characters";
+            newErrors.password = "Hasło musi mieć co najmniej 6 znaków";
         }
 
         if (formData.password !== formData.confirmPassword) {
-            newErrors.confirmPassword = "Passwords do not match";
+            newErrors.confirmPassword = "Hasła nie są zgodne";
         }
 
         setErrors(newErrors);
@@ -95,7 +95,7 @@ const Register = () => {
                 phone: formData.phone,
                 password: formData.password,
             });
-            // Usunięto toast.success, bo jest w useAuth.tsx
+            // toast.success jest w useAuth.tsx
         } catch (error) {
             toast.error("Rejestracja nie powiodła się. Spróbuj ponownie.");
         } finally {
@@ -109,9 +109,11 @@ const Register = () => {
                 <div className="w-full max-w-md px-4">
                     <Card className="animate-fade-in">
                         <CardHeader className="space-y-1 text-center">
-                            <CardTitle className="text-3xl font-bold text-barber-dark">Create an account</CardTitle>
+                            <CardTitle className="text-3xl font-bold text-barber-dark">
+                                Utwórz konto
+                            </CardTitle>
                             <CardDescription>
-                                Enter your details to create a new account
+                                Wprowadź swoje dane, aby utworzyć nowe konto
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -119,36 +121,40 @@ const Register = () => {
                                 <div className="grid gap-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="firstName">First name</Label>
+                                            <Label htmlFor="firstName">Imię</Label>
                                             <Input
                                                 id="firstName"
                                                 name="firstName"
-                                                placeholder="John"
+                                                placeholder="Jan"
                                                 value={formData.firstName}
                                                 onChange={handleChange}
                                                 className={errors.firstName ? "border-red-500" : ""}
                                             />
                                             {errors.firstName && (
-                                                <p className="text-red-500 text-sm">{errors.firstName}</p>
+                                                <p className="text-red-500 text-sm">
+                                                    {errors.firstName}
+                                                </p>
                                             )}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="lastName">Last name</Label>
+                                            <Label htmlFor="lastName">Nazwisko</Label>
                                             <Input
                                                 id="lastName"
                                                 name="lastName"
-                                                placeholder="Doe"
+                                                placeholder="Kowalski"
                                                 value={formData.lastName}
                                                 onChange={handleChange}
                                                 className={errors.lastName ? "border-red-500" : ""}
                                             />
                                             {errors.lastName && (
-                                                <p className="text-red-500 text-sm">{errors.lastName}</p>
+                                                <p className="text-red-500 text-sm">
+                                                    {errors.lastName}
+                                                </p>
                                             )}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email">E‑mail</Label>
                                         <Input
                                             id="email"
                                             name="email"
@@ -163,12 +169,12 @@ const Register = () => {
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Phone number</Label>
+                                        <Label htmlFor="phone">Numer telefonu</Label>
                                         <Input
                                             id="phone"
                                             name="phone"
                                             type="tel"
-                                            placeholder="(123) 456-7890"
+                                            placeholder="+48 123 456 789"
                                             value={formData.phone}
                                             onChange={handleChange}
                                             className={errors.phone ? "border-red-500" : ""}
@@ -178,7 +184,7 @@ const Register = () => {
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="password">Password</Label>
+                                        <Label htmlFor="password">Hasło</Label>
                                         <Input
                                             id="password"
                                             name="password"
@@ -189,11 +195,13 @@ const Register = () => {
                                             className={errors.password ? "border-red-500" : ""}
                                         />
                                         {errors.password && (
-                                            <p className="text-red-500 text-sm">{errors.password}</p>
+                                            <p className="text-red-500 text-sm">
+                                                {errors.password}
+                                            </p>
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="confirmPassword">Confirm password</Label>
+                                        <Label htmlFor="confirmPassword">Potwierdź hasło</Label>
                                         <Input
                                             id="confirmPassword"
                                             name="confirmPassword"
@@ -201,10 +209,14 @@ const Register = () => {
                                             placeholder="••••••••"
                                             value={formData.confirmPassword}
                                             onChange={handleChange}
-                                            className={errors.confirmPassword ? "border-red-500" : ""}
+                                            className={
+                                                errors.confirmPassword ? "border-red-500" : ""
+                                            }
                                         />
                                         {errors.confirmPassword && (
-                                            <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+                                            <p className="text-red-500 text-sm">
+                                                {errors.confirmPassword}
+                                            </p>
                                         )}
                                     </div>
                                     <Button
@@ -212,16 +224,16 @@ const Register = () => {
                                         className="bg-barber hover:bg-barber-muted btn-hover"
                                         disabled={isSubmitting}
                                     >
-                                        {isSubmitting ? "Creating account..." : "Register"}
+                                        {isSubmitting ? "Tworzenie konta..." : "Zarejestruj się"}
                                     </Button>
                                 </div>
                             </form>
                         </CardContent>
                         <CardFooter className="text-center">
                             <div className="text-sm">
-                                Already have an account?{" "}
+                                Masz już konto?{" "}
                                 <Link to="/login" className="text-barber hover:underline">
-                                    Login
+                                    Zaloguj się
                                 </Link>
                             </div>
                         </CardFooter>

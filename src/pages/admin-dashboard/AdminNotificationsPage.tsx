@@ -95,7 +95,7 @@ const AdminNotificationsPage = () => {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Failed to mark as read on server");
+            if (!response.ok) throw new Error("Nie udało się oznaczyć jako przeczytane na serwerze");
             toast.success("Oznaczono jako przeczytane");
         } catch (error) {
             toast.error("Błąd serwera. Przywracanie statusu.");
@@ -112,7 +112,7 @@ const AdminNotificationsPage = () => {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Failed to delete notification on server");
+            if (!response.ok) throw new Error("Nie udało się usunąć powiadomienia na serwerze");
             toast.success("Powiadomienie usunięte");
         } catch (error) {
             toast.error("Błąd serwera. Przywracanie powiadomienia.");
@@ -129,7 +129,7 @@ const AdminNotificationsPage = () => {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Failed to mark all as read on server");
+            if (!response.ok) throw new Error("Nie udało się oznaczyć wszystkich jako przeczytane na serwerze");
             toast.success("Wszystkie oznaczono jako przeczytane");
         } catch (error) {
             toast.error("Błąd serwera. Przywracanie statusów.");
@@ -138,7 +138,11 @@ const AdminNotificationsPage = () => {
     };
 
     if (authLoading || isLoading) {
-        return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div></div>;
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+            </div>
+        );
     }
 
     const getNotificationIcon = (type: AdminNotificationFE["displayType"]) => {
@@ -158,13 +162,42 @@ const AdminNotificationsPage = () => {
                     <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} ${!notification.is_read ? 'text-gray-800' : 'text-gray-600'}`}>{notification.title}</h4>
                     <p className={`text-gray-600 ${isMobile ? 'text-xs' : 'text-sm'} my-1 line-clamp-2`}>{notification.message}</p>
                     <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center gap-1.5"><Clock className="h-3 w-3" /><span>{isValidDateFn(notification.timestamp) ? formatDistanceToNow(notification.timestamp, { addSuffix: true }) : "Invalid date"}</span></div>
-                        {notification.link && <RouterLink to={notification.link} className="text-barber hover:underline flex items-center gap-1"><LinkIcon className="h-3 w-3" /> Szczegóły</RouterLink>}
+                        <div className="flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" />
+                            <span>
+                                {isValidDateFn(notification.timestamp)
+                                    ? formatDistanceToNow(notification.timestamp, { addSuffix: true })
+                                    : "Nieprawidłowa data"}
+                            </span>
+                        </div>
+                        {notification.link && (
+                            <RouterLink to={notification.link} className="text-barber hover:underline flex items-center gap-1">
+                                <LinkIcon className="h-3 w-3" /> Szczegóły
+                            </RouterLink>
+                        )}
                     </div>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 ml-2">
-                    {!notification.is_read && <Button onClick={() => markAsRead(notification.id)} size="icon" variant="ghost" className="text-green-600 hover:bg-green-100 h-7 w-7" title="Oznacz jako przeczytane"><CheckCircle className="h-4 w-4" /></Button>}
-                    <Button onClick={() => deleteNotification(notification.id)} size="icon" variant="ghost" className="text-red-500 hover:bg-red-100 h-7 w-7" title="Usuń powiadomienie"><Trash2 className="h-4 w-4" /></Button>
+                    {!notification.is_read && (
+                        <Button
+                            onClick={() => markAsRead(notification.id)}
+                            size="icon"
+                            variant="ghost"
+                            className="text-green-600 hover:bg-green-100 h-7 w-7"
+                            title="Oznacz jako przeczytane"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                        </Button>
+                    )}
+                    <Button
+                        onClick={() => deleteNotification(notification.id)}
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-500 hover:bg-red-100 h-7 w-7"
+                        title="Usuń powiadomienie"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 </div>
             </div>
         </div>
@@ -179,7 +212,12 @@ const AdminNotificationsPage = () => {
                             <Bell className="h-6 w-6 text-barber" />
                             <CardTitle className="text-xl md:text-2xl">Powiadomienia</CardTitle>
                         </div>
-                        {unreadNotifications.length > 0 && <Button onClick={markAllAsRead} variant="outline" size="sm"><CheckCircle className="h-4 w-4 mr-2" />Oznacz wszystkie jako przeczytane</Button>}
+                        {unreadNotifications.length > 0 && (
+                            <Button onClick={markAllAsRead} variant="outline" size="sm">
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Oznacz wszystkie jako przeczytane
+                            </Button>
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent className="p-3 sm:p-4 space-y-6">
@@ -189,13 +227,21 @@ const AdminNotificationsPage = () => {
                                 <h3 className="font-semibold text-lg text-gray-800">Nowe</h3>
                                 <Badge variant="destructive">{unreadNotifications.length}</Badge>
                             </div>
-                            <div className="space-y-3">{unreadNotifications.map(n => <NotificationItem key={n.id} notification={n} />)}</div>
+                            <div className="space-y-3">
+                                {unreadNotifications.map(n => (
+                                    <NotificationItem key={n.id} notification={n} />
+                                ))}
+                            </div>
                         </section>
                     )}
                     {readNotifications.length > 0 && (
                         <section>
                             <h3 className="font-semibold text-lg text-gray-600 mb-3 border-t pt-4 mt-6">Przeczytane</h3>
-                            <div className="space-y-3 opacity-80">{readNotifications.map(n => <NotificationItem key={n.id} notification={n} />)}</div>
+                            <div className="space-y-3 opacity-80">
+                                {readNotifications.map(n => (
+                                    <NotificationItem key={n.id} notification={n} />
+                                ))}
+                            </div>
                         </section>
                     )}
                     {notifications.length === 0 && (

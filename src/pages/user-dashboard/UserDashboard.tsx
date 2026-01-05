@@ -21,7 +21,7 @@ const UserDashboard = () => {
 
     if (authContextLoading) {
         return (
-            <DashboardLayout title="Loading Dashboard...">
+            <DashboardLayout title="Ładowanie panelu...">
                 <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
                 </div>
@@ -31,28 +31,24 @@ const UserDashboard = () => {
 
     if (!authUser && !authContextLoading) { // Dodatkowe sprawdzenie
         return (
-            <DashboardLayout title="Authentication Error">
+            <DashboardLayout title="Błąd uwierzytelniania">
                 <div className="p-6 text-center">
-                    <p className="text-red-500">Authentication error. Please log in to continue.</p>
+                    <p className="text-red-500">
+                        Błąd uwierzytelniania. Zaloguj się, aby kontynuować.
+                    </p>
                     <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
-                        <Link to="/login">Go to Login</Link>
+                        <Link to="/login">Przejdź do logowania</Link>
                     </Button>
                 </div>
             </DashboardLayout>
         );
     }
 
-    // Logika renderowania overview może pozostać w osobnym komponencie UserOverview
-    // lub być częścią trasy bazowej "/"
-
-    // Tytuł dla DashboardLayout może być dynamiczny w zależności od aktualnej trasy
-    // Można to zrobić używając useLocation i dopasowując tytuł
-
     return (
-        <DashboardLayout title="User Dashboard"> {/* Możesz chcieć dynamicznego tytułu */}
+        <DashboardLayout title="Panel klienta">
             <Routes>
                 {/* Trasa bazowa dla /user-dashboard (może to być overview) */}
-                <Route path="/" element={<UserOverview />} /> {/* Lub bezpośrednio renderOverviewContent() jeśli jest proste */}
+                <Route path="/" element={<UserOverview />} />
                 <Route path="profile" element={<UserProfile />} />
                 <Route path="appointments" element={<UserAppointments />} />
                 <Route path="notifications" element={<UserNotifications />} />

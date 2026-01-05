@@ -21,7 +21,7 @@ const AdminDashboard = () => {
     }
 
     return (
-        <DashboardLayout title="Admin Dashboard">
+        <DashboardLayout title="Panel Administratora">
             <Routes>
                 <Route path="/" element={<Overview />} />
                 <Route path="users" element={<Users />} />
