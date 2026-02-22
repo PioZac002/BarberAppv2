@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // ... reszta Twoich funkcji (updateUserContext, useEffect) bez zmian ...
     const updateUserContext = useCallback((updatedUserData: Partial<User>) => {
         setUser(prevUser => {
             if (prevUser) {
@@ -35,7 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (storedToken) {
                 setToken(storedToken);
                 try {
-                    // ZMIANA TUTAJ
+
                     const response = await fetch(`${import.meta.env.VITE_API_URL}/api/verify-token`, {
                         headers: { Authorization: `Bearer ${storedToken}` },
                     });

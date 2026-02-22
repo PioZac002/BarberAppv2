@@ -1,4 +1,6 @@
+
 // controllers/adminController.test.js
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getMockReq, getMockRes } from "vitest-mock-express";
 

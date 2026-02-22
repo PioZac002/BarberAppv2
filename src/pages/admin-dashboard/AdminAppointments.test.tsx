@@ -1,17 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+
 import AdminAppointments from "./AdminAppointments";
+
+
+import '@testing-library/jest-dom';
+import matchers from '@testing-library/jest-dom/matchers';
+import { expect as vitestExpect } from 'vitest';
+vitestExpect.extend(matchers);
 
 const mockFetch = vi.fn();
 const mockGetItem = vi.fn();
 
 beforeEach(() => {
     vi.clearAllMocks();
-    // @ts-expect-error
-    global.fetch = mockFetch;
-    // @ts-expect-error
-    global.localStorage = { getItem: mockGetItem };
+
+    (global as any).fetch = mockFetch;
+    (global as any).localStorage = { getItem: mockGetItem };
     mockGetItem.mockReturnValue("FAKE_TOKEN");
 });
 
@@ -55,16 +60,16 @@ describe("AdminAppointments", () => {
 
         render(<AdminAppointments />);
 
-        // nagłówek
+
         expect(
             await screen.findByText("Zarządzanie wizytami")
         ).toBeInTheDocument();
 
-        // klient może pojawić się w widoku desktop i mobilnym, więc używamy findAllByText
+
         const clients = await screen.findAllByText("Jan Kowalski");
         expect(clients.length).toBeGreaterThan(0);
 
-        // usługa
+
         expect(screen.getByText("Strzyżenie")).toBeInTheDocument();
     });
 });
