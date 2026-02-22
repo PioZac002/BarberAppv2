@@ -3,8 +3,6 @@ const pool = require('../config/database');
 
 exports.getAllPublicServices = async (req, res) => {
     try {
-        // Pobieramy tylko aktywne usługi
-        // Zgodnie ze schematem tabeli services, photo_url to adres obrazka
         const result = await pool.query(
             `SELECT id, name, description, price, duration, photo_url 
              FROM services 
@@ -16,12 +14,9 @@ exports.getAllPublicServices = async (req, res) => {
             id: service.id,
             name: service.name,
             description: service.description,
-            price: parseFloat(service.price), // Upewnij się, że cena jest liczbą
+            price: parseFloat(service.price),
             duration: parseInt(service.duration, 10),
-            image: service.photo_url || null, // Mapujemy photo_url na image dla spójności z frontendem
-            // Na razie usuwamy rating i category, bo nie ma ich w tabeli services
-            // category: "all", // Można by dodać logikę kategoryzacji tutaj, jeśli potrzebne
-            // rating: 0, // Placeholder, jeśli potrzebne
+            image: service.photo_url || null,
         }));
 
         res.json(services);

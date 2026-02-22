@@ -12,7 +12,7 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 const corsOptions = {
-    origin:'http://localhost:5178',
+    origin:'http://localhost:5174', // Adres frontendu na localhost
         //'https://barberappv2.onrender.com', // Adres frontendu
     optionsSuccessStatus: 200
 };
@@ -33,3 +33,4 @@ app.use('/api/public/services', publicServicesRoutes);
 app.listen(port, () => {
     console.log(`Serwer działa na porcie ${port}`);
 });
+
