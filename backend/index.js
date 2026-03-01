@@ -27,8 +27,8 @@ app.use((req, res, next) => {
     next();
 });
 
-// obsługa preflight dla wszystkich ścieżek
-app.options('*', cors(corsOptions));
+// obsługa preflight dla wszystkich ścieżek (Express 5 nie obsługuje '*' – używamy RegExp)
+app.options(/\/.*/, cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use(express.json());
