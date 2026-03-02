@@ -1,4 +1,3 @@
-
 import { ReactNode } from "react";
 import Navigation from "./Navigation";
 import Footer from "./Footer";
@@ -10,7 +9,7 @@ type LayoutProps = {
 
 const Layout = ({ children, withFooter = true }: LayoutProps) => {
     return (
-        <div className="flex flex-col min-h-screen bg-barber-dark">
+        <div className="flex flex-col min-h-screen bg-background transition-colors duration-200">
             <Navigation />
             <main className="flex-grow pt-16">
                 {children}
