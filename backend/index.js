@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 
-const rawFrontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+const rawFrontend = process.env.FRONTEND_URL || 'http://localhost:5174';
 const allowedOrigins = rawFrontend.split(',').map(s => s.trim()).filter(Boolean);
 
 const corsOptions = {

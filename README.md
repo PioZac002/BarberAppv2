@@ -120,13 +120,22 @@ docker compose up --build frontend backend
 
 When the local `db` container starts for the first time it automatically runs `backend/db/01_schema.sql` (tables) and `backend/db/02_seed.sql` (seed data), so the database is ready with no extra steps.
 
-| Account | Email                    | Password     |
-|---------|--------------------------|--------------|
-| Admin   | admin@barbershop.com     | Admin1234!   |
+All seeded passwords: **User1234!** (admin: **Admin1234!**)
 
-> Change the password after first login via **Admin dashboard → Profile**.
+| Role   | Email                    | Name                |
+|--------|--------------------------|---------------------|
+| Admin  | admin@barbershop.com     | Admin BarberShop    |
+| Barber | marek@barbershop.com     | Marek Kowalski      |
+| Barber | tomasz@barbershop.com    | Tomasz Wiśniewski   |
+| Client | jan@example.com          | Jan Nowak           |
+| Client | piotr@example.com        | Piotr Zając         |
+| Client | kamil@example.com        | Kamil Lewandowski   |
+| Client | anna@example.com         | Anna Wróbel         |
+| Client | michal@example.com       | Michał Krawczyk     |
 
-Barber and client accounts can be registered normally via `/register`. Role assignment is done by the admin in the Users panel.
+The seed also inserts sample services, appointments (various statuses), reviews, and notifications so the dashboards look populated from day one.
+
+> Change the admin password after first login via **Admin dashboard → Profile**.
 
 ---
 
