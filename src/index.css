@@ -3,67 +3,67 @@
 @tailwind utilities;
 
 @layer base {
-  /* ── Light mode (barber warm palette) ── */
+  /* ── Light mode — Warm Barbershop Gold ── */
   :root {
-    --background: 36 25% 97%;          /* #FAF9F7 warm off-white */
-    --foreground: 0 0% 13%;            /* #222222 near-black */
+    --background: 40 33% 97%;          /* #FAF9F7 warm off-white */
+    --foreground: 0 0% 13%;            /* #202020 Carbon Black */
     --card: 0 0% 100%;                 /* white */
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;
-    --primary: 35 40% 64%;             /* #C8A97E barber gold */
+    --primary: 47 100% 39%;            /* #c8a000 rich amber gold */
     --primary-foreground: 0 0% 100%;   /* white */
-    --secondary: 36 20% 93%;           /* light warm */
+    --secondary: 40 20% 93%;           /* warm cream */
     --secondary-foreground: 0 0% 13%;
-    --muted: 36 20% 93%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 36 20% 90%;
+    --muted: 40 20% 93%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 47 60% 91%;              /* light golden tint */
     --accent-foreground: 0 0% 13%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 36 15% 85%;              /* warm light border */
-    --input: 36 15% 88%;
-    --ring: 35 40% 64%;                /* barber gold */
+    --border: 0 0% 84%;               /* #d6d6d6 Dust Grey */
+    --input: 0 0% 89%;
+    --ring: 47 100% 39%;               /* amber gold focus ring */
     --radius: 0.5rem;
-    --sidebar-background: 36 20% 93%;
+    --sidebar-background: 40 20% 93%;
     --sidebar-foreground: 0 0% 13%;
-    --sidebar-primary: 35 40% 64%;
+    --sidebar-primary: 47 100% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 36 20% 87%;
+    --sidebar-accent: 40 20% 87%;
     --sidebar-accent-foreground: 0 0% 13%;
-    --sidebar-border: 36 15% 82%;
-    --sidebar-ring: 35 40% 64%;
+    --sidebar-border: 0 0% 82%;
+    --sidebar-ring: 47 100% 39%;
   }
 
-  /* ── Dark mode (barber dark palette) ── */
+  /* ── Dark mode — Carbon Black & Bright Gold ── */
   .dark {
-    --background: 0 0% 13%;            /* #222222 barber-dark */
-    --foreground: 0 0% 96%;            /* #F5F5F5 near-white */
-    --card: 0 0% 17%;                  /* #2B2B2B slightly lighter dark */
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 17%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 35 40% 64%;             /* #C8A97E barber gold — same in both modes */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 20%;             /* dark secondary */
-    --secondary-foreground: 0 0% 90%;
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 35 20% 22%;              /* warm dark accent */
-    --accent-foreground: 0 0% 96%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 96%;
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
-    --ring: 35 40% 64%;
-    --sidebar-background: 0 0% 15%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 35 40% 64%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 20%;
-    --sidebar-accent-foreground: 0 0% 90%;
+    --background: 0 0% 13%;            /* #202020 Carbon Black */
+    --foreground: 0 0% 95%;            /* near-white */
+    --card: 120 2% 20%;                /* #333533 Graphite */
+    --card-foreground: 0 0% 95%;
+    --popover: 120 2% 20%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 49 100% 50%;            /* #ffd100 Bright Gold — pops on dark */
+    --primary-foreground: 0 0% 13%;    /* dark text on bright gold */
+    --secondary: 0 0% 22%;
+    --secondary-foreground: 0 0% 85%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 76%;      /* Dust Grey-ish */
+    --accent: 49 20% 22%;              /* subtle warm dark */
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 0 0% 26%;
+    --input: 0 0% 24%;
+    --ring: 49 100% 50%;               /* Bright Gold focus ring */
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 88%;
+    --sidebar-primary: 49 100% 50%;
+    --sidebar-primary-foreground: 0 0% 13%;
+    --sidebar-accent: 0 0% 17%;
+    --sidebar-accent-foreground: 0 0% 88%;
     --sidebar-border: 0 0% 22%;
-    --sidebar-ring: 35 40% 64%;
+    --sidebar-ring: 49 100% 50%;
   }
 }
 
@@ -82,7 +82,7 @@
 
   body {
     @apply bg-background text-foreground font-sans;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   .animate-enter {
@@ -92,11 +92,11 @@
 
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .btn-hover {
-    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
+    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
   }
 
   .page-container {
@@ -110,4 +110,45 @@
   .card-hover {
     @apply transition-all duration-300 hover:shadow-lg;
   }
+
+  /* ── Gold accent line on section headings ── */
+  .heading-accent {
+    @apply relative inline-block;
+  }
+  .heading-accent::after {
+    content: '';
+    @apply absolute -bottom-2 left-0 w-12 h-0.5 bg-barber;
+  }
+}
+
+/* ── MUI DateCalendar dark mode overrides ── */
+.dark .MuiDateCalendar-root {
+  background-color: transparent;
+}
+.dark .MuiDateCalendar-root .MuiTypography-root,
+.dark .MuiDateCalendar-root .MuiPickersCalendarHeader-label,
+.dark .MuiDateCalendar-root .MuiDayCalendar-weekDayLabel,
+.dark .MuiDateCalendar-root .MuiPickersDay-root:not(.Mui-selected):not(.Mui-disabled) {
+  color: #ffffff;
+}
+.dark .MuiDateCalendar-root .MuiPickersDay-root.MuiPickersDay-today:not(.Mui-selected) {
+  border-color: #ffd100;
+  color: #ffd100;
+}
+.dark .MuiDateCalendar-root .MuiPickersDay-root.Mui-selected {
+  background-color: #c8a000 !important;
+  color: #ffffff !important;
+}
+.dark .MuiDateCalendar-root .MuiPickersArrowSwitcher-button,
+.dark .MuiDateCalendar-root .MuiPickersCalendarHeader-switchViewButton {
+  color: #ffffff;
+}
+.dark .MuiDateCalendar-root .MuiPickersDay-root:hover:not(.Mui-selected):not(.Mui-disabled) {
+  background-color: rgba(200, 160, 0, 0.2);
+}
+.dark .MuiDateCalendar-root .MuiPickersDay-root.Mui-disabled {
+  color: rgba(255, 255, 255, 0.3);
+}
+.dark .MuiDateCalendar-root .MuiPickersSlideTransition-root {
+  color: #ffffff;
 }

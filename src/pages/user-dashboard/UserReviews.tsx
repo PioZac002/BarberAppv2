@@ -31,8 +31,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { isValid, format } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Review {
     id: number;
@@ -54,6 +55,8 @@ interface AppointmentToReview {
 const UserReviews = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["client"] });
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === "pl" ? pl : enUS;
 
     const [reviews, setReviews] = useState<Review[]>([]);
     const [appointmentsToReview, setAppointmentsToReview] = useState<AppointmentToReview[]>([]);
@@ -98,21 +101,18 @@ const UserReviews = () => {
                     const reviewsData = await reviewsRes.json();
                     setReviews(reviewsData);
                 } else {
-                    toast.error("Nie udało się wczytać Twoich opinii.");
-                    console.error("Failed to fetch user reviews:", await reviewsRes.text());
+                    toast.error(t("userPanel.reviews.loadFailed"));
                 }
 
                 if (appointmentsToReviewRes.ok) {
                     const appointmentsData = await appointmentsToReviewRes.json();
                     setAppointmentsToReview(appointmentsData);
                 } else {
-                    toast.error("Nie udało się wczytać wizyt dostępnych do oceny.");
-                    console.error("Failed to fetch appointments to review:", await appointmentsToReviewRes.text());
+                    toast.error(t("userPanel.reviews.loadFailed"));
                 }
 
             } catch (error) {
-                console.error("Error fetching reviews data:", error);
-                toast.error("Wystąpił błąd podczas ładowania danych o opiniach.");
+                toast.error(t("userPanel.reviews.loadFailed"));
             } finally {
                 setIsLoading(false);
             }
@@ -153,19 +153,19 @@ const UserReviews = () => {
 
     const handleSubmitReview = async () => {
         if (!newReviewData.appointment_id) {
-            toast.error("Wybierz wizytę, którą chcesz ocenić.");
+            toast.error(t("userPanel.reviews.selectVisit"));
             return;
         }
         if (newReviewData.rating === 0) {
-            toast.error("Podaj ocenę w skali 1–5 gwiazdek.");
+            toast.error(t("userPanel.reviews.provideRating"));
             return;
         }
         if (!newReviewData.comment.trim()) {
-            toast.error("Napisz komentarz do swojej opinii.");
+            toast.error(t("userPanel.reviews.writeComment"));
             return;
         }
         if (!token) {
-            toast.error("Błąd uwierzytelniania.");
+            toast.error(t("userPanel.reviews.authError"));
             return;
         }
 
@@ -184,7 +184,7 @@ const UserReviews = () => {
             });
 
             if (!response.ok) {
-                let errorMsg = "Nie udało się dodać opinii";
+                let errorMsg = t("userPanel.reviews.addFailed");
                 try {
                     const errorData = await response.json();
                     errorMsg = errorData.error || errorMsg;
@@ -195,29 +195,23 @@ const UserReviews = () => {
             const addedReview = await response.json();
             setReviews(prevReviews =>
                 [addedReview, ...prevReviews].sort(
-                    (a, b) =>
-                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
                 )
             );
             setAppointmentsToReview(prev =>
-                prev.filter(
-                    apt =>
-                        apt.appointment_id !==
-                        parseInt(newReviewData.appointment_id, 10)
-                )
+                prev.filter(apt => apt.appointment_id !== parseInt(newReviewData.appointment_id, 10))
             );
             setNewReviewData({ appointment_id: "", rating: 0, comment: "" });
             setIsDialogOpen(false);
-            toast.success("Opinia została pomyślnie dodana!");
+            toast.success(t("userPanel.reviews.added"));
         } catch (error: any) {
-            toast.error(error.message || "Nie udało się dodać opinii.");
+            toast.error(error.message || t("userPanel.reviews.addFailed"));
         }
     };
 
     const averageRating =
         reviews.length > 0
-            ? reviews.reduce((acc, review) => acc + review.rating, 0) /
-            reviews.length
+            ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
             : 0;
 
     if (authContextLoading || isLoading) {
@@ -231,14 +225,9 @@ const UserReviews = () => {
     if (!authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">
-                    Zaloguj się, aby zarządzać swoimi opiniami.
-                </p>
-                <Button
-                    asChild
-                    className="mt-4 bg-barber hover:bg-barber-muted"
-                >
-                    <Link to="/login">Przejdź do logowania</Link>
+                <p className="text-red-500">{t("userPanel.authErrorDesc")}</p>
+                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                    <Link to="/login">{t("userPanel.goToLogin")}</Link>
                 </Button>
             </div>
         );
@@ -250,11 +239,10 @@ const UserReviews = () => {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg sm:text-xl">
-                            Podsumowanie Twoich opinii
+                            {t("userPanel.reviews.summary")}
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Krótkie statystyki dotyczące Twoich dotychczasowych
-                            ocen.
+                            {t("userPanel.reviews.summaryDesc")}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
@@ -262,8 +250,8 @@ const UserReviews = () => {
                             <div className="text-2xl sm:text-3xl font-bold text-barber">
                                 {reviews.length}
                             </div>
-                            <p className="text-xs sm:text-sm text-gray-500">
-                                Liczba wystawionych opinii
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                                {t("userPanel.reviews.count")}
                             </p>
                         </div>
                         <div>
@@ -271,15 +259,15 @@ const UserReviews = () => {
                                 <div className="text-2xl sm:text-3xl font-bold text-barber">
                                     {averageRating.toFixed(1)}
                                 </div>
-                                <span className="text-sm text-gray-500">
-                                    / 5.0
+                                <span className="text-sm text-muted-foreground">
+                                    {t("userPanel.reviews.outOf")}
                                 </span>
                             </div>
                             <div className="flex mt-1">
                                 {renderStars(Math.round(averageRating))}
                             </div>
-                            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                                Średnia ocena
+                            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                                {t("userPanel.reviews.avgRating")}
                             </p>
                         </div>
                     </CardContent>
@@ -288,104 +276,61 @@ const UserReviews = () => {
                 <Card className="flex flex-col justify-center items-center">
                     <CardContent className="pt-6 text-center">
                         <MessageSquare className="h-10 w-10 text-barber mx-auto mb-2" />
-                        <Dialog
-                            open={isDialogOpen}
-                            onOpenChange={setIsDialogOpen}
-                        >
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button
                                     className="bg-barber hover:bg-barber-muted"
-                                    disabled={
-                                        appointmentsToReview.length === 0 &&
-                                        !isLoading
-                                    }
+                                    disabled={appointmentsToReview.length === 0 && !isLoading}
                                     onClick={() => {
-                                        if (
-                                            !newReviewData.appointment_id &&
-                                            appointmentsToReview.length > 0
-                                        ) {
+                                        if (!newReviewData.appointment_id && appointmentsToReview.length > 0) {
                                             setNewReviewData({
-                                                appointment_id: String(
-                                                    appointmentsToReview[0]
-                                                        .appointment_id
-                                                ),
+                                                appointment_id: String(appointmentsToReview[0].appointment_id),
                                                 rating: 0,
                                                 comment: "",
                                             });
-                                        } else if (
-                                            appointmentsToReview.length === 0
-                                        ) {
-                                            setNewReviewData({
-                                                appointment_id: "",
-                                                rating: 0,
-                                                comment: "",
-                                            });
+                                        } else if (appointmentsToReview.length === 0) {
+                                            setNewReviewData({ appointment_id: "", rating: 0, comment: "" });
                                         }
                                         setIsDialogOpen(true);
                                     }}
                                 >
                                     <Plus className="h-4 w-4 mr-2" />
-                                    Napisz nową opinię
+                                    {t("userPanel.reviews.writeNew")}
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-lg">
                                 <DialogHeader>
-                                    <DialogTitle>Dodaj opinię</DialogTitle>
+                                    <DialogTitle>{t("userPanel.reviews.addReview")}</DialogTitle>
                                     <DialogDescription>
-                                        Podziel się swoją opinią na temat
-                                        zakończonej wizyty.
+                                        {t("userPanel.reviews.addReviewDesc")}
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4 py-2">
                                     <div>
-                                        <Label
-                                            htmlFor="appointmentToReview"
-                                            className="text-sm font-medium"
-                                        >
-                                            Wizyta do oceny
+                                        <Label htmlFor="appointmentToReview" className="text-sm font-medium">
+                                            {t("userPanel.reviews.appointmentToReview")}
                                         </Label>
                                         <Select
                                             value={newReviewData.appointment_id}
-                                            onValueChange={value =>
-                                                handleNewReviewChange(
-                                                    "appointment_id",
-                                                    value
-                                                )
-                                            }
-                                            disabled={
-                                                appointmentsToReview.length ===
-                                                0
-                                            }
+                                            onValueChange={value => handleNewReviewChange("appointment_id", value)}
+                                            disabled={appointmentsToReview.length === 0}
                                         >
-                                            <SelectTrigger
-                                                id="appointmentToReview"
-                                                className="mt-1"
-                                            >
-                                                <SelectValue placeholder="Wybierz zakończoną wizytę" />
+                                            <SelectTrigger id="appointmentToReview" className="mt-1">
+                                                <SelectValue placeholder={t("userPanel.reviews.selectAppointment")} />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {appointmentsToReview.length >
-                                                0 ? (
-                                                    appointmentsToReview.map(
-                                                        apt => (
-                                                            <SelectItem
-                                                                key={
-                                                                    apt.appointment_id
-                                                                }
-                                                                value={String(
-                                                                    apt.appointment_id
-                                                                )}
-                                                            >
-                                                                {
-                                                                    apt.display_text
-                                                                }
-                                                            </SelectItem>
-                                                        )
-                                                    )
+                                                {appointmentsToReview.length > 0 ? (
+                                                    appointmentsToReview.map(apt => (
+                                                        <SelectItem
+                                                            key={apt.appointment_id}
+                                                            value={String(apt.appointment_id)}
+                                                        >
+                                                            {apt.display_text}
+                                                        </SelectItem>
+                                                    ))
                                                 ) : (
-                                                    <div className="p-4 text-sm text-center text-gray-500">
-                                                        Brak nowych wizyt do
-                                                        oceny.
+                                                    <div className="p-4 text-sm text-center text-muted-foreground">
+                                                        {t("userPanel.reviews.noAppointmentsToReview")}
                                                     </div>
                                                 )}
                                             </SelectContent>
@@ -393,38 +338,26 @@ const UserReviews = () => {
                                     </div>
                                     <div>
                                         <Label className="text-sm font-medium">
-                                            Twoja ocena
+                                            {t("userPanel.reviews.yourRating")}
                                         </Label>
                                         <div className="flex mt-1.5">
                                             {renderStars(
                                                 newReviewData.rating,
                                                 true,
-                                                rating =>
-                                                    handleNewReviewChange(
-                                                        "rating",
-                                                        rating
-                                                    )
+                                                rating => handleNewReviewChange("rating", rating)
                                             )}
                                         </div>
                                     </div>
                                     <div>
-                                        <Label
-                                            htmlFor="reviewComment"
-                                            className="text-sm font-medium"
-                                        >
-                                            Twój komentarz
+                                        <Label htmlFor="reviewComment" className="text-sm font-medium">
+                                            {t("userPanel.reviews.yourComment")}
                                         </Label>
                                         <Textarea
                                             id="reviewComment"
                                             className="mt-1"
-                                            placeholder="Opisz swoje doświadczenie z wizyty..."
+                                            placeholder={t("userPanel.reviews.commentPlaceholder")}
                                             value={newReviewData.comment}
-                                            onChange={e =>
-                                                handleNewReviewChange(
-                                                    "comment",
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={e => handleNewReviewChange("comment", e.target.value)}
                                             rows={5}
                                         />
                                     </div>
@@ -433,15 +366,9 @@ const UserReviews = () => {
                                     <DialogClose asChild>
                                         <Button
                                             variant="outline"
-                                            onClick={() =>
-                                                setNewReviewData({
-                                                    appointment_id: "",
-                                                    rating: 0,
-                                                    comment: "",
-                                                })
-                                            }
+                                            onClick={() => setNewReviewData({ appointment_id: "", rating: 0, comment: "" })}
                                         >
-                                            Anuluj
+                                            {t("userPanel.reviews.cancel")}
                                         </Button>
                                     </DialogClose>
                                     <Button
@@ -453,14 +380,14 @@ const UserReviews = () => {
                                             !newReviewData.comment.trim()
                                         }
                                     >
-                                        Wyślij opinię
+                                        {t("userPanel.reviews.submit")}
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
                         {appointmentsToReview.length === 0 && !isLoading && (
-                            <p className="text-xs text-gray-500 mt-2">
-                                Nie masz obecnie nowych wizyt do oceny.
+                            <p className="text-xs text-muted-foreground mt-2">
+                                {t("userPanel.reviews.noNewToReview")}
                             </p>
                         )}
                     </CardContent>
@@ -468,16 +395,13 @@ const UserReviews = () => {
             </div>
 
             <div>
-                <h2 className="text-xl font-semibold mb-3 text-gray-800">
-                    Moje dotychczasowe opinie
+                <h2 className="text-xl font-semibold mb-3 text-foreground">
+                    {t("userPanel.reviews.myReviews")}
                 </h2>
                 <div className="space-y-4">
                     {reviews.length > 0 ? (
                         reviews.map(review => (
-                            <Card
-                                key={review.id}
-                                className="shadow-sm"
-                            >
+                            <Card key={review.id} className="shadow-sm">
                                 <CardContent className="pt-5 pb-5 px-5">
                                     <div className="flex items-start justify-between mb-2">
                                         <div>
@@ -489,47 +413,28 @@ const UserReviews = () => {
                                                     {review.service}
                                                 </h3>
                                             </div>
-                                            <p className="text-xs text-gray-500">
-                                                Dodano:{" "}
-                                                {isValid(
-                                                    new Date(review.date)
-                                                )
-                                                    ? format(
-                                                        new Date(
-                                                            review.date
-                                                        ),
-                                                        "PPP",
-                                                        { locale: pl }
-                                                    )
-                                                    : "Brak danych"}
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("userPanel.reviews.addedPrefix")}
+                                                {isValid(new Date(review.date))
+                                                    ? format(new Date(review.date), "PPP", { locale: dateLocale })
+                                                    : t("userPanel.reviews.noData")}
                                             </p>
                                         </div>
                                     </div>
-                                    <p className="text-gray-700 text-sm mb-3 leading-relaxed">
+                                    <p className="text-foreground text-sm mb-3 leading-relaxed">
                                         {review.comment}
                                     </p>
-                                    <div className="flex items-center text-xs text-gray-500">
+                                    <div className="flex items-center text-xs text-muted-foreground">
                                         <User className="h-3.5 w-3.5 mr-1" />
-                                        <span>Barber: {review.barber}</span>
+                                        <span>{t("userPanel.reviews.barberLabel")}{review.barber}</span>
                                         {review.appointmentDate && (
                                             <>
                                                 <span className="mx-2">|</span>
                                                 <Calendar className="h-3.5 w-3.5 mr-1" />
                                                 <span>
-                                                    Wizyta:{" "}
-                                                    {isValid(
-                                                        new Date(
-                                                            review.appointmentDate
-                                                        )
-                                                    )
-                                                        ? format(
-                                                            new Date(
-                                                                review.appointmentDate
-                                                            ),
-                                                            "PPP",
-                                                            { locale: pl }
-                                                        )
-                                                        : "Brak danych"}
+                                                    {isValid(new Date(review.appointmentDate))
+                                                        ? format(new Date(review.appointmentDate), "PPP", { locale: dateLocale })
+                                                        : t("userPanel.reviews.noData")}
                                                 </span>
                                             </>
                                         )}
@@ -540,13 +445,12 @@ const UserReviews = () => {
                     ) : (
                         <Card>
                             <CardContent className="pt-6 text-center">
-                                <Info className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                                <h3 className="text-md font-medium text-gray-700 mb-1">
-                                    Nie dodałeś jeszcze żadnej opinii.
+                                <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                                <h3 className="text-md font-medium text-foreground mb-1">
+                                    {t("userPanel.reviews.noReviews")}
                                 </h3>
-                                <p className="text-sm text-gray-500">
-                                    Po swojej następnej wizycie podziel się
-                                    doświadczeniem!
+                                <p className="text-sm text-muted-foreground">
+                                    {t("userPanel.reviews.noReviewsDesc")}
                                 </p>
                             </CardContent>
                         </Card>

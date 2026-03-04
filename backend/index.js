@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config(); // wczytaj env zanim cokolwiek innego będzie require'owane w routerach/controllers
 
 const app = express();
@@ -32,6 +33,9 @@ app.options(/\/.*/, cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use(express.json());
+
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // healthcheck (możesz ustawić tę ścieżkę w Render jako health check)
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

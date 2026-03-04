@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { User, Mail, Phone, Save, Edit, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ProfileData {
     firstName: string;
@@ -17,6 +18,7 @@ interface ProfileData {
 }
 
 const AdminProfile = () => {
+    const { t } = useLanguage();
     const { user: authUser, token, loading: authContextLoading, updateUserContext } = useAuth();
     useRequireAuth({ allowedRoles: ["admin"] });
 
@@ -34,17 +36,17 @@ const AdminProfile = () => {
         if (authContextLoading) { setIsDataLoading(true); return; }
         if (!authUser || !token) {
             setIsDataLoading(false);
-            toast.error("Nie udało się uwierzytelnić użytkownika.");
+            toast.error(t('adminPanel.profile.authError'));
             return;
         }
 
         const fetchProfile = async () => {
             setIsDataLoading(true);
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/profile`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!response.ok) throw new Error("Nie udało się pobrać profilu");
+                if (!response.ok) throw new Error(t('adminPanel.profile.loadFailed'));
                 const data = await response.json();
                 const fetched = {
                     firstName: data.firstName || authUser.firstName || "",
@@ -55,7 +57,7 @@ const AdminProfile = () => {
                 setProfileData(fetched);
                 setInitialProfileData(fetched);
             } catch (error: any) {
-                toast.error(error.message || "Nie udało się wczytać danych profilu.");
+                toast.error(error.message || t('adminPanel.profile.loadFailed'));
                 const fallback = {
                     firstName: authUser.firstName || "",
                     lastName: authUser.lastName || "",
@@ -77,18 +79,18 @@ const AdminProfile = () => {
     };
 
     const handleSave = async () => {
-        if (!token) { toast.error("Błąd uwierzytelniania."); return; }
+        if (!token) { toast.error(t('adminPanel.profile.authError')); return; }
         if (!profileData.firstName || !profileData.lastName || !profileData.email) {
-            toast.error("Imię, nazwisko i e-mail są wymagane.");
+            toast.error(t('adminPanel.profile.required'));
             return;
         }
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user/profile`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/profile`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify(profileData),
             });
-            if (!response.ok) throw new Error("Nie udało się zaktualizować profilu");
+            if (!response.ok) throw new Error(t('adminPanel.profile.updateFailed'));
             const updatedData = await response.json();
             const newData = {
                 firstName: updatedData.firstName,
@@ -99,12 +101,12 @@ const AdminProfile = () => {
             setProfileData(newData);
             setInitialProfileData(newData);
             setIsEditing(false);
-            toast.success("Profil został zaktualizowany!");
+            toast.success(t('adminPanel.profile.updated'));
             if (updateUserContext && authUser) {
                 updateUserContext({ id: authUser.id, firstName: newData.firstName, lastName: newData.lastName, email: newData.email });
             }
         } catch (error: any) {
-            toast.error(error.message || "Nie udało się zapisać profilu.");
+            toast.error(error.message || t('adminPanel.profile.updateFailed'));
         }
     };
 
@@ -124,9 +126,9 @@ const AdminProfile = () => {
     if (!authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">Nie udało się uwierzytelnić użytkownika.</p>
+                <p className="text-red-500">{t('adminPanel.profile.authError')}</p>
                 <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
-                    <Link to="/login">Przejdź do logowania</Link>
+                    <Link to="/login">Go to login</Link>
                 </Button>
             </div>
         );
@@ -138,18 +140,18 @@ const AdminProfile = () => {
         <div className="max-w-3xl mx-auto">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Dane osobowe</CardTitle>
+                    <CardTitle>{t('adminPanel.profile.personalInfo')}</CardTitle>
                     {!isEditing ? (
                         <Button onClick={() => setIsEditing(true)} className="bg-barber hover:bg-barber-muted">
-                            <Edit className="h-4 w-4 mr-1.5" /> Edytuj profil
+                            <Edit className="h-4 w-4 mr-1.5" /> {t('adminPanel.profile.editProfile')}
                         </Button>
                     ) : (
                         <div className="flex space-x-2">
                             <Button onClick={handleSave} className="bg-barber hover:bg-barber-muted">
-                                <Save className="h-4 w-4 mr-1.5" /> Zapisz
+                                <Save className="h-4 w-4 mr-1.5" /> {t('adminPanel.profile.save')}
                             </Button>
                             <Button variant="outline" onClick={handleCancel}>
-                                <XCircle className="h-4 w-4 mr-1.5" /> Anuluj
+                                <XCircle className="h-4 w-4 mr-1.5" /> {t('adminPanel.profile.cancel')}
                             </Button>
                         </div>
                     )}
@@ -157,14 +159,14 @@ const AdminProfile = () => {
                 <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label htmlFor="firstName">Imię</Label>
+                            <Label htmlFor="firstName">{t('adminPanel.profile.firstName')}</Label>
                             <div className="flex items-center">
                                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <Input id="firstName" value={profileData.firstName} onChange={handleInputChange} disabled={!isEditing} className={!isEditing ? inputDisabledClass : ""} />
                             </div>
                         </div>
                         <div className="space-y-1.5">
-                            <Label htmlFor="lastName">Nazwisko</Label>
+                            <Label htmlFor="lastName">{t('adminPanel.profile.lastName')}</Label>
                             <div className="flex items-center">
                                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <Input id="lastName" value={profileData.lastName} onChange={handleInputChange} disabled={!isEditing} className={!isEditing ? inputDisabledClass : ""} />
@@ -172,17 +174,17 @@ const AdminProfile = () => {
                         </div>
                     </div>
                     <div className="space-y-1.5">
-                        <Label htmlFor="email">E-mail</Label>
+                        <Label htmlFor="email">{t('adminPanel.profile.email')}</Label>
                         <div className="flex items-center">
                             <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                             <Input id="email" type="email" value={profileData.email} onChange={handleInputChange} disabled={!isEditing} className={!isEditing ? inputDisabledClass : ""} />
                         </div>
                     </div>
                     <div className="space-y-1.5">
-                        <Label htmlFor="phone">Numer telefonu</Label>
+                        <Label htmlFor="phone">{t('adminPanel.profile.phone')}</Label>
                         <div className="flex items-center">
                             <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <Input id="phone" value={profileData.phone || ""} onChange={handleInputChange} disabled={!isEditing} placeholder={isEditing ? "Wprowadź numer telefonu" : "Brak"} className={!isEditing ? inputDisabledClass : ""} />
+                            <Input id="phone" value={profileData.phone || ""} onChange={handleInputChange} disabled={!isEditing} placeholder={isEditing ? t('adminPanel.profile.enterPhone') : t('adminPanel.profile.noValue')} className={!isEditing ? inputDisabledClass : ""} />
                         </div>
                     </div>
                 </CardContent>

@@ -8,13 +8,16 @@ import {
     LogOut,
     Scissors,
     BarChart,
-    X
+    X,
+    Sun,
+    Moon,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface DashboardLayoutProps {
     children: ReactNode;
@@ -29,7 +32,8 @@ interface SidebarItem {
 
 const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     const { logout, user } = useAuth();
-    const { t } = useLanguage();
+    const { t, lang, toggleLang } = useLanguage();
+    const { theme, toggleTheme } = useTheme();
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
     const location = useLocation();
 
@@ -96,10 +100,26 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
                         BarberShop
                     </Link>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4">
                     <span className="text-sm text-muted-foreground hidden md:inline-block">
                         {t('dashboard.welcome')}, {user?.firstName || "User"} ({user?.role})
                     </span>
+                    <button
+                        onClick={toggleTheme}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-barber hover:bg-barber/10 transition-colors"
+                        aria-label="Toggle theme"
+                    >
+                        {theme === "dark"
+                            ? <Sun className="h-4 w-4" />
+                            : <Moon className="h-4 w-4" />}
+                    </button>
+                    <button
+                        onClick={toggleLang}
+                        className="px-2 py-0.5 rounded border border-border text-xs font-bold tracking-wide text-muted-foreground hover:border-barber hover:text-barber transition-colors"
+                        aria-label="Toggle language"
+                    >
+                        {lang === "pl" ? "EN" : "PL"}
+                    </button>
                     <Button
                         variant="ghost"
                         size="sm"

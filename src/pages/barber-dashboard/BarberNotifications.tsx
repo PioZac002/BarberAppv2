@@ -1,6 +1,7 @@
 // src/pages/barber-dashboard/BarberNotificationsPage.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
     Card,
     CardContent,
@@ -26,6 +27,7 @@ import {
 import { toast as sonnerToast } from "sonner";
 import { formatDistanceToNow, isValid as isValidDateFn } from "date-fns";
 import { pl } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { Link as RouterLink } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -50,6 +52,8 @@ interface AdminNotificationFE extends AdminNotificationBackend {
 
 const BarberNotificationsPage = () => {
     const { token, loading: authContextLoading, user: authUser } = useAuth();
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === 'pl' ? pl : enUS;
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState("all");
     const [notifications, setNotifications] = useState<AdminNotificationFE[]>([]);
@@ -91,7 +95,7 @@ const BarberNotificationsPage = () => {
         if (!token || !authUser) {
             setIsLoading(false);
             setNotifications([]);
-            if (!authContextLoading) sonnerToast.error("Błąd autoryzacji. Proszę się zalogować.");
+            if (!authContextLoading) sonnerToast.error(t("barberPanel.authError"));
             return;
         }
 
@@ -103,8 +107,8 @@ const BarberNotificationsPage = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: "Nie udało się pobrać powiadomień barbera" }));
-                    throw new Error(errorData.error || "Nie udało się pobrać powiadomień barbera");
+                    const errorData = await response.json().catch(() => ({ error: t("barberPanel.notifications.loadFailed") }));
+                    throw new Error(errorData.error || t("barberPanel.notifications.loadFailed"));
                 }
                 const data: AdminNotificationBackend[] = await response.json();
                 setNotifications(data.map(mapBackendNotificationToFrontend));
@@ -140,16 +144,16 @@ const BarberNotificationsPage = () => {
 
     const getCategoryIcon = (category: AdminNotificationFE["category"]) => {
         switch (category) {
-            case "appointments": return <CalendarDays className="h-4 w-4 text-gray-500" />;
-            case "users": return <UsersIcon className="h-4 w-4 text-gray-500" />;
-            case "revenue": return <DollarSign className="h-4 w-4 text-gray-500" />;
-            default: return <Bell className="h-4 w-4 text-gray-500" />;
+            case "appointments": return <CalendarDays className="h-4 w-4 text-muted-foreground" />;
+            case "users": return <UsersIcon className="h-4 w-4 text-muted-foreground" />;
+            case "revenue": return <DollarSign className="h-4 w-4 text-muted-foreground" />;
+            default: return <Bell className="h-4 w-4 text-muted-foreground" />;
         }
     };
 
     const markAsRead = async (id: number) => {
         if (!token) {
-            sonnerToast.error("Błąd autoryzacji.");
+            sonnerToast.error(t("barberPanel.authError"));
             return;
         }
         try {
@@ -158,8 +162,8 @@ const BarberNotificationsPage = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Nie udało się oznaczyć jako przeczytane" }));
-                throw new Error(errorData.error || "Nie udało się oznaczyć powiadomienia jako przeczytane.");
+                const errorData = await response.json().catch(() => ({ error: t("barberPanel.notifications.loadFailed") }));
+                throw new Error(errorData.error || t("barberPanel.notifications.loadFailed"));
             }
             setNotifications(prev =>
                 prev.map(notification =>
@@ -169,29 +173,29 @@ const BarberNotificationsPage = () => {
                 )
             );
         } catch (error: any) {
-            sonnerToast.error(error.message || "Nie udało się oznaczyć powiadomienia jako przeczytane.");
+            sonnerToast.error(error.message || t("barberPanel.notifications.loadFailed"));
         }
     };
 
     const deleteNotificationFE = async (id: number) => {
         if (!token) {
-            sonnerToast.error("Błąd autoryzacji.");
+            sonnerToast.error(t("barberPanel.authError"));
             return;
         }
-        if (!window.confirm("Czy na pewno chcesz usunąć to powiadomienie?")) return;
+        if (!window.confirm(t("barberPanel.notifications.deleted") + "?")) return;
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/notifications/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Nie udało się usunąć powiadomienia" }));
-                throw new Error(errorData.error || "Nie udało się usunąć powiadomienia.");
+                const errorData = await response.json().catch(() => ({ error: t("barberPanel.notifications.loadFailed") }));
+                throw new Error(errorData.error || t("barberPanel.notifications.loadFailed"));
             }
             setNotifications(prev => prev.filter(n => n.id !== id));
-            sonnerToast.success("Powiadomienie usunięte.");
+            sonnerToast.success(t("barberPanel.notifications.deleted"));
         } catch (error: any) {
-            sonnerToast.error(error.message || "Nie udało się usunąć powiadomienia.");
+            sonnerToast.error(error.message || t("barberPanel.notifications.loadFailed"));
         }
     };
 
@@ -203,15 +207,15 @@ const BarberNotificationsPage = () => {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Nie udało się oznaczyć wszystkich jako przeczytane" }));
-                throw new Error(errorData.error || "Nie udało się oznaczyć wszystkich jako przeczytane.");
+                const errorData = await response.json().catch(() => ({ error: t("barberPanel.notifications.loadFailed") }));
+                throw new Error(errorData.error || t("barberPanel.notifications.loadFailed"));
             }
             setNotifications(prev =>
                 prev.map(notification => ({ ...notification, is_read: true }))
             );
-            sonnerToast.success("Wszystkie powiadomienia oznaczono jako przeczytane.");
+            sonnerToast.success(t("barberPanel.notifications.markedAllRead"));
         } catch (error: any) {
-            sonnerToast.error(error.message || "Nie udało się oznaczyć wszystkich jako przeczytane.");
+            sonnerToast.error(error.message || t("barberPanel.notifications.loadFailed"));
         }
     };
 
@@ -233,10 +237,10 @@ const BarberNotificationsPage = () => {
                         <div className="flex items-center gap-2">
                             <Bell className="h-6 w-6 text-barber" />
                             <CardTitle className="text-xl md:text-2xl">
-                                Moje powiadomienia
+                                {t("barberPanel.notifications.title")}
                                 {unreadCount > 0 && (
                                     <Badge variant="destructive" className="ml-2 text-xs px-1.5 py-0.5">
-                                        {unreadCount} NOWE
+                                        {unreadCount} {t("barberPanel.notifications.unread").toUpperCase()}
                                     </Badge>
                                 )}
                             </CardTitle>
@@ -249,12 +253,12 @@ const BarberNotificationsPage = () => {
                                 className={isMobile ? "w-full mt-2 sm:mt-0" : ""}
                             >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Oznacz wszystkie jako przeczytane
+                                {t("barberPanel.notifications.markAllRead")}
                             </Button>
                         )}
                     </div>
                     <CardDescription className="mt-1 text-xs md:text-sm">
-                        Przeglądaj i zarządzaj powiadomieniami związanymi z Twoją pracą.
+                        {t("barberPanel.notifications.title")}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-3 sm:p-4">
@@ -264,24 +268,24 @@ const BarberNotificationsPage = () => {
                                 value="all"
                                 className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "all" ? "bg-primary text-primary-foreground" : ""}`}
                             >
-                                Wszystkie
+                                {t("barberPanel.notifications.all")}
                             </TabsTrigger>
                             <TabsTrigger
                                 value="unread"
                                 className={`text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 ${isMobile && activeTab === "unread" ? "bg-primary text-primary-foreground" : ""}`}
                             >
-                                Nieprzeczytane
+                                {t("barberPanel.notifications.unread")}
                             </TabsTrigger>
                         </TabsList>
 
                         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
                             {filteredNotifications.length === 0 ? (
                                 <div className="py-10 text-center">
-                                    <Info className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                    <p className="text-gray-500">
+                                    <Info className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                                    <p className="text-muted-foreground">
                                         {activeTab === "unread"
-                                            ? "Wszystkie powiadomienia zostały przeczytane."
-                                            : "Brak powiadomień w tej kategorii."}
+                                            ? t("barberPanel.notifications.allDone")
+                                            : t("barberPanel.notifications.noNotifications")}
                                     </p>
                                 </div>
                             ) : (
@@ -321,9 +325,9 @@ const BarberNotificationsPage = () => {
                                                             {isValidDateFn(new Date(notification.created_at))
                                                                 ? formatDistanceToNow(new Date(notification.created_at), {
                                                                     addSuffix: true,
-                                                                    locale: pl,
+                                                                    locale: dateLocale,
                                                                 })
-                                                                : "Nieprawidłowa data"}
+                                                                : "—"}
                                                         </span>
                                                     </div>
                                                     {notification.link && (
@@ -331,7 +335,7 @@ const BarberNotificationsPage = () => {
                                                             to={notification.link}
                                                             className="text-primary hover:underline flex items-center gap-1"
                                                         >
-                                                            <LinkIconUI className="h-3 w-3" /> Szczegóły
+                                                            <LinkIconUI className="h-3 w-3" /> {t("barberPanel.notifications.viewDetails")}
                                                         </RouterLink>
                                                     )}
                                                 </div>
@@ -343,7 +347,7 @@ const BarberNotificationsPage = () => {
                                                         size="icon"
                                                         variant="ghost"
                                                         className={`text-green-600 hover:bg-green-100 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`}
-                                                        title="Oznacz jako przeczytane"
+                                                        title={t("barberPanel.notifications.markRead")}
                                                     >
                                                         <CheckCircle className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
                                                     </Button>
@@ -353,7 +357,7 @@ const BarberNotificationsPage = () => {
                                                     size="icon"
                                                     variant="ghost"
                                                     className={`text-destructive hover:bg-destructive/10 ${isMobile ? 'h-6 w-6' : 'h-7 w-7'}`}
-                                                    title="Usuń powiadomienie"
+                                                    title={t("barberPanel.notifications.deleteNotification")}
                                                 >
                                                     <Trash2 className={isMobile ? "h-3.5 w-3.5" : "h-4 w-4"} />
                                                 </Button>

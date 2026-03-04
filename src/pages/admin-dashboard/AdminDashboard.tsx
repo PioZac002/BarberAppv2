@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Overview from "./AdminOverview";
 import Users from "./AdminUsers";
 import Appointments from "./AdminAppointments";
@@ -12,6 +13,7 @@ import AdminProfile from "./AdminProfile";
 
 const AdminDashboard = () => {
     const { loading } = useRequireAuth({ allowedRoles: ["admin"] });
+    const { t } = useLanguage();
 
     if (loading) {
         return (
@@ -22,7 +24,7 @@ const AdminDashboard = () => {
     }
 
     return (
-        <DashboardLayout title="Panel Administratora">
+        <DashboardLayout title={t('adminPanel.title')}>
             <Routes>
                 <Route path="/" element={<Overview />} />
                 <Route path="users" element={<Users />} />

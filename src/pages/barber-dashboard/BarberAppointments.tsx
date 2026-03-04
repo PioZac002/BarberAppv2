@@ -6,16 +6,28 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
-    CardDescription
+    CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays as CalendarIcon, Filter, Check, X, User as UserIconLucide, Info } from "lucide-react";
+import {
+    CalendarDays as CalendarIcon,
+    Filter,
+    CheckCircle2,
+    XCircle,
+    ThumbsUp,
+    UserX,
+    Info,
+    Phone,
+    Scissors,
+    Clock,
+    DollarSign,
+} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCard } from "@/components/ui/table";
-import { isValid, format } from 'date-fns';
-import { pl } from 'date-fns/locale';
+import { isValid, format } from "date-fns";
+import { pl, enUS } from "date-fns/locale";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Appointment {
     id: number;
@@ -27,352 +39,293 @@ interface Appointment {
     status: string;
 }
 
+const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
+    confirmed:  { bg: "bg-blue-100 dark:bg-blue-900/30",   text: "text-blue-700 dark:text-blue-300",   dot: "bg-blue-500" },
+    completed:  { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300", dot: "bg-green-500" },
+    cancelled:  { bg: "bg-red-100 dark:bg-red-900/30",     text: "text-red-700 dark:text-red-300",     dot: "bg-red-500" },
+    canceled:   { bg: "bg-red-100 dark:bg-red-900/30",     text: "text-red-700 dark:text-red-300",     dot: "bg-red-500" },
+    pending:    { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
+    "no-show":  { bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-300", dot: "bg-orange-500" },
+};
+
 const BarberAppointmentsPage = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === "pl" ? pl : enUS;
 
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [statusFilter, setStatusFilter] = useState("all");
     const [timeFilter, setTimeFilter] = useState("all");
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [updatingId, setUpdatingId] = useState<number | null>(null);
 
     useEffect(() => {
-        if (authContextLoading) {
-            setIsLoadingData(true);
-            return;
-        }
-        if (!authUser || !token) {
-            setIsLoadingData(false);
-            setAppointments([]);
-            return;
-        }
+        if (authContextLoading) { setIsLoadingData(true); return; }
+        if (!authUser || !token) { setIsLoadingData(false); setAppointments([]); return; }
 
         const fetchAppointments = async () => {
-            if (!token) return;
             setIsLoadingData(true);
             let url = `${import.meta.env.VITE_API_URL}/api/barber/appointments`;
             const params = new URLSearchParams();
-            if (timeFilter !== "all") {
-                params.append("upcoming", timeFilter === "upcoming" ? "true" : "false");
-            }
-
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
+            if (timeFilter !== "all") params.append("upcoming", timeFilter === "upcoming" ? "true" : "false");
+            if (params.toString()) url += `?${params.toString()}`;
 
             try {
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: "Nie udało się pobrać wizyt" }));
-                    throw new Error(errorData.error || "Nie udało się pobrać wizyt");
+                const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: t("barberPanel.appointments.loadFailed") }));
+                    throw new Error(err.error || t("barberPanel.appointments.loadFailed"));
                 }
-                const data = await response.json();
-                data.sort((a: Appointment, b: Appointment) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime());
+                const data: Appointment[] = await res.json();
+                data.sort((a, b) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime());
                 setAppointments(data);
             } catch (error: any) {
-                console.error(error);
-                toast.error(error.message || "Nie udało się wczytać wizyt");
+                toast.error(error.message || t("barberPanel.appointments.loadFailed"));
             } finally {
                 setIsLoadingData(false);
             }
         };
-
         fetchAppointments();
     }, [authUser, token, timeFilter, authContextLoading]);
 
-    const getStatusBadgeVariant = (status: string) => {
-        switch (status) {
-            case 'confirmed': return 'bg-blue-100 text-blue-800';
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'cancelled': case 'canceled': return 'bg-red-100 text-red-800';
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'no-show': return 'bg-orange-100 text-orange-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
-
     const getStatusLabel = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'pending': return 'Oczekujące';
-            case 'confirmed': return 'Potwierdzone';
-            case 'completed': return 'Zrealizowane';
-            case 'canceled': case 'cancelled': return 'Anulowane';
-            case 'no-show': return 'Nieobecność';
-            default: return status;
+            case "pending":   return t("barberPanel.appointments.pending");
+            case "confirmed": return t("barberPanel.appointments.confirmed");
+            case "completed": return t("barberPanel.appointments.completed");
+            case "canceled":
+            case "cancelled": return t("barberPanel.appointments.cancelled");
+            case "no-show":   return t("barberPanel.appointments.noShow");
+            default:          return status;
         }
     };
 
-    const filteredAppointments = appointments.filter((appointment) =>
-        statusFilter === "all" || appointment.status.toLowerCase() === statusFilter.toLowerCase()
+    const filteredAppointments = appointments.filter(a =>
+        statusFilter === "all" || a.status.toLowerCase() === statusFilter.toLowerCase()
     );
 
-    const handleStatusChangeUpdated = async (appointmentId: number, newStatus: string) => {
-        if (!token) {
-            toast.error("Błąd uwierzytelnienia.");
-            return;
-        }
+    const handleStatusChange = async (appointmentId: number, newStatus: string) => {
+        if (!token) { toast.error(t("barberPanel.appointments.authError")); return; }
+        setUpdatingId(appointmentId);
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/barber/appointments/${appointmentId}/status`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Nie udało się zaktualizować statusu" }));
-                throw new Error(errorData.error || "Nie udało się zaktualizować statusu wizyty");
-            }
-            setAppointments((prev) =>
-                prev.map((apt) =>
-                    apt.id === appointmentId ? { ...apt, status: newStatus } : apt
-                ).sort((a, b) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime())
+            const res = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/barber/appointments/${appointmentId}/status`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ status: newStatus }),
+                }
             );
-            toast.success(`Status wizyty zaktualizowany na ${getStatusLabel(newStatus)}`);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: t("barberPanel.appointments.updateFailed") }));
+                throw new Error(err.error || t("barberPanel.appointments.updateFailed"));
+            }
+            setAppointments(prev =>
+                prev.map(a => a.id === appointmentId ? { ...a, status: newStatus } : a)
+                    .sort((a, b) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime())
+            );
+            toast.success(`${t("barberPanel.appointments.statusUpdated")} ${getStatusLabel(newStatus)}`);
         } catch (error: any) {
-            console.error("Error updating status:", error);
-            toast.error(error.message || "Nie udało się zaktualizować statusu wizyty");
+            toast.error(error.message || t("barberPanel.appointments.updateFailed"));
+        } finally {
+            setUpdatingId(null);
         }
     };
-
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-    const mobileRenderUpdated = (appointment: Appointment) => (
-        <TableCard key={appointment.id}>
-            <div className="flex flex-col space-y-2 p-4">
-                <div className="flex justify-between items-center">
-                    <span className="font-medium">{appointment.client_name}</span>
-                    <Badge className={getStatusBadgeVariant(appointment.status)}>
-                        {getStatusLabel(appointment.status)}
-                    </Badge>
-                </div>
-                <div className="text-sm text-gray-600">{appointment.service_name}</div>
-                <div className="text-sm text-gray-500">
-                    {isValid(new Date(appointment.appointment_time))
-                        ? format(new Date(appointment.appointment_time), 'PPpp', { locale: pl })
-                        : 'Nieprawidłowa data'}
-                </div>
-                <div className="text-xs text-gray-500">Tel: {appointment.client_phone || "Brak"}</div>
-                <div className="text-sm text-gray-600">
-                    Cena: {parseFloat(String(appointment.price)).toFixed(2)} PLN
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                    {appointment.status === "pending" && (
-                        <>
-                            <Button
-                                size="sm"
-                                className="bg-green-500 hover:bg-green-600 text-white w-full"
-                                onClick={() => handleStatusChangeUpdated(appointment.id, "confirmed")}
-                            >
-                                <Check className="h-4 w-4 mr-1" />
-                                Potwierdź
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-red-500 text-red-500 hover:bg-red-50 w-full"
-                                onClick={() => handleStatusChangeUpdated(appointment.id, "canceled")}
-                            >
-                                <X className="h-4 w-4 mr-1" />
-                                Anuluj
-                            </Button>
-                        </>
-                    )}
-                    {appointment.status === "confirmed" && (
-                        <>
-                            <Button
-                                size="sm"
-                                className="bg-blue-500 hover:bg-blue-600 text-white w-full"
-                                onClick={() => handleStatusChangeUpdated(appointment.id, "completed")}
-                            >
-                                <Check className="h-4 w-4 mr-1" />
-                                Zakończ
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-orange-500 text-orange-500 hover:bg-orange-50 w-full"
-                                onClick={() => handleStatusChangeUpdated(appointment.id, "no-show")}
-                            >
-                                <UserIconLucide className="h-4 w-4 mr-1" />
-                                Nieobecność
-                            </Button>
-                        </>
-                    )}
-                </div>
-            </div>
-        </TableCard>
-    );
 
     if (authContextLoading || isLoadingData) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber" />
             </div>
         );
     }
 
     return (
-        <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 border-b pb-4">
-                <div className="space-y-1">
-                    <CardTitle className="flex items-center text-xl sm:text-2xl">
-                        <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-barber" />
-                        Zarządzanie wizytami
-                    </CardTitle>
-                    <CardDescription>Przeglądaj i zarządzaj wizytami swoich klientów.</CardDescription>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                    <Filter className="h-4 w-4 text-gray-500 hidden sm:block" />
-                    <Select value={timeFilter} onValueChange={setTimeFilter}>
-                        <SelectTrigger className="w-full sm:w-36 h-9 text-xs sm:text-sm">
-                            <SelectValue placeholder="Filtruj według czasu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Wszystkie czasy</SelectItem>
-                            <SelectItem value="upcoming">Nadchodzące</SelectItem>
-                            <SelectItem value="past">Przeszłe</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-full sm:w-40 h-9 text-xs sm:text-sm">
-                            <SelectValue placeholder="Filtruj według statusu" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Wszystkie statusy</SelectItem>
-                            <SelectItem value="pending">Oczekujące</SelectItem>
-                            <SelectItem value="confirmed">Potwierdzone</SelectItem>
-                            <SelectItem value="completed">Zrealizowane</SelectItem>
-                            <SelectItem value="canceled">Anulowane</SelectItem>
-                            <SelectItem value="no-show">Nieobecność</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4">
-                {isMobile ? (
-                    <div className="space-y-4">
-                        {filteredAppointments.length > 0 ?
-                            filteredAppointments.map(mobileRenderUpdated) :
-                            (
-                                <div className="text-center py-10 col-span-full">
-                                    <Info className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                    <p className="text-gray-500">Brak wizyt spełniających wybrane kryteria.</p>
-                                </div>
-                            )
-                        }
+        <div className="space-y-6">
+            {/* Header card with filters */}
+            <Card>
+                <CardHeader className="border-b pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <CardTitle className="flex items-center text-xl sm:text-2xl">
+                                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-barber" />
+                                {t("barberPanel.appointments.title")}
+                            </CardTitle>
+                            <CardDescription className="mt-1">{t("barberPanel.appointments.subtitle")}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                            <Select value={timeFilter} onValueChange={setTimeFilter}>
+                                <SelectTrigger className="w-36 h-9 text-sm">
+                                    <SelectValue placeholder={t("barberPanel.appointments.filterByTime")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{t("barberPanel.appointments.allTimes")}</SelectItem>
+                                    <SelectItem value="upcoming">{t("barberPanel.appointments.upcoming")}</SelectItem>
+                                    <SelectItem value="past">{t("barberPanel.appointments.past")}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger className="w-40 h-9 text-sm">
+                                    <SelectValue placeholder={t("barberPanel.appointments.filterByStatus")} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{t("barberPanel.appointments.allStatuses")}</SelectItem>
+                                    <SelectItem value="pending">{t("barberPanel.appointments.pending")}</SelectItem>
+                                    <SelectItem value="confirmed">{t("barberPanel.appointments.confirmed")}</SelectItem>
+                                    <SelectItem value="completed">{t("barberPanel.appointments.completed")}</SelectItem>
+                                    <SelectItem value="canceled">{t("barberPanel.appointments.cancelled")}</SelectItem>
+                                    <SelectItem value="no-show">{t("barberPanel.appointments.noShow")}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Klient</TableHead>
-                                <TableHead>Usługa</TableHead>
-                                <TableHead>Data i godzina</TableHead>
-                                <TableHead>Cena</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Akcje</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredAppointments.map((appointment) => (
-                                <TableRow key={appointment.id}>
-                                    <TableCell>
-                                        <div>
-                                            <div className="font-medium">{appointment.client_name}</div>
-                                            <div className="text-sm text-gray-500">{appointment.client_phone || "Brak"}</div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{appointment.service_name}</TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <div>
-                                                {isValid(new Date(appointment.appointment_time))
-                                                    ? format(new Date(appointment.appointment_time), "PP", { locale: pl })
-                                                    : 'Nieprawidłowa data'}
-                                            </div>
-                                            <div className="text-sm text-gray-500">
-                                                {isValid(new Date(appointment.appointment_time))
-                                                    ? format(new Date(appointment.appointment_time), "p", { locale: pl })
-                                                    : ''}
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{parseFloat(String(appointment.price)).toFixed(2)} PLN</TableCell>
-                                    <TableCell>
-                                        <Badge className={getStatusBadgeVariant(appointment.status)}>
-                                            {getStatusLabel(appointment.status)}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex space-x-1 justify-end">
-                                            {appointment.status === "pending" && (
-                                                <>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8"
-                                                        onClick={() => handleStatusChangeUpdated(appointment.id, "confirmed")}
-                                                        title="Potwierdź"
-                                                    >
-                                                        <Check className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
-                                                        onClick={() => handleStatusChangeUpdated(appointment.id, "canceled")}
-                                                        title="Anuluj"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {appointment.status === "confirmed" && (
-                                                <>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8"
-                                                        onClick={() => handleStatusChangeUpdated(appointment.id, "completed")}
-                                                        title="Oznacz jako zakończone"
-                                                    >
-                                                        <Check className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-8 w-8"
-                                                        onClick={() => handleStatusChangeUpdated(appointment.id, "no-show")}
-                                                        title="Oznacz jako nieobecność"
-                                                    >
-                                                        <UserIconLucide className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
+                </CardHeader>
+            </Card>
 
-                {filteredAppointments.length === 0 && !isLoadingData && (
-                    <div className="text-center py-12">
-                        <CalendarIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-1">Nie znaleziono wizyt</h3>
-                        <p className="text-gray-500">
-                            {statusFilter === "all" && timeFilter === "all"
-                                ? "Obecnie nie masz żadnych wizyt."
-                                : "Brak wizyt spełniających wybrane kryteria."}
-                        </p>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+            {/* Appointments list */}
+            {filteredAppointments.length === 0 ? (
+                <div className="text-center py-16">
+                    <CalendarIcon className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-1">{t("barberPanel.appointments.noAppointments")}</h3>
+                    <p className="text-muted-foreground">
+                        {statusFilter === "all" && timeFilter === "all"
+                            ? t("barberPanel.appointments.noAppointmentsDesc")
+                            : t("barberPanel.appointments.noAppointmentsFilter")}
+                    </p>
+                </div>
+            ) : (
+                <div className="grid gap-3">
+                    {filteredAppointments.map(appointment => {
+                        const cfg = statusConfig[appointment.status.toLowerCase()] ?? statusConfig["pending"];
+                        const isUpdating = updatingId === appointment.id;
+                        const aptDate = new Date(appointment.appointment_time);
+                        const validDate = isValid(aptDate);
+
+                        return (
+                            <Card
+                                key={appointment.id}
+                                className="overflow-hidden transition-shadow hover:shadow-md"
+                            >
+                                <div className="flex flex-col sm:flex-row">
+                                    {/* Left accent bar */}
+                                    <div className={`w-full sm:w-1.5 h-1.5 sm:h-auto flex-shrink-0 ${cfg.dot.replace("bg-", "bg-")}`} />
+
+                                    <div className="flex-1 p-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                            {/* Client & service info */}
+                                            <div className="flex-1 space-y-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h3 className="font-semibold text-foreground text-base">
+                                                        {appointment.client_name}
+                                                    </h3>
+                                                    <Badge className={`${cfg.bg} ${cfg.text} border-0 text-xs font-medium`}>
+                                                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dot} mr-1.5`} />
+                                                        {getStatusLabel(appointment.status)}
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Scissors className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <span className="truncate">{appointment.service_name}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Clock className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <span>
+                                                            {validDate
+                                                                ? format(aptDate, "PP", { locale: dateLocale })
+                                                                : t("barberPanel.appointments.invalidDate")}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <CalendarIcon className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <span>
+                                                            {validDate
+                                                                ? format(aptDate, "p", { locale: dateLocale })
+                                                                : "—"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <DollarSign className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <span className="font-medium text-foreground">
+                                                            {parseFloat(String(appointment.price)).toFixed(2)} PLN
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {appointment.client_phone && (
+                                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                        <Phone className="h-3 w-3" />
+                                                        <span>{appointment.client_phone}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Action buttons */}
+                                            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-col sm:items-end">
+                                                {appointment.status === "pending" && (
+                                                    <>
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={isUpdating}
+                                                            onClick={() => handleStatusChange(appointment.id, "confirmed")}
+                                                            className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 text-xs gap-1.5"
+                                                        >
+                                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                                            {t("barberPanel.appointments.confirm")}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={isUpdating}
+                                                            variant="outline"
+                                                            onClick={() => handleStatusChange(appointment.id, "canceled")}
+                                                            className="border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 px-3 text-xs gap-1.5"
+                                                        >
+                                                            <XCircle className="h-3.5 w-3.5" />
+                                                            {t("barberPanel.appointments.cancel")}
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {appointment.status === "confirmed" && (
+                                                    <>
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={isUpdating}
+                                                            onClick={() => handleStatusChange(appointment.id, "completed")}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs gap-1.5"
+                                                        >
+                                                            <ThumbsUp className="h-3.5 w-3.5" />
+                                                            {t("barberPanel.appointments.complete")}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={isUpdating}
+                                                            variant="outline"
+                                                            onClick={() => handleStatusChange(appointment.id, "no-show")}
+                                                            className="border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 h-8 px-3 text-xs gap-1.5"
+                                                        >
+                                                            <UserX className="h-3.5 w-3.5" />
+                                                            {t("barberPanel.appointments.markNoShow")}
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {(appointment.status === "completed" || appointment.status === "cancelled" || appointment.status === "canceled" || appointment.status === "no-show") && (
+                                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground italic">
+                                                        <Info className="h-3.5 w-3.5" />
+                                                        <span>{getStatusLabel(appointment.status)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
     );
 };
 

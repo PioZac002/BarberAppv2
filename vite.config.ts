@@ -10,13 +10,14 @@ export default defineConfig({
       registerType: 'autoUpdate', // Automatycznie aktualizuje service workera
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'] // Pliki do cache'owania
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
       },
       manifest: {
         name: 'BarberShop App',
         short_name: 'BarberShop',
         description: 'Your premium barber services at your fingertips.',
-        theme_color: '#C8A97E', // Kolor motywu (Twój kolor 'barber')
+        theme_color: '#c8a000',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',

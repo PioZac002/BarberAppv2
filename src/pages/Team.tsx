@@ -4,7 +4,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogDescription
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +19,11 @@ import {
     User as UserIcon,
     Camera,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
 interface BarberSummary {
@@ -44,266 +45,185 @@ interface BarberDetails extends BarberSummary {
 }
 
 const Team = () => {
-    const [teamMembers, setTeamMembers] = useState<BarberSummary[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedSpecialization, setSelectedSpecialization] =
-        useState<string>("all");
-
-    const [selectedMemberForModal, setSelectedMemberForModal] =
-        useState<BarberSummary | null>(null);
-    const [detailedMemberProfile, setDetailedMemberProfile] =
-        useState<BarberDetails | null>(null);
+    const { t } = useLanguage();
+    const [teamMembers, setTeamMembers]       = useState<BarberSummary[]>([]);
+    const [isLoading, setIsLoading]           = useState(true);
+    const [searchTerm, setSearchTerm]         = useState("");
+    const [selectedSpecialization, setSelectedSpecialization] = useState<string>("all");
+    const [selectedMember, setSelectedMember] = useState<BarberSummary | null>(null);
+    const [detailedProfile, setDetailedProfile] = useState<BarberDetails | null>(null);
     const [isModalLoading, setIsModalLoading] = useState(false);
-
-    const [isPortfolioViewerOpen, setIsPortfolioViewerOpen] = useState(false);
+    const [isPortfolioOpen, setIsPortfolioOpen] = useState(false);
     const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     useEffect(() => {
-        const fetchTeamMembers = async () => {
+        const fetchTeam = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(
+                const res = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/public/team/barbers`
                 );
-                if (!response.ok) {
-                    throw new Error("Failed to fetch team members");
-                }
-                const data = await response.json();
-                setTeamMembers(data);
-            } catch (error) {
-                console.error("Error fetching team members:", error);
-                toast.error(
-                    "Nie udało się wczytać zespołu. Spróbuj ponownie później."
-                );
+                if (!res.ok) throw new Error("Failed to fetch team");
+                setTeamMembers(await res.json());
+            } catch {
+                toast.error(t("team.loading"));
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchTeamMembers();
+        fetchTeam();
     }, []);
 
     useEffect(() => {
-        if (selectedMemberForModal?.id) {
-            const fetchMemberDetails = async () => {
-                setIsModalLoading(true);
-                setDetailedMemberProfile(null);
-                try {
-                    const response = await fetch(
-                        `${import.meta.env.VITE_API_URL}/api/public/team/barbers/${selectedMemberForModal.id}/details`
-                    );
-                    if (!response.ok) {
-                        throw new Error(
-                            `Failed to fetch details for ${selectedMemberForModal.name}`
-                        );
-                    }
-                    const data = await response.json();
-                    setDetailedMemberProfile(data);
-                } catch (error) {
-                    console.error("Error fetching member details:", error);
-                    toast.error(
-                        `Nie udało się wczytać szczegółów dla ${selectedMemberForModal.name}.`
-                    );
-                } finally {
-                    setIsModalLoading(false);
-                }
-            };
-            fetchMemberDetails();
-        }
-    }, [selectedMemberForModal]);
+        if (!selectedMember?.id) return;
+        const fetchDetails = async () => {
+            setIsModalLoading(true);
+            setDetailedProfile(null);
+            try {
+                const res = await fetch(
+                    `${import.meta.env.VITE_API_URL}/api/public/team/barbers/${selectedMember.id}/details`
+                );
+                if (!res.ok) throw new Error("Failed to fetch details");
+                setDetailedProfile(await res.json());
+            } catch {
+                toast.error(`${t("team.loading")} (${selectedMember.name})`);
+            } finally {
+                setIsModalLoading(false);
+            }
+        };
+        fetchDetails();
+    }, [selectedMember]);
 
-    // helper do normalizacji specjalizacji (do deduplikacji i porównań)
-    const normalizeSpec = (spec: string) =>
-        spec?.trim().toLowerCase() || "";
-
-    const capitalizeSpec = (spec: string) => {
-        const s = spec.trim();
-        if (!s) return s;
-        return s.charAt(0).toUpperCase() + s.slice(1);
+    const normalizeSpec  = (s: string) => s?.trim().toLowerCase() || "";
+    const capitalizeSpec = (s: string) => {
+        const trimmed = s.trim();
+        return trimmed ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : trimmed;
     };
 
-    // Dynamiczne opcje specjalizacji bez duplikatów, odporne na wielkość liter
     const specializationOptions = [
-        { id: "all", name: "Wszyscy" },
+        { id: "all", name: t("team.allSpecializations") },
         ...(() => {
             const map = new Map<string, string>();
-            teamMembers.forEach(member => {
-                (member.specializations || []).forEach(raw => {
-                    if (!raw || !raw.trim()) return;
+            teamMembers.forEach(m =>
+                (m.specializations || []).forEach(raw => {
                     const key = normalizeSpec(raw);
-                    if (!key) return;
-                    if (!map.has(key)) {
-                        map.set(key, capitalizeSpec(key));
-                    }
-                });
-            });
-            return Array.from(map.entries()).map(([key, label]) => ({
-                id: key,
-                name: label
-            }));
-        })()
+                    if (key && !map.has(key)) map.set(key, capitalizeSpec(key));
+                })
+            );
+            return Array.from(map.entries()).map(([k, v]) => ({ id: k, name: v }));
+        })(),
     ];
 
-    const filteredMembers = teamMembers.filter(member => {
+    const filteredMembers = teamMembers.filter(m => {
         const term = searchTerm.toLowerCase();
-        const nameMatches = member.name.toLowerCase().includes(term);
-        const roleMatches = member.role.toLowerCase().includes(term);
-
-        const specializationMatches =
+        const matches = m.name.toLowerCase().includes(term) || m.role.toLowerCase().includes(term);
+        const specMatch =
             selectedSpecialization === "all" ||
-            (member.specializations &&
-                member.specializations.some(
-                    spec =>
-                        normalizeSpec(spec) ===
-                        normalizeSpec(selectedSpecialization)
-                ));
-
-        return (nameMatches || roleMatches) && specializationMatches;
+            (m.specializations || []).some(s => normalizeSpec(s) === normalizeSpec(selectedSpecialization));
+        return matches && specMatch;
     });
 
     const renderStars = (rating: number) => {
-        const fullStars = Math.floor(rating);
-        const halfStar = rating % 1 >= 0.25 && rating % 1 < 0.75;
-        const fullIfAlmost = rating % 1 >= 0.75;
-        const renderedStars = [];
-
-        for (let i = 0; i < 5; i++) {
-            if (i < fullStars || (i === fullStars && fullIfAlmost)) {
-                renderedStars.push(
+        const full = Math.floor(rating);
+        const almostFull = rating % 1 >= 0.75;
+        return (
+            <div className="flex">
+                {Array.from({ length: 5 }, (_, i) => (
                     <Star
-                        key={`full-${i}`}
-                        className="h-5 w-5 text-yellow-400 fill-yellow-400"
+                        key={i}
+                        className={`h-4 w-4 ${
+                            i < full || (i === full && almostFull)
+                                ? "text-yellow-400 fill-yellow-400"
+                                : "text-muted-foreground/30"
+                        }`}
                     />
-                );
-            } else if (i === fullStars && halfStar) {
-                renderedStars.push(
-                    <Star
-                        key={`half-${i}`}
-                        className="h-5 w-5 text-yellow-400"
-                    />
-                );
-            } else {
-                renderedStars.push(
-                    <Star
-                        key={`empty-${i}`}
-                        className="h-5 w-5 text-gray-300"
-                    />
-                );
-            }
-        }
-        return <div className="flex">{renderedStars}</div>;
+                ))}
+            </div>
+        );
     };
 
-    const openPortfolioViewer = (images: (string | null)[], index: number) => {
-        const filtered = (images.filter(
-            (img): img is string => !!img
-        ) || []) as string[];
-        if (filtered.length === 0) return;
+    const openPortfolio = (images: (string | null)[], index: number) => {
+        const filtered = images.filter((img): img is string => !!img);
+        if (!filtered.length) return;
         setPortfolioImages(filtered);
         setCurrentImageIndex(index < filtered.length ? index : 0);
-        setIsPortfolioViewerOpen(true);
-    };
-
-    const showPrevImage = () => {
-        setCurrentImageIndex(prev =>
-            prev === 0 ? portfolioImages.length - 1 : prev - 1
-        );
-    };
-
-    const showNextImage = () => {
-        setCurrentImageIndex(prev =>
-            prev === portfolioImages.length - 1 ? 0 : prev + 1
-        );
+        setIsPortfolioOpen(true);
     };
 
     return (
         <Layout>
-            <section className="relative py-24 md:py-32">
+            {/* ── Hero ── */}
+            <section className="relative py-24 md:py-36">
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{
                         backgroundImage:
-                            "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1599491143868-40d9afbd6c0b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80')",
+                            "linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.72)), url('https://images.unsplash.com/photo-1599491143868-40d9afbd6c0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80')",
                     }}
-                ></div>
+                />
                 <div className="container mx-auto px-4 relative z-10 text-center">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-fade-in">
-                        Poznaj nasz zespół
+                        {t("team.heroTitle")}
                     </h1>
                     <p
-                        className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 animate-fade-in"
+                        className="text-xl text-gray-300 max-w-3xl mx-auto animate-fade-in"
                         style={{ animationDelay: "0.2s" }}
                     >
-                        Nasi barberzy i styliści łączą wieloletnie doświadczenie
-                        z pasją, dbając o każdy szczegół Twojej wizyty.
+                        {t("team.heroSubtitle")}
                     </p>
                 </div>
             </section>
 
-            <section className="py-16 bg-white">
+            {/* ── Team grid ── */}
+            <section className="py-16 bg-background">
                 <div className="container mx-auto px-4">
-                    <div className="mb-12">
-                        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-                            <div className="relative w-full md:w-auto md:flex-grow md:max-w-xs">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                                <input
-                                    type="text"
-                                    placeholder="Szukaj po imieniu lub roli..."
-                                    className="pl-10 pr-4 py-2.5 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-barber focus:border-transparent"
-                                    value={searchTerm}
-                                    onChange={e =>
-                                        setSearchTerm(e.target.value)
+                    {/* Filters */}
+                    <div className="mb-10 flex flex-col md:flex-row gap-4 justify-between items-center">
+                        <div className="relative w-full md:max-w-xs">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                            <input
+                                type="text"
+                                placeholder={t("team.searchPlaceholder")}
+                                className="pl-10 pr-4 py-2.5 w-full border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent transition-colors"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+                            {specializationOptions.map(spec => (
+                                <Button
+                                    key={spec.id}
+                                    onClick={() => setSelectedSpecialization(spec.id)}
+                                    variant={selectedSpecialization === spec.id ? "default" : "outline"}
+                                    className={
+                                        selectedSpecialization === spec.id
+                                            ? "bg-barber hover:bg-barber-muted text-white"
+                                            : "border-border text-foreground hover:bg-muted"
                                     }
-                                />
-                            </div>
-                            <div className="flex flex-wrap gap-2 justify-center md:justify-end">
-                                {specializationOptions.map(spec => (
-                                    <Button
-                                        key={spec.id}
-                                        onClick={() =>
-                                            setSelectedSpecialization(spec.id)
-                                        }
-                                        variant={
-                                            selectedSpecialization === spec.id
-                                                ? "default"
-                                                : "outline"
-                                        }
-                                        className={
-                                            selectedSpecialization === spec.id
-                                                ? "bg-barber hover:bg-barber-muted"
-                                                : "border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400"
-                                        }
-                                        size="sm"
-                                    >
-                                        {spec.name}
-                                    </Button>
-                                ))}
-                            </div>
+                                    size="sm"
+                                >
+                                    {spec.name}
+                                </Button>
+                            ))}
                         </div>
                     </div>
 
                     {isLoading ? (
-                        <div className="text-center py-10">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber mx-auto"></div>
-                            <p className="mt-3 text-gray-600">
-                                Ładowanie członków zespołu...
-                            </p>
+                        <div className="text-center py-16">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber mx-auto" />
+                            <p className="mt-4 text-muted-foreground">{t("team.loading")}</p>
                         </div>
                     ) : filteredMembers.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {filteredMembers.map((member, index) => (
+                            {filteredMembers.map((member, i) => (
                                 <div
                                     key={member.id}
-                                    className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
-                                    onClick={() =>
-                                        setSelectedMemberForModal(member)
-                                    }
-                                    style={{
-                                        animationDelay: `${0.05 * index}s`,
-                                    }}
+                                    className="bg-card rounded-xl overflow-hidden border border-border hover:border-barber/40 hover:shadow-xl transition-all duration-300 cursor-pointer group animate-fade-in"
+                                    style={{ animationDelay: `${0.06 * i}s` }}
+                                    onClick={() => setSelectedMember(member)}
                                 >
-                                    <div className="h-64 overflow-hidden relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                    <div className="h-64 overflow-hidden bg-muted flex items-center justify-center">
                                         {member.image ? (
                                             <img
                                                 src={member.image}
@@ -311,243 +231,180 @@ const Team = () => {
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                             />
                                         ) : (
-                                            <UserIcon className="h-24 w-24 text-slate-400 dark:text-slate-500" />
+                                            <UserIcon className="h-24 w-24 text-muted-foreground/40" />
                                         )}
                                     </div>
                                     <div className="p-5">
-                                        <h3 className="text-xl font-semibold mb-1 text-gray-800 group-hover:text-barber transition-colors">
+                                        <h3 className="text-xl font-semibold mb-1 text-foreground group-hover:text-barber transition-colors">
                                             {member.name}
                                         </h3>
-                                        <p className="text-barber text-sm mb-3">
-                                            {member.role}
-                                        </p>
-                                        <div className="flex items-center mb-3 text-sm">
-                                            <div className="flex items-center mr-4">
-                                                {renderStars(member.rating)}
-                                                <span className="ml-1.5 text-gray-600">
-                                                    ({member.rating.toFixed(1)})
-                                                </span>
-                                            </div>
-                                            <span className="text-gray-600">
-                                                {member.experience} lat
-                                                doświadczenia
+                                        <p className="text-barber text-sm mb-3">{member.role}</p>
+                                        <div className="flex items-center gap-3 mb-3 text-sm">
+                                            {renderStars(member.rating)}
+                                            <span className="text-muted-foreground">
+                                                ({member.rating.toFixed(1)})
+                                            </span>
+                                            <span className="text-muted-foreground">
+                                                {member.experience} {t("team.experience")}
                                             </span>
                                         </div>
-                                        {member.specializations &&
-                                            member.specializations.length >
-                                            0 && (
-                                                <div className="flex flex-wrap gap-1.5 mb-4">
-                                                    {member.specializations
-                                                        .slice(0, 3)
-                                                        .map(spec => (
-                                                            <Badge
-                                                                key={normalizeSpec(
-                                                                    spec
-                                                                )}
-                                                                variant="secondary"
-                                                                className="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
-                                                            >
-                                                                {capitalizeSpec(
-                                                                    spec
-                                                                )}
-                                                            </Badge>
-                                                        ))}
-                                                </div>
-                                            )}
+                                        {(member.specializations?.length ?? 0) > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                                {member.specializations.slice(0, 3).map(spec => (
+                                                    <Badge
+                                                        key={normalizeSpec(spec)}
+                                                        variant="secondary"
+                                                        className="px-2.5 py-0.5 text-xs"
+                                                    >
+                                                        {capitalizeSpec(spec)}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )}
                                         <Button
                                             variant="outline"
-                                            className="w-full text-barber border-barber hover:bg-barber hover:text-white transition-colors"
+                                            className="w-full border-barber text-barber hover:bg-barber hover:text-white transition-colors"
                                             onClick={e => {
                                                 e.stopPropagation();
-                                                setSelectedMemberForModal(
-                                                    member
-                                                );
+                                                setSelectedMember(member);
                                             }}
                                         >
-                                            Zobacz profil
+                                            {t("team.viewProfile")}
                                         </Button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-10 col-span-full">
-                            <UserIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-600 text-lg">
-                                Brak członków zespołu spełniających wybrane
-                                kryteria.
-                            </p>
-                            <p className="text-gray-500">
-                                Spróbuj zmienić wyszukiwanie lub filtry.
-                            </p>
+                        <div className="text-center py-16">
+                            <UserIcon className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                            <p className="text-foreground text-lg font-medium">{t("team.noMembers")}</p>
+                            <p className="text-muted-foreground mt-1">{t("team.noMembersHint")}</p>
                         </div>
                     )}
                 </div>
             </section>
 
-            {/* Modal z profilem barbera */}
+            {/* ── Barber profile modal ── */}
             <Dialog
-                open={!!selectedMemberForModal}
-                onOpenChange={open =>
-                    !open && setSelectedMemberForModal(null)
-                }
+                open={!!selectedMember}
+                onOpenChange={open => !open && setSelectedMember(null)}
             >
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-                    {detailedMemberProfile && (
+                    {detailedProfile && (
                         <DialogHeader className="sr-only">
-                            <DialogTitle>
-                                Szczegóły dla {detailedMemberProfile.name}
-                            </DialogTitle>
+                            <DialogTitle>{detailedProfile.name}</DialogTitle>
                             <DialogDescription>
-                                Szczegółowe informacje o roli{" "}
-                                {detailedMemberProfile.role} –{" "}
-                                {detailedMemberProfile.name}.
+                                {detailedProfile.role} – {detailedProfile.name}
                             </DialogDescription>
                         </DialogHeader>
                     )}
 
-                    {isModalLoading && !detailedMemberProfile ? (
-                        <div className="h-96 flex items-center justify-center p-6">
-                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-barber"></div>
+                    {isModalLoading && !detailedProfile ? (
+                        <div className="h-96 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-barber" />
                         </div>
-                    ) : detailedMemberProfile ? (
+                    ) : detailedProfile ? (
                         <>
                             <div className="p-6">
+                                {/* Header */}
                                 <div className="flex flex-col sm:flex-row items-start gap-5 mb-6">
                                     <div className="flex-shrink-0">
-                                        {detailedMemberProfile.image ? (
+                                        {detailedProfile.image ? (
                                             <img
-                                                src={
-                                                    detailedMemberProfile.image
-                                                }
-                                                alt={
-                                                    detailedMemberProfile.name
-                                                }
-                                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
+                                                src={detailedProfile.image}
+                                                alt={detailedProfile.name}
+                                                className="w-24 h-24 rounded-full object-cover border-4 border-barber shadow-md"
                                             />
                                         ) : (
-                                            <div className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border-4 border-white shadow-md">
-                                                <UserIcon className="w-12 h-12 text-slate-400 dark:text-slate-500" />
+                                            <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center border-4 border-barber shadow-md">
+                                                <UserIcon className="w-12 h-12 text-muted-foreground" />
                                             </div>
                                         )}
                                     </div>
                                     <div className="mt-2 sm:mt-0">
-                                        <h2 className="text-3xl font-bold text-gray-900">
-                                            {detailedMemberProfile.name}
+                                        <h2 className="text-3xl font-bold text-foreground">
+                                            {detailedProfile.name}
                                         </h2>
-                                        <p className="text-lg text-gray-600 mt-1">
-                                            {detailedMemberProfile.role} •{" "}
-                                            {
-                                                detailedMemberProfile.experience
-                                            }{" "}
-                                            lat doświadczenia
+                                        <p className="text-muted-foreground mt-1">
+                                            {detailedProfile.role} · {detailedProfile.experience} {t("team.experience")}
                                         </p>
                                         <div className="flex mt-2">
-                                            {renderStars(
-                                                detailedMemberProfile.rating
-                                            )}
+                                            {renderStars(detailedProfile.rating)}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-x-8 gap-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
                                     <div className="md:col-span-3 space-y-6">
                                         <div>
-                                            <h3 className="text-xl font-semibold mb-2 text-gray-800">
-                                                O{" "}
-                                                {
-                                                    detailedMemberProfile.name.split(
-                                                        " "
-                                                    )[0]
-                                                }
+                                            <h3 className="text-lg font-semibold mb-2 text-foreground">
+                                                {t("team.about")} {detailedProfile.name.split(" ")[0]}
                                             </h3>
-                                            <p className="text-base text-gray-600 leading-relaxed">
-                                                {detailedMemberProfile.bio ||
-                                                    "Brak dodanego opisu."}
+                                            <p className="text-muted-foreground leading-relaxed">
+                                                {detailedProfile.bio || t("team.noDescription")}
                                             </p>
                                         </div>
-                                        {detailedMemberProfile
-                                                .specializations &&
-                                            detailedMemberProfile
-                                                .specializations.length >
-                                            0 && (
-                                                <div>
-                                                    <h3 className="text-xl font-semibold mb-3 text-gray-800">
-                                                        Specjalizacje
-                                                    </h3>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {detailedMemberProfile.specializations.map(
-                                                            spec => (
-                                                                <Badge
-                                                                    key={normalizeSpec(
-                                                                        spec
-                                                                    )}
-                                                                    variant="secondary"
-                                                                    className="bg-barber/10 text-barber text-sm"
-                                                                >
-                                                                    {capitalizeSpec(
-                                                                        spec
-                                                                    )}
-                                                                </Badge>
-                                                            )
-                                                        )}
-                                                    </div>
+                                        {(detailedProfile.specializations?.length ?? 0) > 0 && (
+                                            <div>
+                                                <h3 className="text-lg font-semibold mb-3 text-foreground">
+                                                    {t("team.specializations")}
+                                                </h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {detailedProfile.specializations.map(spec => (
+                                                        <Badge
+                                                            key={normalizeSpec(spec)}
+                                                            variant="secondary"
+                                                            className="bg-barber/10 text-barber dark:bg-barber/20 text-sm"
+                                                        >
+                                                            {capitalizeSpec(spec)}
+                                                        </Badge>
+                                                    ))}
                                                 </div>
-                                            )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="md:col-span-2 space-y-6">
-                                        {detailedMemberProfile
-                                                .certifications &&
-                                            detailedMemberProfile
-                                                .certifications.length > 0 && (
-                                                <div>
-                                                    <h3 className="text-xl font-semibold mb-3 text-gray-800 flex items-center">
-                                                        <Award className="h-5 w-5 mr-2 text-barber" />{" "}
-                                                        Certyfikaty
-                                                    </h3>
-                                                    <ul className="space-y-1.5 text-sm text-gray-600">
-                                                        {detailedMemberProfile.certifications.map(
-                                                            (cert, index) => (
-                                                                <li
-                                                                    key={index}
-                                                                    className="flex items-center"
-                                                                >
-                                                                    <CheckCircle className="h-4 w-4 mr-2 text-green-500 flex-shrink-0" />{" "}
-                                                                    {cert}
-                                                                </li>
-                                                            )
-                                                        )}
-                                                    </ul>
-                                                </div>
-                                            )}
+                                        {(detailedProfile.certifications?.length ?? 0) > 0 && (
+                                            <div>
+                                                <h3 className="text-lg font-semibold mb-3 text-foreground flex items-center">
+                                                    <Award className="h-5 w-5 mr-2 text-barber" />
+                                                    {t("team.certifications")}
+                                                </h3>
+                                                <ul className="space-y-1.5 text-sm text-muted-foreground">
+                                                    {detailedProfile.certifications.map((cert, i) => (
+                                                        <li key={i} className="flex items-center">
+                                                            <CheckCircle className="h-4 w-4 mr-2 text-green-500 flex-shrink-0" />
+                                                            {cert}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                         <div>
-                                            <h3 className="text-xl font-semibold mb-3 text-gray-800">
-                                                Kontakt
+                                            <h3 className="text-lg font-semibold mb-3 text-foreground">
+                                                {t("team.contact")}
                                             </h3>
-                                            {detailedMemberProfile.email && (
-                                                <p className="flex items-center mb-1 text-sm">
+                                            {detailedProfile.email && (
+                                                <p className="flex items-center mb-2 text-sm">
                                                     <Mail className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
                                                     <a
-                                                        href={`mailto:${detailedMemberProfile.email}`}
+                                                        href={`mailto:${detailedProfile.email}`}
                                                         className="text-barber hover:underline truncate"
                                                     >
-                                                        {
-                                                            detailedMemberProfile.email
-                                                        }
+                                                        {detailedProfile.email}
                                                     </a>
                                                 </p>
                                             )}
-                                            {detailedMemberProfile.phone && (
+                                            {detailedProfile.phone && (
                                                 <p className="flex items-center text-sm">
                                                     <Phone className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
                                                     <a
-                                                        href={`tel:${detailedMemberProfile.phone}`}
+                                                        href={`tel:${detailedProfile.phone}`}
                                                         className="text-barber hover:underline"
                                                     >
-                                                        {
-                                                            detailedMemberProfile.phone
-                                                        }
+                                                        {detailedProfile.phone}
                                                     </a>
                                                 </p>
                                             )}
@@ -556,86 +413,68 @@ const Team = () => {
                                 </div>
                             </div>
 
-                            {detailedMemberProfile.portfolioImages &&
-                                detailedMemberProfile.portfolioImages.length >
-                                0 && (
-                                    <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-5">
-                                        <h3 className="text-xl font-semibold mb-4 text-gray-800">
-                                            Portfolio
-                                        </h3>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                            {detailedMemberProfile.portfolioImages
-                                                .slice(0, 8)
-                                                .map((img, index) => (
-                                                    <button
-                                                        key={index}
-                                                        type="button"
-                                                        className="aspect-square rounded-lg overflow-hidden shadow-sm bg-slate-200 dark:bg-slate-800 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-barber"
-                                                        onClick={() =>
-                                                            openPortfolioViewer(
-                                                                detailedMemberProfile.portfolioImages,
-                                                                index
-                                                            )
-                                                        }
-                                                    >
-                                                        {img ? (
-                                                            <img
-                                                                src={img}
-                                                                alt={`Portfolio ${index + 1}`}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <Camera className="w-8 h-8 text-slate-400 dark:text-slate-600" />
-                                                        )}
-                                                    </button>
-                                                ))}
-                                        </div>
+                            {(detailedProfile.portfolioImages?.length ?? 0) > 0 && (
+                                <div className="bg-muted/50 px-6 py-5 border-t border-border">
+                                    <h3 className="text-lg font-semibold mb-4 text-foreground">
+                                        {t("team.portfolioTitle")}
+                                    </h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                        {detailedProfile.portfolioImages.slice(0, 8).map((img, i) => (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                className="aspect-square rounded-lg overflow-hidden bg-muted flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-barber"
+                                                onClick={() => openPortfolio(detailedProfile.portfolioImages, i)}
+                                            >
+                                                {img ? (
+                                                    <img
+                                                        src={img}
+                                                        alt={`Portfolio ${i + 1}`}
+                                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                                    />
+                                                ) : (
+                                                    <Camera className="w-8 h-8 text-muted-foreground/50" />
+                                                )}
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
+                            )}
 
-                            <div className="p-4 border-t sticky bottom-0 bg-white/80 backdrop-blur-sm">
+                            <div className="p-4 border-t border-border bg-card/80 backdrop-blur-sm">
                                 <Button
                                     asChild
-                                    className="w-full bg-barber hover:bg-barber-muted text-white text-lg py-6"
+                                    className="w-full bg-barber hover:bg-barber-muted text-white text-lg py-6 btn-hover"
                                 >
-                                    <Link
-                                        to={`/booking?barberId=${detailedMemberProfile.id}`}
-                                    >
-                                        <CalendarIcon className="h-5 w-5 mr-2" />{" "}
-                                        Umów wizytę z{" "}
-                                        {
-                                            detailedMemberProfile.name.split(
-                                                " "
-                                            )[0]
-                                        }
+                                    <Link to={`/booking?barberId=${detailedProfile.id}`}>
+                                        <CalendarIcon className="h-5 w-5 mr-2" />
+                                        {t("team.bookWithPerson")} {detailedProfile.name.split(" ")[0]}
                                     </Link>
                                 </Button>
                             </div>
                         </>
                     ) : (
                         <div className="h-96 flex items-center justify-center p-6">
-                            <p className="text-gray-500">
-                                Nie udało się wczytać szczegółów barbera lub
-                                barber nie został znaleziony.
-                            </p>
+                            <p className="text-muted-foreground text-center">{t("team.notFound")}</p>
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
 
-            {/* Modal karuzeli portfolio */}
-            <Dialog
-                open={isPortfolioViewerOpen}
-                onOpenChange={open => setIsPortfolioViewerOpen(open)}
-            >
+            {/* ── Portfolio viewer modal ── */}
+            <Dialog open={isPortfolioOpen} onOpenChange={setIsPortfolioOpen}>
                 <DialogContent className="max-w-3xl">
                     {portfolioImages.length > 0 ? (
                         <div className="flex flex-col items-center">
-                            <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-black/80 rounded-md overflow-hidden">
+                            <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-black/80 rounded-lg overflow-hidden">
                                 <button
                                     type="button"
-                                    onClick={showPrevImage}
-                                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2"
+                                    onClick={() =>
+                                        setCurrentImageIndex(p =>
+                                            p === 0 ? portfolioImages.length - 1 : p - 1
+                                        )
+                                    }
+                                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-barber text-white rounded-full p-2 transition-colors"
                                 >
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
@@ -646,20 +485,23 @@ const Team = () => {
                                 />
                                 <button
                                     type="button"
-                                    onClick={showNextImage}
-                                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2"
+                                    onClick={() =>
+                                        setCurrentImageIndex(p =>
+                                            p === portfolioImages.length - 1 ? 0 : p + 1
+                                        )
+                                    }
+                                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-barber text-white rounded-full p-2 transition-colors"
                                 >
                                     <ChevronRight className="w-6 h-6" />
                                 </button>
                             </div>
-                            <div className="mt-3 text-sm text-gray-600">
-                                Zdjęcie {currentImageIndex + 1} z{" "}
-                                {portfolioImages.length}
+                            <div className="mt-3 text-sm text-muted-foreground">
+                                {t("team.photoOf")} {currentImageIndex + 1} {t("team.of")} {portfolioImages.length}
                             </div>
                         </div>
                     ) : (
-                        <div className="py-10 text-center text-gray-500">
-                            Brak zdjęć do wyświetlenia.
+                        <div className="py-10 text-center text-muted-foreground">
+                            {t("team.noPhotos")}
                         </div>
                     )}
                 </DialogContent>
