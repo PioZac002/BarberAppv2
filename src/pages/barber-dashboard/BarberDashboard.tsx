@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import DashboardLayout from "@/components/dashboard/DashboardLayout"; // Główny layout
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Importuj komponenty podstron dla BarberDashboard
 import BarberScheduleOverview from "./BarberScheduleOverview";
@@ -16,10 +17,11 @@ const BarberDashboard = () => {
     const { user: authUser, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["barber", "admin"] });
     const location = useLocation();
+    const { t } = useLanguage();
 
     if (authContextLoading) {
         return (
-            <DashboardLayout title="Loading Barber Dashboard...">
+            <DashboardLayout title={t('barberPanel.loading')}>
                 <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
                 </div>
@@ -28,10 +30,10 @@ const BarberDashboard = () => {
     }
     if (!authUser && !authContextLoading) {
         return (
-            <DashboardLayout title="Authentication Error">
+            <DashboardLayout title={t('barberPanel.authError')}>
                 <div className="p-6 text-center">
-                    <p className="text-red-500">Błąd autoryzacji. Zaloguj się.</p>
-                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">Przejdź do logowania</Link></Button>
+                    <p className="text-red-500">{t('barberPanel.authError')}</p>
+                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">{t('barberPanel.goToLogin')}</Link></Button>
                 </div>
             </DashboardLayout>
         );
@@ -39,12 +41,12 @@ const BarberDashboard = () => {
 
     const getTitle = () => {
         const path = location.pathname.replace("/barber-dashboard", "");
-        if (path === "/appointments" || path.startsWith("/appointments/")) return "My Appointments";
-        if (path === "/portfolio" || path.startsWith("/portfolio/")) return "My Portfolio";
-        if (path === "/notifications" || path.startsWith("/notifications/")) return "Notifications";
-        if (path === "/profile" || path.startsWith("/profile/")) return "My Profile";
-        if (path === "/" || path === "" || path === "/schedule" || path.startsWith("/schedule/")) return "Schedule Overview";
-        return "Barber Dashboard";
+        if (path === "/appointments" || path.startsWith("/appointments/")) return t('barberPanel.appointments.title');
+        if (path === "/portfolio" || path.startsWith("/portfolio/")) return t('barberPanel.portfolio.title');
+        if (path === "/notifications" || path.startsWith("/notifications/")) return t('barberPanel.notifications.title');
+        if (path === "/profile" || path.startsWith("/profile/")) return t('barberPanel.profile.profileDetails');
+        if (path === "/" || path === "" || path === "/schedule" || path.startsWith("/schedule/")) return t('dashboard.schedule');
+        return t('barberPanel.title');
     };
 
     return (

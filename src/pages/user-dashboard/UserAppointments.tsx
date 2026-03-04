@@ -20,7 +20,8 @@ import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { isValid, format } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Appointment {
     id: number;
@@ -46,30 +47,6 @@ const getStatusColor = (status: string) => {
     }
 };
 
-const getStatusLabel = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "confirmed": return "Potwierdzona";
-        case "pending": return "Oczekująca";
-        case "completed": return "Zrealizowana";
-        case "canceled":
-        case "cancelled": return "Anulowana";
-        case "no-show": return "Nieobecność";
-        default: return status;
-    }
-};
-
-const getFilterLabel = (status: string) => {
-    switch (status) {
-        case "all": return "Wszystkie wizyty";
-        case "confirmed": return "Potwierdzone";
-        case "pending": return "Oczekujące";
-        case "completed": return "Zrealizowane";
-        case "canceled": return "Anulowane";
-        case "no-show": return "Nieobecność";
-        default: return status;
-    }
-};
-
 const formatPricePln = (price: string) => {
     const value = parseFloat(price);
     if (isNaN(value)) return price;
@@ -79,10 +56,36 @@ const formatPricePln = (price: string) => {
 const UserAppointments = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["client"] });
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === "pl" ? pl : enUS;
 
     const [appointmentList, setAppointmentList] = useState<Appointment[]>([]);
     const [filter, setFilter] = useState("all");
     const [isDataLoading, setIsDataLoading] = useState(true);
+
+    const getStatusLabel = (status: string) => {
+        switch (status.toLowerCase()) {
+            case "confirmed": return t("userPanel.appointments.confirmed");
+            case "pending":   return t("userPanel.appointments.pending");
+            case "completed": return t("userPanel.appointments.completed");
+            case "canceled":
+            case "cancelled": return t("userPanel.appointments.cancelled");
+            case "no-show":   return t("userPanel.appointments.noShow");
+            default: return status;
+        }
+    };
+
+    const getFilterLabel = (status: string) => {
+        switch (status) {
+            case "all":       return t("userPanel.appointments.all");
+            case "confirmed": return t("userPanel.appointments.confirmed");
+            case "pending":   return t("userPanel.appointments.pending");
+            case "completed": return t("userPanel.appointments.completed");
+            case "canceled":  return t("userPanel.appointments.cancelled");
+            case "no-show":   return t("userPanel.appointments.noShow");
+            default: return status;
+        }
+    };
 
     useEffect(() => {
         if (authContextLoading) {
@@ -108,7 +111,7 @@ const UserAppointments = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!response.ok) {
-                    let errorMsg = "Nie udało się pobrać wizyt";
+                    let errorMsg = t("userPanel.appointments.loadFailed");
                     try {
                         const errorData = await response.json();
                         errorMsg = errorData.error || errorMsg;
@@ -123,7 +126,7 @@ const UserAppointments = () => {
                 );
                 setAppointmentList(data);
             } catch (error: any) {
-                toast.error(error.message || "Nie udało się wczytać wizyt.");
+                toast.error(error.message || t("userPanel.appointments.loadFailed"));
                 setAppointmentList([]);
             } finally {
                 setIsDataLoading(false);
@@ -134,12 +137,14 @@ const UserAppointments = () => {
 
     const handleCancelAppointment = async (id: number) => {
         if (!token) {
-            toast.error("Błąd uwierzytelniania. Nie można anulować wizyty.");
+            toast.error(t("userPanel.appointments.authError"));
             return;
         }
-        if (!window.confirm("Czy na pewno chcesz anulować tę wizytę?")) {
-            return;
-        }
+        const confirmMsg = lang === "pl"
+            ? "Czy na pewno chcesz anulować tę wizytę?"
+            : "Are you sure you want to cancel this appointment?";
+        if (!window.confirm(confirmMsg)) return;
+
         try {
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/user/appointments/${id}/cancel`,
@@ -149,8 +154,8 @@ const UserAppointments = () => {
                 }
             );
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Nie udało się anulować wizyty" }));
-                throw new Error(errorData.error || "Nie udało się anulować wizyty");
+                const errorData = await response.json().catch(() => ({ error: t("userPanel.appointments.cancelFailed") }));
+                throw new Error(errorData.error || t("userPanel.appointments.cancelFailed"));
             }
             setAppointmentList(prev =>
                 prev
@@ -165,9 +170,9 @@ const UserAppointments = () => {
                             new Date(a.appointment_timestamp).getTime()
                     )
             );
-            toast.success("Wizyta została pomyślnie anulowana.");
+            toast.success(t("userPanel.appointments.cancelledSuccess"));
         } catch (error: any) {
-            toast.error(error.message || "Nie udało się anulować wizyty.");
+            toast.error(error.message || t("userPanel.appointments.cancelFailed"));
         }
     };
 
@@ -183,10 +188,10 @@ const UserAppointments = () => {
         return (
             <div className="p-6 text-center">
                 <p className="text-red-500">
-                    Nie udało się uwierzytelnić użytkownika, aby wyświetlić wizyty.
+                    {t("userPanel.authErrorDesc")}
                 </p>
                 <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
-                    <Link to="/login">Przejdź do logowania</Link>
+                    <Link to="/login">{t("userPanel.goToLogin")}</Link>
                 </Button>
             </div>
         );
@@ -196,15 +201,15 @@ const UserAppointments = () => {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Moje wizyty</h2>
-                    <p className="text-sm text-gray-600">
-                        Zarządzaj swoimi nadchodzącymi i przeszłymi wizytami.
+                    <h2 className="text-2xl font-bold text-foreground">{t("userPanel.appointments.title")}</h2>
+                    <p className="text-sm text-muted-foreground">
+                        {t("userPanel.appointments.subtitle")}
                     </p>
                 </div>
                 <Button asChild className="bg-barber hover:bg-barber-muted w-full sm:w-auto">
                     <Link to="/booking">
                         <Plus className="h-4 w-4 mr-2" />
-                        Zarezerwuj nową wizytę
+                        {t("userPanel.appointments.bookNew")}
                     </Link>
                 </Button>
             </div>
@@ -214,12 +219,12 @@ const UserAppointments = () => {
                     htmlFor="status-filter"
                     className="text-sm font-medium flex items-center whitespace-nowrap"
                 >
-                    <ListFilter className="h-4 w-4 mr-1.5 text-gray-500" />
-                    Filtruj wg statusu:
+                    <ListFilter className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                    {t("userPanel.appointments.filterByStatus")}
                 </Label>
                 <Select value={filter} onValueChange={setFilter}>
                     <SelectTrigger className="w-full sm:w-[220px]" id="status-filter">
-                        <SelectValue placeholder="Wybierz status" />
+                        <SelectValue placeholder={t("userPanel.appointments.all")} />
                     </SelectTrigger>
                     <SelectContent>
                         {["all", "confirmed", "pending", "completed", "canceled", "no-show"].map(
@@ -244,44 +249,37 @@ const UserAppointments = () => {
                                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                                     <div className="flex-1 space-y-2">
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-y-1">
-                                            <h3 className="font-semibold text-md sm:text-lg text-gray-800">
+                                            <h3 className="font-semibold text-md sm:text-lg text-foreground">
                                                 {appointment.service}
                                             </h3>
                                             <Badge
-                                                className={`${getStatusColor(
-                                                    appointment.status
-                                                )} text-xs sm:text-sm`}
+                                                className={`${getStatusColor(appointment.status)} text-xs sm:text-sm`}
                                             >
                                                 {getStatusLabel(appointment.status)}
                                             </Badge>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs sm:text-sm text-gray-600 pt-1">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs sm:text-sm text-muted-foreground pt-1">
                                             <div className="flex items-center">
-                                                <User className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                                                <span>Barber: {appointment.barber}</span>
+                                                <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                                <span>{t("userPanel.appointments.barberLabel")}{appointment.barber}</span>
                                             </div>
                                             <div className="flex items-center">
-                                                <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
+                                                <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                                                 <span>
                                                     {isValid(new Date(appointment.date))
-                                                        ? format(new Date(appointment.date), "PPP", {
-                                                            locale: pl,
-                                                        })
-                                                        : "Nieprawidłowa data"}
+                                                        ? format(new Date(appointment.date), "PPP", { locale: dateLocale })
+                                                        : t("userPanel.appointments.invalidDate")}
                                                 </span>
                                             </div>
                                             <div className="flex items-center sm:col-span-2">
-                                                <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                                                <span>
-                                                    {appointment.time} (Czas trwania:{" "}
-                                                    {appointment.duration})
-                                                </span>
+                                                <Clock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                                <span>{appointment.time} ({appointment.duration})</span>
                                             </div>
                                         </div>
 
                                         <div className="text-md sm:text-lg font-semibold text-barber pt-1">
-                                            Cena: {formatPricePln(appointment.price)}
+                                            {formatPricePln(appointment.price)}
                                         </div>
                                     </div>
 
@@ -291,13 +289,11 @@ const UserAppointments = () => {
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() =>
-                                                    handleCancelAppointment(appointment.id)
-                                                }
+                                                onClick={() => handleCancelAppointment(appointment.id)}
                                                 className="w-full border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
                                             >
                                                 <Trash2 className="h-4 w-4 mr-1.5" />
-                                                Anuluj wizytę
+                                                {t("userPanel.appointments.cancelAppointment")}
                                             </Button>
                                         )}
                                         {appointment.status.toLowerCase() === "confirmed" && (
@@ -306,10 +302,9 @@ const UserAppointments = () => {
                                                 size="sm"
                                                 disabled
                                                 className="w-full border-barber text-barber hover:bg-barber/10"
-                                                title="Przełożenie wizyty – wkrótce dostępne"
                                             >
                                                 <Edit className="h-4 w-4 mr-1.5" />
-                                                Przełóż wizytę
+                                                {t("userPanel.appointments.reschedule")}
                                             </Button>
                                         )}
                                         {appointment.status.toLowerCase() === "completed" && (
@@ -318,10 +313,9 @@ const UserAppointments = () => {
                                                 size="sm"
                                                 disabled
                                                 className="w-full border-barber text-barber hover:bg-barber/10"
-                                                title="Dodanie opinii – wkrótce dostępne"
                                             >
                                                 <Star className="h-4 w-4 mr-1.5" />
-                                                Dodaj opinię
+                                                {t("userPanel.appointments.addReview")}
                                             </Button>
                                         )}
                                     </div>
@@ -332,17 +326,17 @@ const UserAppointments = () => {
                 ) : (
                     <Card>
                         <CardContent className="text-center py-12">
-                            <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-1">
-                                Nie znaleziono wizyt
+                            <Info className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-foreground mb-1">
+                                {t("userPanel.appointments.noAppointments")}
                             </h3>
-                            <p className="text-gray-500 mb-4">
+                            <p className="text-muted-foreground mb-4">
                                 {filter === "all"
-                                    ? "Nie masz jeszcze żadnych zarezerwowanych wizyt."
-                                    : `Nie masz wizyt ze statusem: ${getFilterLabel(filter).toLowerCase()}.`}
+                                    ? t("userPanel.appointments.noAppointmentsYet")
+                                    : `${t("userPanel.appointments.noAppointmentsFilter")} ${getFilterLabel(filter).toLowerCase()}.`}
                             </p>
                             <Button asChild className="bg-barber hover:bg-barber-muted">
-                                <Link to="/booking">Zarezerwuj swoją pierwszą wizytę</Link>
+                                <Link to="/booking">{t("userPanel.appointments.bookFirst")}</Link>
                             </Button>
                         </CardContent>
                     </Card>

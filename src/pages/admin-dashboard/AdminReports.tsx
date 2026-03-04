@@ -936,7 +936,7 @@ const AdminReports = () => {
             <div
                 ref={reportContentRef}
                 id="report-to-print-content"
-                className="report-content-for-pdf bg-white p-4 print:!p-0 print:shadow-none print:border-none space-y-6"
+                className="report-content-for-pdf bg-background p-4 print:!p-0 print:shadow-none print:border-none space-y-6"
             >
                 <div
                     id="pdf-header-placeholder"

@@ -18,15 +18,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isValid as isValidDateFn } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import dayjs from "dayjs";
 import "dayjs/locale/pl";
-
-dayjs.locale("pl");
+import "dayjs/locale/en";
 
 interface Service {
     id: number;
@@ -61,7 +61,13 @@ interface BookingFormData {
 const Booking = () => {
     useRequireAuth({ allowedRoles: ["client"] });
     const { user, token } = useAuth();
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === "pl" ? pl : enUS;
     const navigate = useNavigate();
+
+    useEffect(() => {
+        dayjs.locale(lang === "pl" ? "pl" : "en");
+    }, [lang]);
 
     const [step, setStep] = useState<number>(1);
     const [services, setServices] = useState<Service[]>([]);
@@ -96,11 +102,11 @@ const Booking = () => {
                             headers: { Authorization: `Bearer ${token}` },
                         }
                     );
-                    if (!response.ok) throw new Error("Nie udało się pobrać usług");
+                    if (!response.ok) throw new Error(t("bookingPage.loadingServices"));
                     const data = await response.json();
                     setServices(data);
                 } catch (error) {
-                    toast.error("Nie udało się wczytać usług. Spróbuj ponownie.");
+                    toast.error(t("bookingPage.loadingServices"));
                     console.error(error);
                 } finally {
                     setIsLoadingServices(false);
@@ -121,11 +127,11 @@ const Booking = () => {
                             headers: { Authorization: `Bearer ${token}` },
                         }
                     );
-                    if (!response.ok) throw new Error("Nie udało się pobrać barberów");
+                    if (!response.ok) throw new Error(t("bookingPage.loadingBarbers"));
                     const data = await response.json();
                     setBarbers(data);
                 } catch (error) {
-                    toast.error("Nie udało się wczytać barberów. Spróbuj ponownie.");
+                    toast.error(t("bookingPage.loadingBarbers"));
                     console.error(error);
                 } finally {
                     setIsLoadingBarbers(false);
@@ -161,11 +167,11 @@ const Booking = () => {
                         }
                     );
                     if (!response.ok)
-                        throw new Error("Nie udało się pobrać dostępnych godzin");
+                        throw new Error(t("bookingPage.noSlots"));
                     const data = await response.json();
                     setAvailableTimeSlots(data);
                 } catch (error) {
-                    toast.error("Nie udało się wczytać dostępnych godzin.");
+                    toast.error(t("bookingPage.noSlots"));
                     console.error(error);
                     setAvailableTimeSlots([]);
                 } finally {
@@ -194,29 +200,28 @@ const Booking = () => {
         const newErrors: { [key: string]: string } = {};
         if (currentStep === 1) {
             if (!formData.serviceId)
-                newErrors.serviceId = "Wybierz usługę";
+                newErrors.serviceId = t("bookingPage.selectService");
         } else if (currentStep === 2) {
             if (!formData.barberId)
-                newErrors.barberId = "Wybierz barbera";
+                newErrors.barberId = t("bookingPage.selectBarber");
         } else if (currentStep === 3) {
             if (!formData.date)
-                newErrors.date = "Wybierz datę wizyty";
+                newErrors.date = t("bookingPage.selectDate");
             if (!formData.timeSlot)
-                newErrors.timeSlot = "Wybierz godzinę wizyty";
+                newErrors.timeSlot = t("bookingPage.selectTime");
         } else if (currentStep === 4) {
             if (!formData.firstName)
-                newErrors.firstName = "Imię jest wymagane";
+                newErrors.firstName = t("bookingPage.firstName");
             if (!formData.lastName)
-                newErrors.lastName = "Nazwisko jest wymagane";
+                newErrors.lastName = t("bookingPage.lastName");
             if (!formData.email) {
-                newErrors.email = "Adres e‑mail jest wymagany";
+                newErrors.email = t("bookingPage.email");
             } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-                newErrors.email = "Adres e‑mail jest nieprawidłowy";
+                newErrors.email = t("bookingPage.email");
             }
 
             if (!formData.termsAccepted)
-                newErrors.termsAccepted =
-                    "Musisz zaakceptować regulamin i warunki wizyty";
+                newErrors.termsAccepted = t("bookingPage.termsAccept");
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -227,7 +232,7 @@ const Booking = () => {
             setStep(step + 1);
             window.scrollTo(0, 0);
         } else {
-            toast.error("Uzupełnij wymagane pola na tym etapie.");
+            toast.error(lang === "pl" ? "Uzupełnij wymagane pola na tym etapie." : "Please fill in all required fields for this step.");
         }
     };
 
@@ -240,10 +245,12 @@ const Booking = () => {
         e.preventDefault();
         if (!validateStep(4) || !token) {
             if (!token)
-                toast.error("Błąd uwierzytelniania. Zaloguj się ponownie.");
+                toast.error(t("bookingPage.loginRequired"));
             else
                 toast.error(
-                    "Upewnij się, że wszystkie dane są poprawne i zaakceptowano regulamin."
+                    lang === "pl"
+                        ? "Upewnij się, że wszystkie dane są poprawne i zaakceptowano regulamin."
+                        : "Please ensure all fields are correct and terms are accepted."
                 );
             return;
         }
@@ -280,15 +287,10 @@ const Booking = () => {
                 throw new Error(errorMsg);
             }
 
-            toast.success(
-                "Rezerwacja została wysłana! Twoja wizyta oczekuje na potwierdzenie."
-            );
+            toast.success(t("bookingPage.bookingConfirmed"));
             navigate("/user-dashboard/appointments");
         } catch (error: any) {
-            toast.error(
-                error.message ||
-                "Nie udało się wysłać rezerwacji. Spróbuj ponownie."
-            );
+            toast.error(error.message || t("bookingPage.bookingFailed"));
         }
     };
 
@@ -310,16 +312,11 @@ const Booking = () => {
 
     const getStepTitle = (): string => {
         switch (step) {
-            case 1:
-                return "Wybierz usługę";
-            case 2:
-                return "Wybierz barbera";
-            case 3:
-                return "Wybierz datę i godzinę";
-            case 4:
-                return "Twoje dane i potwierdzenie";
-            default:
-                return "Zarezerwuj wizytę";
+            case 1: return t("bookingPage.selectService");
+            case 2: return t("bookingPage.selectBarber");
+            case 3: return `${t("bookingPage.selectDate")} & ${t("bookingPage.selectTime")}`;
+            case 4: return `${t("bookingPage.yourDetails")} & ${t("bookingPage.step5")}`;
+            default: return t("bookingPage.title");
         }
     };
 
@@ -334,10 +331,10 @@ const Booking = () => {
                 return (
                     <div className="space-y-4">
                         <Label className="text-base font-medium">
-                            Wybierz usługę
+                            {t("bookingPage.selectService")}
                         </Label>
                         {isLoadingServices ? (
-                            <p>Ładowanie usług...</p>
+                            <p>{t("bookingPage.loadingServices")}</p>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {services.map(service => (
@@ -369,7 +366,7 @@ const Booking = () => {
                                             )}
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start">
-                                                    <h3 className="font-semibold text-gray-800">
+                                                    <h3 className="font-semibold text-foreground">
                                                         {service.name}
                                                     </h3>
                                                     <p className="font-semibold text-barber">
@@ -407,10 +404,10 @@ const Booking = () => {
                 return (
                     <div className="space-y-4">
                         <Label className="text-base font-medium">
-                            Wybierz barbera
+                            {t("bookingPage.selectBarber")}
                         </Label>
                         {isLoadingBarbers ? (
-                            <p>Ładowanie barberów...</p>
+                            <p>{t("bookingPage.loadingBarbers")}</p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {barbers.map(barber => (
@@ -439,7 +436,7 @@ const Booking = () => {
                                                     className="w-20 h-20 object-cover rounded-full mb-2"
                                                 />
                                             )}
-                                            <h3 className="font-semibold text-gray-800">
+                                            <h3 className="font-semibold text-foreground">
                                                 {barber.name}
                                             </h3>
                                             {barber.role && (
@@ -468,7 +465,7 @@ const Booking = () => {
                     <div className="space-y-6">
                         <div>
                             <Label className="text-base font-medium">
-                                Wybierz datę
+                                {t("bookingPage.selectDate")}
                             </Label>
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -485,9 +482,9 @@ const Booking = () => {
                                         {formData.date &&
                                         isValidDateFn(formData.date)
                                             ? format(formData.date, "PPP", {
-                                                locale: pl,
+                                                locale: dateLocale,
                                             })
-                                            : "Wybierz datę"}
+                                            : t("bookingPage.selectDate")}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent
@@ -513,11 +510,11 @@ const Booking = () => {
                         </div>
                         <div>
                             <Label className="text-base font-medium">
-                                Wybierz godzinę
+                                {t("bookingPage.selectTime")}
                             </Label>
                             {isLoadingTimeSlots ? (
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Ładowanie dostępnych godzin...
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {t("bookingPage.loadingSlots")}
                                 </p>
                             ) : availableTimeSlots.length > 0 ? (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-1">
@@ -549,12 +546,10 @@ const Booking = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-sm text-gray-500 mt-1">
-                                    {formData.date &&
-                                    formData.serviceId &&
-                                    formData.barberId
-                                        ? "Brak dostępnych terminów dla wybranej daty/usługi/barbera."
-                                        : "Najpierw wybierz usługę, barbera i datę."}
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {formData.date && formData.serviceId && formData.barberId
+                                        ? t("bookingPage.noSlots")
+                                        : lang === "pl" ? "Najpierw wybierz usługę, barbera i datę." : "First select a service, barber, and date."}
                                 </p>
                             )}
                             {errors.timeSlot && (
@@ -570,7 +565,7 @@ const Booking = () => {
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label htmlFor="firstName">Imię</Label>
+                                <Label htmlFor="firstName">{t("bookingPage.firstName")}</Label>
                                 <Input
                                     id="firstName"
                                     name="firstName"
@@ -587,7 +582,7 @@ const Booking = () => {
                                 )}
                             </div>
                             <div className="space-y-1.5">
-                                <Label htmlFor="lastName">Nazwisko</Label>
+                                <Label htmlFor="lastName">{t("bookingPage.lastName")}</Label>
                                 <Input
                                     id="lastName"
                                     name="lastName"
@@ -606,7 +601,7 @@ const Booking = () => {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <Label htmlFor="email">E‑mail</Label>
+                                <Label htmlFor="email">{t("bookingPage.email")}</Label>
                                 <Input
                                     id="email"
                                     name="email"
@@ -627,7 +622,7 @@ const Booking = () => {
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="notes">
-                                Dodatkowe uwagi (opcjonalnie)
+                                {t("bookingPage.notes")}
                             </Label>
                             <Textarea
                                 id="notes"
@@ -635,8 +630,8 @@ const Booking = () => {
                                 rows={3}
                                 value={formData.notes}
                                 onChange={handleChange}
-                                placeholder="Np. preferowana długość brody, wrażliwa skóra itp."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent"
+                                placeholder={t("bookingPage.notesPlaceholder")}
+                                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent"
                             />
                         </div>
                         <div className="flex items-start space-x-2 pt-2">
@@ -655,11 +650,12 @@ const Booking = () => {
                                     htmlFor="termsAccepted"
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                    Akceptuję regulamin i warunki wizyty
+                                    {t("bookingPage.termsAccept")}
                                 </label>
                                 <p className="text-xs text-muted-foreground">
-                                    Wizytę możesz odwołać lub przełożyć
-                                    najpóźniej 24 godziny przed jej terminem.
+                                    {lang === "pl"
+                                        ? "Wizytę możesz odwołać lub przełożyć najpóźniej 24 godziny przed jej terminem."
+                                        : "You can cancel or reschedule your appointment up to 24 hours before it begins."}
                                 </p>
                                 {errors.termsAccepted && (
                                     <p className="text-red-500 text-xs">
@@ -682,15 +678,14 @@ const Booking = () => {
 
     return (
         <Layout>
-            <div className="min-h-screen bg-gray-50 py-8 sm:py-12">
+            <div className="min-h-screen bg-background py-8 sm:py-12">
                 <div className="container mx-auto px-4">
                     <div className="max-w-4xl mx-auto mb-8">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-2">
-                            Zarezerwuj wizytę
+                        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground mb-2">
+                            {t("bookingPage.title")}
                         </h1>
-                        <p className="text-center text-gray-500 text-sm sm:text-base mb-6">
-                            Przejdź przez kolejne kroki, aby zaplanować swoją
-                            wizytę.
+                        <p className="text-center text-muted-foreground text-sm sm:text-base mb-6">
+                            {t("bookingPage.subtitle")}
                         </p>
                         <div className="relative pt-1">
                             <div className="flex mb-2 items-center justify-between text-xs">
@@ -702,61 +697,49 @@ const Booking = () => {
                                                 : "bg-gray-200 text-gray-600"
                                         }`}
                                     >
-                                        Usługa
+                                        {t("bookingPage.step1")}
                                     </span>
                                 </div>
                                 <div
                                     className={`flex-auto border-t-2 transition-all duration-500 ease-in-out mx-2 ${
-                                        step > 1
-                                            ? "border-barber"
-                                            : "border-gray-200"
+                                        step > 1 ? "border-barber" : "border-border"
                                     }`}
                                 ></div>
                                 <div>
                                     <span
                                         className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 2
-                                                ? "bg-barber text-white"
-                                                : "bg-gray-200 text-gray-600"
+                                            step >= 2 ? "bg-barber text-white" : "bg-muted text-muted-foreground"
                                         }`}
                                     >
-                                        Barber
+                                        {t("bookingPage.step2")}
                                     </span>
                                 </div>
                                 <div
                                     className={`flex-auto border-t-2 transition-all duration-500 ease-in-out mx-2 ${
-                                        step > 2
-                                            ? "border-barber"
-                                            : "border-gray-200"
+                                        step > 2 ? "border-barber" : "border-border"
                                     }`}
                                 ></div>
                                 <div>
                                     <span
                                         className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 3
-                                                ? "bg-barber text-white"
-                                                : "bg-gray-200 text-gray-600"
+                                            step >= 3 ? "bg-barber text-white" : "bg-muted text-muted-foreground"
                                         }`}
                                     >
-                                        Data i godzina
+                                        {t("bookingPage.step3")}
                                     </span>
                                 </div>
                                 <div
                                     className={`flex-auto border-t-2 transition-all duration-500 ease-in-out mx-2 ${
-                                        step > 3
-                                            ? "border-barber"
-                                            : "border-gray-200"
+                                        step > 3 ? "border-barber" : "border-border"
                                     }`}
                                 ></div>
                                 <div>
                                     <span
                                         className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 4
-                                                ? "bg-barber text-white"
-                                                : "bg-gray-200 text-gray-600"
+                                            step >= 4 ? "bg-barber text-white" : "bg-muted text-muted-foreground"
                                         }`}
                                     >
-                                        Potwierdzenie
+                                        {t("bookingPage.step5")}
                                     </span>
                                 </div>
                             </div>
@@ -774,7 +757,7 @@ const Booking = () => {
                             <div className="md:col-span-2">
                                 <Card className="animate-fade-in shadow-lg">
                                     <CardHeader>
-                                        <CardTitle className="text-xl font-semibold text-gray-700">
+                                        <CardTitle className="text-xl font-semibold text-foreground">
                                             {getStepTitle()}
                                         </CardTitle>
                                     </CardHeader>
@@ -789,7 +772,7 @@ const Booking = () => {
                                                     variant="outline"
                                                     onClick={handleBack}
                                                 >
-                                                    Wstecz
+                                                    {t("bookingPage.back")}
                                                 </Button>
                                             )}
                                             {step < 4 ? (
@@ -798,18 +781,16 @@ const Booking = () => {
                                                     className="bg-barber hover:bg-barber-muted ml-auto"
                                                     onClick={handleNext}
                                                 >
-                                                    Dalej
+                                                    {t("bookingPage.next")}
                                                 </Button>
                                             ) : (
                                                 <Button
                                                     type="submit"
                                                     className="bg-barber hover:bg-barber-muted ml-auto"
                                                     onClick={handleSubmit}
-                                                    disabled={
-                                                        !formData.termsAccepted
-                                                    }
+                                                    disabled={!formData.termsAccepted}
                                                 >
-                                                    Potwierdź rezerwację
+                                                    {t("bookingPage.confirm")}
                                                 </Button>
                                             )}
                                         </div>
@@ -821,17 +802,17 @@ const Booking = () => {
                                 <Card className="shadow-lg">
                                     <CardHeader>
                                         <CardTitle className="text-lg font-semibold text-barber">
-                                            Podsumowanie wizyty
+                                            {t("bookingPage.summary")}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-3 text-sm">
                                         <div>
-                                            <Label className="text-xs text-gray-500">
-                                                Usługa
+                                            <Label className="text-xs text-muted-foreground">
+                                                {t("bookingPage.service")}
                                             </Label>
-                                            <p className="font-medium text-gray-700">
+                                            <p className="font-medium text-foreground">
                                                 {currentService?.name ||
-                                                    "Nie wybrano"}
+                                                    (lang === "pl" ? "Nie wybrano" : "Not selected")}
                                             </p>
                                             {currentService && (
                                                 <p className="text-xs text-gray-500">
@@ -845,74 +826,48 @@ const Booking = () => {
                                             )}
                                         </div>
                                         <div>
-                                            <Label className="text-xs text-gray-500">
-                                                Barber
+                                            <Label className="text-xs text-muted-foreground">
+                                                {t("bookingPage.barber")}
                                             </Label>
-                                            <p className="font-medium text-gray-700">
+                                            <p className="font-medium text-foreground">
                                                 {currentBarber?.name ||
-                                                    "Nie wybrano"}
+                                                    (lang === "pl" ? "Nie wybrano" : "Not selected")}
                                             </p>
                                         </div>
                                         <div>
-                                            <Label className="text-xs text-gray-500">
-                                                Data i godzina
+                                            <Label className="text-xs text-muted-foreground">
+                                                {t("bookingPage.date")}
                                             </Label>
-                                            <p className="font-medium text-gray-700">
-                                                {formData.date &&
-                                                isValidDateFn(formData.date)
-                                                    ? format(
-                                                        formData.date,
-                                                        "PPP",
-                                                        { locale: pl }
-                                                    )
-                                                    : "Nie wybrano"}
-                                                {formData.timeSlot
-                                                    ? `, ${formData.timeSlot}`
-                                                    : ""}
+                                            <p className="font-medium text-foreground">
+                                                {formData.date && isValidDateFn(formData.date)
+                                                    ? format(formData.date, "PPP", { locale: dateLocale })
+                                                    : (lang === "pl" ? "Nie wybrano" : "Not selected")}
+                                                {formData.timeSlot ? `, ${formData.timeSlot}` : ""}
                                             </p>
                                         </div>
-                                        {(formData.firstName ||
-                                                formData.lastName) &&
-                                            step === 4 && (
-                                                <div>
-                                                    <Label className="text-xs text-gray-500">
-                                                        Klient
-                                                    </Label>
-                                                    <p className="font-medium text-gray-700">
-                                                        {formData.firstName}{" "}
-                                                        {formData.lastName}
-                                                    </p>
-                                                </div>
-                                            )}
+                                        {(formData.firstName || formData.lastName) && step === 4 && (
+                                            <div>
+                                                <Label className="text-xs text-muted-foreground">
+                                                    {lang === "pl" ? "Klient" : "Client"}
+                                                </Label>
+                                                <p className="font-medium text-foreground">
+                                                    {formData.firstName} {formData.lastName}
+                                                </p>
+                                            </div>
+                                        )}
                                         {step === 4 && currentService && (
                                             <div className="pt-3 border-t mt-3">
                                                 <div className="flex justify-between">
-                                                    <p>Suma netto:</p>
-                                                    <p>
-                                                        {currentService.price.toFixed(
-                                                            2
-                                                        )}{" "}
-                                                        PLN
-                                                    </p>
+                                                    <p>{lang === "pl" ? "Suma netto:" : "Net amount:"}</p>
+                                                    <p>{currentService.price.toFixed(2)} PLN</p>
                                                 </div>
-                                                <div className="flex justify-between text-xs text-gray-500">
-                                                    <p>
-                                                        Szacowany podatek (10%):
-                                                    </p>
-                                                    <p>
-                                                        {(
-                                                            currentService.price *
-                                                            0.1
-                                                        ).toFixed(2)}{" "}
-                                                        PLN
-                                                    </p>
+                                                <div className="flex justify-between text-xs text-muted-foreground">
+                                                    <p>{lang === "pl" ? "Szacowany podatek (10%):" : "Estimated tax (10%):"}</p>
+                                                    <p>{(currentService.price * 0.1).toFixed(2)} PLN</p>
                                                 </div>
                                                 <div className="flex justify-between font-bold text-md mt-2 text-barber">
-                                                    <p>Razem:</p>
-                                                    <p>
-                                                        {totalCost.toFixed(2)}{" "}
-                                                        PLN
-                                                    </p>
+                                                    <p>{lang === "pl" ? "Razem:" : "Total:"}</p>
+                                                    <p>{totalCost.toFixed(2)} PLN</p>
                                                 </div>
                                             </div>
                                         )}

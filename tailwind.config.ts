@@ -53,11 +53,14 @@ export default {
                     foreground: 'hsl(var(--card-foreground))'
                 },
                 barber: {
-                    DEFAULT: '#C8A97E',
-                    foreground: '#FFFFFF',
-                    muted: '#907654',
-                    dark: '#222222',
-                    light: '#F5F5F5',
+                    DEFAULT: '#c8a000',   // Rich amber gold — great with white text
+                    foreground: '#ffffff',
+                    muted: '#a07d00',    // darker amber for hover states
+                    dark: '#202020',     // Carbon Black
+                    light: '#FAF9F7',    // warm off-white
+                    gold: '#ffd100',     // Bright Gold — accent/dark mode pop
+                    graphite: '#333533', // Graphite — dark surfaces
+                    grey: '#d6d6d6',     // Dust Grey — borders & muted
                 },
                 sidebar: {
                     DEFAULT: 'hsl(var(--sidebar-background))',
@@ -77,45 +80,32 @@ export default {
             },
             keyframes: {
                 'accordion-down': {
-                    from: {
-                        height: '0'
-                    },
-                    to: {
-                        height: 'var(--radix-accordion-content-height)'
-                    }
+                    from: { height: '0' },
+                    to:   { height: 'var(--radix-accordion-content-height)' }
                 },
                 'accordion-up': {
-                    from: {
-                        height: 'var(--radix-accordion-content-height)'
-                    },
-                    to: {
-                        height: '0'
-                    }
+                    from: { height: 'var(--radix-accordion-content-height)' },
+                    to:   { height: '0' }
                 },
                 'fade-in': {
-                    '0%': {
-                        opacity: '0',
-                        transform: 'translateY(10px)'
-                    },
-                    '100%': {
-                        opacity: '1',
-                        transform: 'translateY(0)'
-                    }
+                    '0%':   { opacity: '0', transform: 'translateY(10px)' },
+                    '100%': { opacity: '1', transform: 'translateY(0)' }
                 },
                 'slide-in': {
-                    '0%': {
-                        transform: 'translateX(-100%)'
-                    },
-                    '100%': {
-                        transform: 'translateX(0)'
-                    }
+                    '0%':   { transform: 'translateX(-100%)' },
+                    '100%': { transform: 'translateX(0)' }
+                },
+                'gold-pulse': {
+                    '0%, 100%': { boxShadow: '0 0 0 0 rgba(200, 160, 0, 0.4)' },
+                    '50%':      { boxShadow: '0 0 0 8px rgba(200, 160, 0, 0)' }
                 }
             },
             animation: {
                 'accordion-down': 'accordion-down 0.2s ease-out',
-                'accordion-up': 'accordion-up 0.2s ease-out',
-                'fade-in': 'fade-in 0.5s ease-out forwards',
-                'slide-in': 'slide-in 0.3s ease-out forwards'
+                'accordion-up':   'accordion-up 0.2s ease-out',
+                'fade-in':        'fade-in 0.5s ease-out forwards',
+                'slide-in':       'slide-in 0.3s ease-out forwards',
+                'gold-pulse':     'gold-pulse 2s ease-in-out infinite'
             }
         }
     },

@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config(); // wczytaj env zanim cokolwiek innego będzie require'owane w routerach/controllers
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// FRONTEND_URL może być pojedynczym adresem lub listą rozdzieloną przecinkami
-const rawFrontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+const rawFrontend = process.env.FRONTEND_URL || 'http://localhost:5174';
 const allowedOrigins = rawFrontend.split(',').map(s => s.trim()).filter(Boolean);
 
 const corsOptions = {
@@ -32,6 +33,9 @@ app.options(/\/.*/, cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use(express.json());
+
+// Serve uploaded files as static assets
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // healthcheck (możesz ustawić tę ścieżkę w Render jako health check)
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

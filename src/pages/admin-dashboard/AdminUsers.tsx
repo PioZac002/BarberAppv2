@@ -33,7 +33,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface User {
     id: number;
@@ -68,6 +69,8 @@ const userFormSchema = z.object({
 });
 
 const AdminUsers = () => {
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === 'pl' ? pl : enUS;
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -102,7 +105,7 @@ const AdminUsers = () => {
             setUsers(normalizedUsers);
         } catch (error) {
             console.error("Error fetching users:", error);
-            toast.error("Nie udało się wczytać listy użytkowników.");
+            toast.error(t('adminPanel.users.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -155,11 +158,11 @@ const AdminUsers = () => {
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Failed to update user");
             }
-            toast.success("Użytkownik został zaktualizowany.");
+            toast.success(t('adminPanel.users.updated'));
             setEditingUser(null);
             fetchUsers();
         } catch (error: any) {
-            toast.error(`Aktualizacja nie powiodła się: ${error.message}`);
+            toast.error(`${t('adminPanel.users.updateFailed')}: ${error.message}`);
         }
     };
 
@@ -176,22 +179,14 @@ const AdminUsers = () => {
                 }
             );
             if (!response.ok) throw new Error("Failed to delete user");
-            toast.success("Użytkownik został usunięty.");
+            toast.success(t('adminPanel.users.deleted'));
             setIsDeleteModalOpen(false);
             setUserToDelete(null);
             fetchUsers();
         } catch (error) {
-            toast.error("Nie udało się usunąć użytkownika.");
+            toast.error(t('adminPanel.users.deleteFailed'));
         }
     };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
-            </div>
-        );
-    }
 
     const getRoleBadgeVariant = (role: string) => {
         switch (role) {
@@ -207,33 +202,41 @@ const AdminUsers = () => {
     const getRoleLabel = (role: string) => {
         switch (role) {
             case "admin":
-                return "Administrator";
+                return t('adminPanel.users.roleAdmin');
             case "barber":
-                return "Barber";
+                return t('adminPanel.users.roleBarber');
             case "client":
             default:
-                return "Klient";
+                return t('adminPanel.users.roleClient');
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+            </div>
+        );
+    }
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Zarządzanie użytkownikami</CardTitle>
+                <CardTitle>{t('adminPanel.users.title')}</CardTitle>
                 <CardDescription>
-                    Przeglądaj, edytuj i zarządzaj wszystkimi użytkownikami w systemie.
+                    {t('adminPanel.users.subtitle')}
                 </CardDescription>
                 <div className="flex items-center gap-3 pt-4">
-                    <Filter className="w-4 h-4 text-gray-500" />
+                    <Filter className="w-4 h-4 text-muted-foreground" />
                     <Select value={roleFilter} onValueChange={setRoleFilter}>
                         <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Filtruj według roli" />
+                            <SelectValue placeholder={t('adminPanel.users.filterByRole')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Wszystkie role</SelectItem>
-                            <SelectItem value="client">Klienci</SelectItem>
-                            <SelectItem value="barber">Barberzy</SelectItem>
-                            <SelectItem value="admin">Administratorzy</SelectItem>
+                            <SelectItem value="all">{t('adminPanel.users.allRoles')}</SelectItem>
+                            <SelectItem value="client">{t('adminPanel.users.clients')}</SelectItem>
+                            <SelectItem value="barber">{t('adminPanel.users.barbersLabel')}</SelectItem>
+                            <SelectItem value="admin">{t('adminPanel.users.admins')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -244,12 +247,12 @@ const AdminUsers = () => {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Imię i nazwisko</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Telefon</TableHead>
-                                <TableHead>Rola</TableHead>
-                                <TableHead>Utworzono</TableHead>
-                                <TableHead className="text-right">Akcje</TableHead>
+                                <TableHead>{t('adminPanel.users.colName')}</TableHead>
+                                <TableHead>{t('adminPanel.users.colEmail')}</TableHead>
+                                <TableHead>{t('adminPanel.users.colPhone')}</TableHead>
+                                <TableHead>{t('adminPanel.users.colRole')}</TableHead>
+                                <TableHead>{t('adminPanel.users.colCreated')}</TableHead>
+                                <TableHead className="text-right">{t('adminPanel.users.colActions')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -259,7 +262,7 @@ const AdminUsers = () => {
                                         {user.first_name} {user.last_name}
                                     </TableCell>
                                     <TableCell>{user.email}</TableCell>
-                                    <TableCell>{user.phone || "Brak"}</TableCell>
+                                    <TableCell>{user.phone || t('adminPanel.users.noValue')}</TableCell>
                                     <TableCell>
                                         <Badge variant={getRoleBadgeVariant(user.role)}>
                                             {getRoleLabel(user.role)}
@@ -270,9 +273,9 @@ const AdminUsers = () => {
                                             ? format(
                                                 parseISO(user.created_at),
                                                 "d MMM yyyy",
-                                                { locale: pl }
+                                                { locale: dateLocale }
                                             )
-                                            : "Brak"}
+                                            : t('adminPanel.users.noValue')}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button
@@ -312,20 +315,20 @@ const AdminUsers = () => {
                                     {getRoleLabel(user.role)}
                                 </Badge>
                             </div>
-                            <div className="text-sm text-gray-600 space-y-1">
+                            <div className="text-sm text-muted-foreground space-y-1">
                                 <p>{user.email}</p>
-                                <p>Telefon: {user.phone || "Brak"}</p>
+                                <p>{t('adminPanel.users.phoneLabel')}{user.phone || t('adminPanel.users.noValue')}</p>
                             </div>
                             <div className="flex justify-between items-center text-xs text-muted-foreground pt-2 border-t">
                                 <span>
-                                    Utworzono:{" "}
+                                    {t('adminPanel.users.createdLabel')}{" "}
                                     {user.created_at
                                         ? format(
                                             parseISO(user.created_at),
                                             "d MMM yyyy",
-                                            { locale: pl }
+                                            { locale: dateLocale }
                                         )
-                                        : "Brak"}
+                                        : t('adminPanel.users.noValue')}
                                 </span>
                                 <div className="flex gap-1">
                                     <Button
@@ -356,9 +359,9 @@ const AdminUsers = () => {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edytuj użytkownika</DialogTitle>
+                        <DialogTitle>{t('adminPanel.users.editUser')}</DialogTitle>
                         <DialogDesc>
-                            Zaktualizuj dane użytkownika oraz jego rolę.
+                            {t('adminPanel.users.editUserDesc')}
                         </DialogDesc>
                     </DialogHeader>
                     <Form {...form}>
@@ -371,7 +374,7 @@ const AdminUsers = () => {
                                 name="first_name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Imię</FormLabel>
+                                        <FormLabel>{t('adminPanel.users.firstName')}</FormLabel>
                                         <FormControl>
                                             <Input {...field} />
                                         </FormControl>
@@ -384,7 +387,7 @@ const AdminUsers = () => {
                                 name="last_name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Nazwisko</FormLabel>
+                                        <FormLabel>{t('adminPanel.users.lastName')}</FormLabel>
                                         <FormControl>
                                             <Input {...field} />
                                         </FormControl>
@@ -397,7 +400,7 @@ const AdminUsers = () => {
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel>{t('adminPanel.users.colEmail')}</FormLabel>
                                         <FormControl>
                                             <Input type="email" {...field} />
                                         </FormControl>
@@ -410,7 +413,7 @@ const AdminUsers = () => {
                                 name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Telefon</FormLabel>
+                                        <FormLabel>{t('adminPanel.users.colPhone')}</FormLabel>
                                         <FormControl>
                                             <Input {...field} />
                                         </FormControl>
@@ -423,7 +426,7 @@ const AdminUsers = () => {
                                 name="role"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Rola</FormLabel>
+                                        <FormLabel>{t('adminPanel.users.roleLabel')}</FormLabel>
                                         <Select
                                             onValueChange={field.onChange}
                                             value={field.value}
@@ -435,13 +438,13 @@ const AdminUsers = () => {
                                             </FormControl>
                                             <SelectContent>
                                                 <SelectItem value="client">
-                                                    Klient
+                                                    {t('adminPanel.users.roleClient')}
                                                 </SelectItem>
                                                 <SelectItem value="barber">
-                                                    Barber
+                                                    {t('adminPanel.users.roleBarber')}
                                                 </SelectItem>
                                                 <SelectItem value="admin">
-                                                    Administrator
+                                                    {t('adminPanel.users.roleAdmin')}
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -455,9 +458,9 @@ const AdminUsers = () => {
                                     variant="outline"
                                     onClick={() => setEditingUser(null)}
                                 >
-                                    Anuluj
+                                    {t('adminPanel.users.cancel')}
                                 </Button>
-                                <Button type="submit">Zapisz zmiany</Button>
+                                <Button type="submit">{t('adminPanel.users.saveChanges')}</Button>
                             </DialogFooter>
                         </form>
                     </Form>
@@ -471,15 +474,14 @@ const AdminUsers = () => {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Usuń użytkownika</DialogTitle>
+                        <DialogTitle>{t('adminPanel.users.deleteUser')}</DialogTitle>
                         <DialogDesc>
-                            Czy na pewno chcesz usunąć tego użytkownika? Tej akcji
-                            nie można cofnąć.
+                            {t('adminPanel.users.deleteUserConfirm')}
                         </DialogDesc>
                     </DialogHeader>
                     {userToDelete && (
                         <div className="py-4">
-                            <strong>Imię i nazwisko:</strong>{" "}
+                            <strong>{t('adminPanel.users.fullNameLabel')}</strong>{" "}
                             {userToDelete.first_name} {userToDelete.last_name}
                         </div>
                     )}
@@ -488,13 +490,13 @@ const AdminUsers = () => {
                             variant="outline"
                             onClick={() => setIsDeleteModalOpen(false)}
                         >
-                            Anuluj
+                            {t('adminPanel.users.cancel')}
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={handleDeleteConfirm}
                         >
-                            Usuń
+                            {t('adminPanel.users.delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

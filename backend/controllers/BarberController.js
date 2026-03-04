@@ -642,10 +642,35 @@ const updateAppointmentStatus = async (req, res) => {
     }
 };
 
+// --- Upload handlers ---
+const path = require('path');
+const fs = require('fs');
+
+const uploadPortfolioImage = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Brak pliku w żądaniu.' });
+    }
+    // Return full URL so frontend can use it directly as image_url
+    const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+    const url = `${baseUrl}/uploads/portfolio/${req.file.filename}`;
+    res.json({ url });
+};
+
+const uploadProfilePhoto = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'Brak pliku w żądaniu.' });
+    }
+    const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+    const url = `${baseUrl}/uploads/profiles/${req.file.filename}`;
+    res.json({ url });
+};
+
 module.exports = {
     getBarberPortfolio,
     addPortfolioImage,
     deletePortfolioImage,
+    uploadPortfolioImage,
+    uploadProfilePhoto,
     getBarberProfile,
     updateBarberProfile,
     getBarberNotifications,

@@ -5,7 +5,6 @@ import {
     CardContent,
     CardHeader,
     CardTitle,
-    CardDescription
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +19,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid as isValidDateFn } from "date-fns";
+import { pl, enUS } from "date-fns/locale";
 import { Link as RouterLink } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-// --- Typy Danych ---
 interface AdminNotificationBackend {
     id: number;
     type: string;
@@ -39,10 +39,12 @@ interface AdminNotificationFE extends AdminNotificationBackend {
     displayType: "info" | "warning" | "success" | "error";
 }
 
-// --- Komponent ---
 const AdminNotificationsPage = () => {
     const { token, loading: authLoading } = useAuth();
     const isMobile = useIsMobile();
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === "pl" ? pl : enUS;
+
     const [notifications, setNotifications] = useState<AdminNotificationFE[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -51,7 +53,6 @@ const AdminNotificationsPage = () => {
         if (notif.type.includes("error")) displayType = "error";
         else if (notif.type.includes("success") || notif.type.includes("confirmed")) displayType = "success";
         else if (notif.type.includes("warning")) displayType = "warning";
-
         return { ...notif, timestamp: new Date(notif.created_at), displayType };
     };
 
@@ -62,11 +63,11 @@ const AdminNotificationsPage = () => {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Nie udało się pobrać powiadomień");
+            if (!response.ok) throw new Error(t("adminPanel.notifications.loadFailed"));
             const data: AdminNotificationBackend[] = await response.json();
             setNotifications(data.map(mapNotification));
         } catch (error: any) {
-            toast.error(error.message);
+            toast.error(error.message || t("adminPanel.notifications.loadFailed"));
         } finally {
             setIsLoading(false);
         }
@@ -84,56 +85,54 @@ const AdminNotificationsPage = () => {
         return { unreadNotifications: unread, readNotifications: read };
     }, [notifications]);
 
-    // --- AKCJE (połączone z backendem) ---
-
     const markAsRead = async (id: number) => {
         if (!token) return;
         const originalNotifications = [...notifications];
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n)); // Optimistic update
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications/${id}/read`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Nie udało się oznaczyć jako przeczytane na serwerze");
-            toast.success("Oznaczono jako przeczytane");
+            if (!response.ok) throw new Error(t("adminPanel.notifications.markReadFailed"));
+            toast.success(t("adminPanel.notifications.markedRead"));
         } catch (error) {
-            toast.error("Błąd serwera. Przywracanie statusu.");
-            setNotifications(originalNotifications); // Revert on error
+            toast.error(t("adminPanel.notifications.serverError"));
+            setNotifications(originalNotifications);
         }
     };
 
     const deleteNotification = async (id: number) => {
         if (!token) return;
         const originalNotifications = [...notifications];
-        setNotifications(prev => prev.filter(n => n.id !== id)); // Optimistic update
+        setNotifications(prev => prev.filter(n => n.id !== id));
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Nie udało się usunąć powiadomienia na serwerze");
-            toast.success("Powiadomienie usunięte");
+            if (!response.ok) throw new Error(t("adminPanel.notifications.deleteFailed"));
+            toast.success(t("adminPanel.notifications.deleted"));
         } catch (error) {
-            toast.error("Błąd serwera. Przywracanie powiadomienia.");
-            setNotifications(originalNotifications); // Revert on error
+            toast.error(t("adminPanel.notifications.serverError"));
+            setNotifications(originalNotifications);
         }
     };
 
     const markAllAsRead = async () => {
         if (!token) return;
         const originalNotifications = [...notifications];
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true }))); // Optimistic update
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/notifications/read-all`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error("Nie udało się oznaczyć wszystkich jako przeczytane na serwerze");
-            toast.success("Wszystkie oznaczono jako przeczytane");
+            if (!response.ok) throw new Error(t("adminPanel.notifications.markAllFailed"));
+            toast.success(t("adminPanel.notifications.markedAllRead"));
         } catch (error) {
-            toast.error("Błąd serwera. Przywracanie statusów.");
-            setNotifications(originalNotifications); // Revert on error
+            toast.error(t("adminPanel.notifications.serverError"));
+            setNotifications(originalNotifications);
         }
     };
 
@@ -155,24 +154,32 @@ const AdminNotificationsPage = () => {
     };
 
     const NotificationItem = ({ notification }: { notification: AdminNotificationFE }) => (
-        <div className={`border rounded-lg overflow-hidden transition-all hover:shadow-md ${!notification.is_read ? 'border-l-4 border-barber bg-blue-50/40' : 'bg-white'}`}>
+        <div className={`border rounded-lg overflow-hidden transition-all hover:shadow-md ${
+            !notification.is_read
+                ? 'border-l-4 border-barber bg-blue-50/40 dark:bg-blue-950/30'
+                : 'bg-card'
+        }`}>
             <div className="flex items-start gap-3 p-3">
                 <div className="mt-1 opacity-80">{getNotificationIcon(notification.displayType)}</div>
                 <div className="flex-1 min-w-0">
-                    <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} ${!notification.is_read ? 'text-gray-800' : 'text-gray-600'}`}>{notification.title}</h4>
-                    <p className={`text-gray-600 ${isMobile ? 'text-xs' : 'text-sm'} my-1 line-clamp-2`}>{notification.message}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <h4 className={`font-semibold ${isMobile ? 'text-sm' : 'text-base'} ${
+                        !notification.is_read ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>{notification.title}</h4>
+                    <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'} my-1 line-clamp-2`}>
+                        {notification.message}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
                             <span>
                                 {isValidDateFn(notification.timestamp)
-                                    ? formatDistanceToNow(notification.timestamp, { addSuffix: true })
-                                    : "Nieprawidłowa data"}
+                                    ? formatDistanceToNow(notification.timestamp, { addSuffix: true, locale: dateLocale })
+                                    : t("adminPanel.notifications.invalidDate")}
                             </span>
                         </div>
                         {notification.link && (
                             <RouterLink to={notification.link} className="text-barber hover:underline flex items-center gap-1">
-                                <LinkIcon className="h-3 w-3" /> Szczegóły
+                                <LinkIcon className="h-3 w-3" /> {t("adminPanel.notifications.details")}
                             </RouterLink>
                         )}
                     </div>
@@ -183,8 +190,8 @@ const AdminNotificationsPage = () => {
                             onClick={() => markAsRead(notification.id)}
                             size="icon"
                             variant="ghost"
-                            className="text-green-600 hover:bg-green-100 h-7 w-7"
-                            title="Oznacz jako przeczytane"
+                            className="text-green-600 hover:bg-green-100 dark:hover:bg-green-950/30 h-7 w-7"
+                            title={t("adminPanel.notifications.markRead")}
                         >
                             <CheckCircle className="h-4 w-4" />
                         </Button>
@@ -193,8 +200,8 @@ const AdminNotificationsPage = () => {
                         onClick={() => deleteNotification(notification.id)}
                         size="icon"
                         variant="ghost"
-                        className="text-red-500 hover:bg-red-100 h-7 w-7"
-                        title="Usuń powiadomienie"
+                        className="text-red-500 hover:bg-red-100 dark:hover:bg-red-950/30 h-7 w-7"
+                        title={t("adminPanel.notifications.deleteLabel")}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
@@ -210,12 +217,12 @@ const AdminNotificationsPage = () => {
                     <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                         <div className="flex items-center gap-3">
                             <Bell className="h-6 w-6 text-barber" />
-                            <CardTitle className="text-xl md:text-2xl">Powiadomienia</CardTitle>
+                            <CardTitle className="text-xl md:text-2xl">{t("adminPanel.notifications.title")}</CardTitle>
                         </div>
                         {unreadNotifications.length > 0 && (
                             <Button onClick={markAllAsRead} variant="outline" size="sm">
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Oznacz wszystkie jako przeczytane
+                                {t("adminPanel.notifications.markAllRead")}
                             </Button>
                         )}
                     </div>
@@ -224,7 +231,7 @@ const AdminNotificationsPage = () => {
                     {unreadNotifications.length > 0 && (
                         <section>
                             <div className="flex items-center gap-2 mb-3">
-                                <h3 className="font-semibold text-lg text-gray-800">Nowe</h3>
+                                <h3 className="font-semibold text-lg text-foreground">{t("adminPanel.notifications.newLabel")}</h3>
                                 <Badge variant="destructive">{unreadNotifications.length}</Badge>
                             </div>
                             <div className="space-y-3">
@@ -236,7 +243,9 @@ const AdminNotificationsPage = () => {
                     )}
                     {readNotifications.length > 0 && (
                         <section>
-                            <h3 className="font-semibold text-lg text-gray-600 mb-3 border-t pt-4 mt-6">Przeczytane</h3>
+                            <h3 className="font-semibold text-lg text-muted-foreground mb-3 border-t border-border pt-4 mt-6">
+                                {t("adminPanel.notifications.readLabel")}
+                            </h3>
                             <div className="space-y-3 opacity-80">
                                 {readNotifications.map(n => (
                                     <NotificationItem key={n.id} notification={n} />
@@ -246,8 +255,8 @@ const AdminNotificationsPage = () => {
                     )}
                     {notifications.length === 0 && (
                         <div className="py-16 text-center">
-                            <Info className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500">Brak powiadomień do wyświetlenia.</p>
+                            <Info className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                            <p className="text-muted-foreground">{t("adminPanel.notifications.none")}</p>
                         </div>
                     )}
                 </CardContent>

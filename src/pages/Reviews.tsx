@@ -1,11 +1,8 @@
-// src/pages/Reviews.tsx
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-    Clock,
     Star,
-    Calendar as CalendarIcon,
     Search,
     ThumbsUp,
     ThumbsDown,
@@ -22,9 +19,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { format, isValid, parseISO } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
 
 interface Review {
     id: number;
@@ -38,41 +36,34 @@ interface Review {
     unhelpful: number;
 }
 
-type SortOption = "newest" | "highest" | "lowest";
+type SortOption   = "newest" | "highest" | "lowest";
 type FilterOption = "all" | "5" | "4" | "3" | "2" | "1";
 
 const defaultAvatar = "https://avatar.iran.liara.run/public/boy?username=";
 
 const ReviewsPage = () => {
-    const [allReviews, setAllReviews] = useState<Review[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [sort, setSort] = useState<SortOption>("newest");
-    const [filter, setFilter] = useState<FilterOption>("all");
-    const [helpfulClicks, setHelpfulClicks] = useState<{ [key: number]: boolean }>(
-        {}
-    );
-    const [unhelpfulClicks, setUnhelpfulClicks] = useState<
-        { [key: number]: boolean }
-    >({});
+    const { t, lang } = useLanguage();
+    const [allReviews, setAllReviews]       = useState<Review[]>([]);
+    const [isLoading, setIsLoading]         = useState(true);
+    const [searchTerm, setSearchTerm]       = useState("");
+    const [sort, setSort]                   = useState<SortOption>("newest");
+    const [filter, setFilter]               = useState<FilterOption>("all");
+    const [helpfulClicks, setHelpfulClicks]     = useState<Record<number, boolean>>({});
+    const [unhelpfulClicks, setUnhelpfulClicks] = useState<Record<number, boolean>>({});
+
+    const dateLocale = lang === "pl" ? pl : enUS;
 
     useEffect(() => {
         const fetchReviews = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch(
+                const res = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/public/team/reviews`
                 );
-                if (!response.ok) {
-                    throw new Error("Failed to fetch reviews from API");
-                }
-                const data: Review[] = await response.json();
-                setAllReviews(data);
-            } catch (error) {
-                console.error("Error fetching reviews:", error);
-                toast.error(
-                    "Nie udało się wczytać opinii. Spróbuj ponownie później."
-                );
+                if (!res.ok) throw new Error("Failed to fetch reviews");
+                setAllReviews(await res.json());
+            } catch {
+                toast.error(t("reviews.loading"));
                 setAllReviews([]);
             } finally {
                 setIsLoading(false);
@@ -81,175 +72,140 @@ const ReviewsPage = () => {
         fetchReviews();
     }, []);
 
-    const filteredAndSortedReviews = allReviews
-        .filter(review => {
-            if (filter !== "all" && review.rating !== parseInt(filter)) {
-                return false;
-            }
-            if (
-                searchTerm &&
-                !review.comment.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                !review.author.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                !review.service.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                !review.barber.toLowerCase().includes(searchTerm.toLowerCase())
-            ) {
-                return false;
+    const filteredAndSorted = allReviews
+        .filter(r => {
+            if (filter !== "all" && r.rating !== parseInt(filter)) return false;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                return (
+                    r.comment.toLowerCase().includes(term) ||
+                    r.author.toLowerCase().includes(term)  ||
+                    r.service.toLowerCase().includes(term) ||
+                    r.barber.toLowerCase().includes(term)
+                );
             }
             return true;
         })
         .sort((a, b) => {
-            if (sort === "newest") {
-                return (
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                );
-            } else if (sort === "highest") {
-                return b.rating - a.rating;
-            } else if (sort === "lowest") {
-                return a.rating - b.rating;
-            }
-            return 0;
+            if (sort === "newest") return new Date(b.date).getTime() - new Date(a.date).getTime();
+            if (sort === "highest") return b.rating - a.rating;
+            return a.rating - b.rating;
         });
 
-    const handleHelpfulClick = (id: number) => {
-        if (!helpfulClicks[id]) {
-            setHelpfulClicks({ ...helpfulClicks, [id]: true });
-            // miejsce na request do backendu dla "helpful"
-        }
-    };
-
-    const handleUnhelpfulClick = (id: number) => {
-        if (!unhelpfulClicks[id]) {
-            setUnhelpfulClicks({ ...unhelpfulClicks, [id]: true });
-            // miejsce na request do backendu dla "unhelpful"
-        }
-    };
-
     const averageRating = useMemo(() => {
-        if (allReviews.length === 0) return 0;
-        return (
-            allReviews.reduce((acc, review) => acc + review.rating, 0) /
-            allReviews.length
-        );
+        if (!allReviews.length) return 0;
+        return allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
     }, [allReviews]);
 
-    const ratingCounts = useMemo(() => {
-        return allReviews.reduce((acc, review) => {
-            acc[review.rating] = (acc[review.rating] || 0) + 1;
-            return acc;
-        }, {} as { [key: number]: number });
-    }, [allReviews]);
+    const ratingCounts = useMemo(
+        () =>
+            allReviews.reduce((acc, r) => {
+                acc[r.rating] = (acc[r.rating] || 0) + 1;
+                return acc;
+            }, {} as Record<number, number>),
+        [allReviews]
+    );
 
-    const renderStars = (rating: number) => {
-        return Array(5)
-            .fill(0)
-            .map((_, i) => (
-                <Star
-                    key={i}
-                    className={`h-5 w-5 ${
-                        i < rating
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300"
-                    }`}
-                />
-            ));
+    const renderStars = (rating: number, size = "h-5 w-5") =>
+        Array(5).fill(0).map((_, i) => (
+            <Star
+                key={i}
+                className={`${size} ${i < rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"}`}
+            />
+        ));
+
+    const starLabel = (s: number) => {
+        if (lang === "pl") {
+            if (s === 1) return t("reviews.starSingular");
+            if (s <= 4)  return t("reviews.starFew");
+            return t("reviews.starMany");
+        }
+        return s === 1 ? t("reviews.starSingular") : t("reviews.starMany");
     };
 
-    const starLabelPl = (s: number) => {
-        if (s === 1) return "gwiazdka";
-        if (s >= 2 && s <= 4) return "gwiazdki";
-        return "gwiazdek";
+    const formatDate = (dateStr: string) => {
+        const parsed = parseISO(dateStr);
+        return isValid(parsed) ? format(parsed, "PPP", { locale: dateLocale }) : t("reviews.invalidDate");
     };
 
     return (
         <Layout>
-            <section className="relative py-24 md:py-32">
+            {/* ── Hero ── */}
+            <section className="relative py-24 md:py-36">
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{
                         backgroundImage:
-                            "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1621607510109-81551648f427?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80')",
+                            "linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.72)), url('https://images.unsplash.com/photo-1621607510109-81551648f427?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80')",
                     }}
-                ></div>
+                />
                 <div className="container mx-auto px-4 relative z-10 text-center">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-fade-in">
-                        Opinie klientów
+                        {t("reviews.title")}
                     </h1>
                     <p
                         className="text-xl text-gray-300 max-w-3xl mx-auto mb-4 animate-fade-in"
                         style={{ animationDelay: "0.2s" }}
                     >
-                        Zobacz, co nasi klienci mówią o swoich wizytach w naszym
-                        barbershopie.
+                        {t("reviews.subtitle")}
                     </p>
                     {!isLoading && allReviews.length > 0 && (
                         <div
-                            className="flex items-center justify-center animate-fade-in"
+                            className="flex items-center justify-center gap-2 animate-fade-in"
                             style={{ animationDelay: "0.3s" }}
                         >
-                            <div className="flex items-center">
-                                {renderStars(Math.round(averageRating))}
-                                <span className="ml-2 text-white font-semibold text-xl">
-                                    {averageRating.toFixed(1)}
-                                </span>
-                            </div>
-                            <span className="mx-2 text-white">•</span>
-                            <span className="text-white">
-                                {allReviews.length} opinii
+                            <div className="flex">{renderStars(Math.round(averageRating))}</div>
+                            <span className="text-white font-semibold text-xl">
+                                {averageRating.toFixed(1)}
+                            </span>
+                            <span className="text-white/60">·</span>
+                            <span className="text-white/80">
+                                {allReviews.length} {t("reviews.reviewCount")}
                             </span>
                         </div>
                     )}
                 </div>
             </section>
 
-            <section className="py-16 bg-white">
+            {/* ── Content ── */}
+            <section className="py-16 bg-background">
                 <div className="container mx-auto px-4">
                     <div className="max-w-5xl mx-auto">
+                        {/* Rating summary */}
                         {!isLoading && allReviews.length > 0 && (
-                            <div className="bg-gray-50 p-6 rounded-lg mb-10 animate-fade-in">
-                                <h2 className="text-2xl font-semibold mb-6">
-                                    Podsumowanie ocen
+                            <div className="bg-card border border-border p-6 rounded-xl mb-10 animate-fade-in">
+                                <h2 className="text-2xl font-semibold mb-6 text-foreground">
+                                    {t("reviews.ratingSummary")}
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="flex flex-col justify-center items-center">
-                                        <div className="text-6xl font-bold text-barber-dark">
+                                        <div className="text-6xl font-bold text-barber">
                                             {averageRating.toFixed(1)}
                                         </div>
-                                        <div className="flex mt-2">
-                                            {renderStars(
-                                                Math.round(averageRating)
-                                            )}
+                                        <div className="flex mt-3">
+                                            {renderStars(Math.round(averageRating))}
                                         </div>
-                                        <div className="text-gray-500 mt-2">
-                                            {allReviews.length} łącznie opinii
+                                        <div className="text-muted-foreground mt-2 text-sm">
+                                            {allReviews.length} {t("reviews.totalReviews")}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         {[5, 4, 3, 2, 1].map(star => {
                                             const count = ratingCounts[star] || 0;
-                                            const percentage =
-                                                allReviews.length > 0
-                                                    ? (count /
-                                                        allReviews.length) *
-                                                    100
-                                                    : 0;
+                                            const pct = allReviews.length ? (count / allReviews.length) * 100 : 0;
                                             return (
-                                                <div
-                                                    key={star}
-                                                    className="flex items-center"
-                                                >
-                                                    <div className="w-24 text-sm flex items-center">
-                                                        {star}{" "}
+                                                <div key={star} className="flex items-center gap-3">
+                                                    <div className="w-20 text-sm flex items-center text-muted-foreground">
+                                                        {star}
                                                         <Star className="h-3 w-3 ml-1 text-yellow-500 fill-yellow-500" />
                                                     </div>
-                                                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-barber rounded-full"
-                                                            style={{
-                                                                width: `${percentage}%`,
-                                                            }}
-                                                        ></div>
+                                                            className="h-full bg-barber rounded-full transition-all duration-500"
+                                                            style={{ width: `${pct}%` }}
+                                                        />
                                                     </div>
-                                                    <div className="w-16 text-right text-sm text-gray-500">
+                                                    <div className="w-10 text-right text-sm text-muted-foreground">
                                                         {count}
                                                     </div>
                                                 </div>
@@ -260,245 +216,149 @@ const ReviewsPage = () => {
                             </div>
                         )}
 
-                        <div
-                            className="mb-8 animate-fade-in"
-                            style={{ animationDelay: "0.2s" }}
-                        >
-                            <div className="flex flex-col md:flex-row gap-4 mb-6">
+                        {/* Filters */}
+                        <div className="mb-8 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+                            <div className="flex flex-col md:flex-row gap-4">
                                 <div className="relative flex-grow">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                                     <Input
                                         type="text"
-                                        placeholder="Szukaj w opiniach..."
+                                        placeholder={t("reviews.searchPlaceholder")}
                                         className="pl-10"
                                         value={searchTerm}
-                                        onChange={e =>
-                                            setSearchTerm(e.target.value)
-                                        }
+                                        onChange={e => setSearchTerm(e.target.value)}
                                     />
                                 </div>
                                 <div className="flex gap-2">
-                                    <Select
-                                        value={filter}
-                                        onValueChange={value =>
-                                            setFilter(value as FilterOption)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full md:w-40">
+                                    <Select value={filter} onValueChange={v => setFilter(v as FilterOption)}>
+                                        <SelectTrigger className="w-full md:w-44">
                                             <div className="flex items-center">
-                                                <Filter className="h-4 w-4 mr-2" />
-                                                <SelectValue placeholder="Filtruj" />
+                                                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                                                <SelectValue placeholder={t("reviews.filterAll")} />
                                             </div>
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">
-                                                Wszystkie oceny
-                                            </SelectItem>
+                                            <SelectItem value="all">{t("reviews.filterAll")}</SelectItem>
                                             {[5, 4, 3, 2, 1].map(s => (
-                                                <SelectItem
-                                                    key={s}
-                                                    value={s.toString()}
-                                                >
-                                                    {s} {starLabelPl(s)}
+                                                <SelectItem key={s} value={s.toString()}>
+                                                    {s} {starLabel(s)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <Select
-                                        value={sort}
-                                        onValueChange={value =>
-                                            setSort(value as SortOption)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full md:w-40">
-                                            <SelectValue placeholder="Sortuj wg" />
+                                    <Select value={sort} onValueChange={v => setSort(v as SortOption)}>
+                                        <SelectTrigger className="w-full md:w-44">
+                                            <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="newest">
-                                                Najnowsze
-                                            </SelectItem>
-                                            <SelectItem value="highest">
-                                                Najwyżej ocenione
-                                            </SelectItem>
-                                            <SelectItem value="lowest">
-                                                Najniżej ocenione
-                                            </SelectItem>
+                                            <SelectItem value="newest">{t("reviews.sortNewest")}</SelectItem>
+                                            <SelectItem value="highest">{t("reviews.sortHighest")}</SelectItem>
+                                            <SelectItem value="lowest">{t("reviews.sortLowest")}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Reviews list */}
                         {isLoading ? (
-                            <div className="text-center py-10">
+                            <div className="text-center py-16">
                                 <Loader2 className="h-12 w-12 text-barber animate-spin mx-auto" />
-                                <p className="mt-3 text-gray-600">
-                                    Ładowanie opinii...
-                                </p>
+                                <p className="mt-4 text-muted-foreground">{t("reviews.loading")}</p>
                             </div>
-                        ) : filteredAndSortedReviews.length > 0 ? (
-                            <div className="space-y-8">
-                                {filteredAndSortedReviews.map(
-                                    (review, index) => (
-                                        <div
-                                            key={review.id}
-                                            className="border-b pb-8 animate-fade-in"
-                                            style={{
-                                                animationDelay: `${0.05 * index}s`,
-                                            }}
-                                        >
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-center">
-                                                    <img
-                                                        src={
-                                                            defaultAvatar +
-                                                            review.author.replace(
-                                                                /\s+/g,
-                                                                ""
-                                                            )
-                                                        }
-                                                        alt={review.author}
-                                                        className="w-12 h-12 rounded-full object-cover mr-4 bg-gray-200"
-                                                    />
-                                                    <div>
-                                                        <h3 className="font-semibold">
-                                                            {review.author}
-                                                        </h3>
-                                                        <div className="flex items-center mt-1">
-                                                            <div className="flex mr-2">
-                                                                {renderStars(
-                                                                    review.rating
-                                                                )}
-                                                            </div>
-                                                            <span className="text-gray-500 text-sm">
-                                                                {isValid(
-                                                                    parseISO(
-                                                                        review.date
-                                                                    )
-                                                                )
-                                                                    ? format(
-                                                                        parseISO(
-                                                                            review.date
-                                                                        ),
-                                                                        "PPP",
-                                                                        {
-                                                                            locale:
-                                                                            pl,
-                                                                        }
-                                                                    )
-                                                                    : "Nieprawidłowa data"}
-                                                            </span>
+                        ) : filteredAndSorted.length > 0 ? (
+                            <div className="space-y-6">
+                                {filteredAndSorted.map((review, i) => (
+                                    <div
+                                        key={review.id}
+                                        className="bg-card border border-border rounded-xl p-6 animate-fade-in"
+                                        style={{ animationDelay: `${0.04 * i}s` }}
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src={defaultAvatar + review.author.replace(/\s+/g, "")}
+                                                    alt={review.author}
+                                                    className="w-11 h-11 rounded-full object-cover bg-muted flex-shrink-0"
+                                                />
+                                                <div>
+                                                    <h3 className="font-semibold text-foreground">
+                                                        {review.author}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <div className="flex">
+                                                            {renderStars(review.rating, "h-4 w-4")}
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right text-sm text-gray-500">
-                                                    <div>{review.service}</div>
-                                                    <div>
-                                                        barber:{" "}
-                                                        {review.barber}
+                                                        <span className="text-muted-foreground text-xs">
+                                                            {formatDate(review.date)}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <p className="my-4 text-gray-700">
-                                                {review.comment}
-                                            </p>
-                                            <div className="flex items-center justify-between mt-4">
-                                                <div className="flex space-x-4">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-gray-500 hover:text-barber flex items-center"
-                                                        onClick={() =>
-                                                            handleHelpfulClick(
-                                                                review.id
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            !!helpfulClicks[
-                                                                review.id
-                                                                ]
-                                                        }
-                                                    >
-                                                        <ThumbsUp
-                                                            className={`h-4 w-4 mr-1 ${
-                                                                helpfulClicks[
-                                                                    review.id
-                                                                    ]
-                                                                    ? "text-barber"
-                                                                    : ""
-                                                            }`}
-                                                        />
-                                                        Pomocna (
-                                                        {review.helpful +
-                                                            (helpfulClicks[
-                                                                review.id
-                                                                ]
-                                                                ? 1
-                                                                : 0)}
-                                                        )
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-gray-500 hover:text-barber flex items-center"
-                                                        onClick={() =>
-                                                            handleUnhelpfulClick(
-                                                                review.id
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            !!unhelpfulClicks[
-                                                                review.id
-                                                                ]
-                                                        }
-                                                    >
-                                                        <ThumbsDown
-                                                            className={`h-4 w-4 mr-1 ${
-                                                                unhelpfulClicks[
-                                                                    review.id
-                                                                    ]
-                                                                    ? "text-barber"
-                                                                    : ""
-                                                            }`}
-                                                        />
-                                                        Nieprzydatna (
-                                                        {review.unhelpful +
-                                                            (unhelpfulClicks[
-                                                                review.id
-                                                                ]
-                                                                ? 1
-                                                                : 0)}
-                                                        )
-                                                    </Button>
-                                                </div>
+                                            <div className="text-right text-xs text-muted-foreground flex-shrink-0">
+                                                <div>{review.service}</div>
+                                                <div>{t("reviews.barberLabel")}: {review.barber}</div>
                                             </div>
                                         </div>
-                                    )
-                                )}
+                                        <p className="my-4 text-foreground/90 leading-relaxed">
+                                            {review.comment}
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-muted-foreground hover:text-barber flex items-center gap-1.5"
+                                                onClick={() =>
+                                                    !helpfulClicks[review.id] &&
+                                                    setHelpfulClicks(p => ({ ...p, [review.id]: true }))
+                                                }
+                                                disabled={!!helpfulClicks[review.id]}
+                                            >
+                                                <ThumbsUp
+                                                    className={`h-4 w-4 ${helpfulClicks[review.id] ? "text-barber" : ""}`}
+                                                />
+                                                {t("reviews.helpful")} ({review.helpful + (helpfulClicks[review.id] ? 1 : 0)})
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-muted-foreground hover:text-destructive flex items-center gap-1.5"
+                                                onClick={() =>
+                                                    !unhelpfulClicks[review.id] &&
+                                                    setUnhelpfulClicks(p => ({ ...p, [review.id]: true }))
+                                                }
+                                                disabled={!!unhelpfulClicks[review.id]}
+                                            >
+                                                <ThumbsDown
+                                                    className={`h-4 w-4 ${unhelpfulClicks[review.id] ? "text-destructive" : ""}`}
+                                                />
+                                                {t("reviews.unhelpful")} ({review.unhelpful + (unhelpfulClicks[review.id] ? 1 : 0)})
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <Info className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                <p className="text-lg text-gray-500">
-                                    Nie znaleziono opinii spełniających wybrane
-                                    kryteria.
+                            <div className="text-center py-16">
+                                <Info className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                                <p className="text-foreground text-lg font-medium">
+                                    {t("reviews.noReviews")}
                                 </p>
                                 {searchTerm || filter !== "all" ? (
                                     <Button
                                         variant="outline"
-                                        className="mt-4"
+                                        className="mt-4 border-barber text-barber hover:bg-barber hover:text-white"
                                         onClick={() => {
                                             setSearchTerm("");
                                             setFilter("all");
                                             setSort("newest");
                                         }}
                                     >
-                                        Wyczyść filtry
+                                        {t("reviews.clearFilters")}
                                     </Button>
                                 ) : (
-                                    <p className="text-gray-400 text-sm mt-2">
-                                        Bądź pierwszą osobą, która oceni nasze
-                                        usługi!
+                                    <p className="text-muted-foreground text-sm mt-2">
+                                        {t("reviews.beFirst")}
                                     </p>
                                 )}
                             </div>
