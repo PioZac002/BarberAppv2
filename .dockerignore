@@ -5,4 +5,3 @@ dist
 *.md
 .env*
 backend
-docker
