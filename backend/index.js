@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config(); // wczytaj env zanim cokolwiek innego będzie require'owane w routerach/controllers
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// FRONTEND_URL może być pojedynczym adresem lub listą rozdzieloną przecinkami
+
 const rawFrontend = process.env.FRONTEND_URL || 'http://localhost:5173';
 const allowedOrigins = rawFrontend.split(',').map(s => s.trim()).filter(Boolean);
 

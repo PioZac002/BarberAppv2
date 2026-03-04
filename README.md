@@ -66,6 +66,70 @@ A full-stack barbershop management application with online booking, role-based d
 
 ---
 
+## Running with Docker (recommended)
+
+The easiest way to run the full stack locally — no need to install Node.js or PostgreSQL separately.
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) + [Docker Compose](https://docs.docker.com/compose/install/) (included with Docker Desktop)
+
+### 1. Create your secrets file
+
+```bash
+cp .env.docker.example .env.docker
+```
+
+Edit `.env.docker` — at minimum set a strong `JWT_SECRET`. The file is gitignored so it will never be committed.
+
+### 2. Start everything
+
+```bash
+docker compose up --build
+```
+
+| Service  | URL                   |
+|----------|-----------------------|
+| Frontend | http://localhost      |
+| Backend  | http://localhost:3000 |
+| Database | localhost:5432        |
+
+> **First run:** the database schema and a default admin account are created automatically. See [Default credentials](#default-credentials) below.
+
+### Stop
+
+```bash
+docker compose down
+```
+
+To also remove stored data (database + uploads):
+
+```bash
+docker compose down -v
+```
+
+
+
+Then start only the backend and frontend (skip the local `db` container):
+
+```bash
+docker compose up --build frontend backend
+```
+
+### Default credentials
+
+When the local `db` container starts for the first time it automatically runs `backend/db/01_schema.sql` (tables) and `backend/db/02_seed.sql` (seed data), so the database is ready with no extra steps.
+
+| Account | Email                    | Password     |
+|---------|--------------------------|--------------|
+| Admin   | admin@barbershop.com     | Admin1234!   |
+
+> Change the password after first login via **Admin dashboard → Profile**.
+
+Barber and client accounts can be registered normally via `/register`. Role assignment is done by the admin in the Users panel.
+
+---
+
 ## Running Locally
 
 ### Prerequisites
