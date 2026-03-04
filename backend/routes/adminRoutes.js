@@ -23,6 +23,7 @@ const {
     getReportData,
     getBarbersForSelect
 } = require('../controllers/adminController');
+const { getUserProfile, updateUserProfile } = require('../controllers/userController');
 
 // Zastosowanie middleware do wszystkich tras w tym pliku
 router.use(verifyToken, requireAdmin);
@@ -58,5 +59,9 @@ router.delete('/services/:id', deleteService);
 // Zarządzanie Recenzjami
 router.get('/reviews', getReviews);
 router.delete('/reviews/:id', deleteReview);
+
+// Admin Profile
+router.get('/profile', getUserProfile);
+router.put('/profile', updateUserProfile);
 
 module.exports = router;

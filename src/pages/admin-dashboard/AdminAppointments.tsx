@@ -16,7 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2, X, Calendar as CalendarIcon, RotateCcw } from "lucide-react";
+import { Pencil, Trash2, X, Calendar as CalendarIcon, RotateCcw, User, Scissors, Clock, DollarSign } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -33,7 +33,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // --- Typy i schematy ---
 interface Appointment {
@@ -97,8 +97,29 @@ const formatDateLocalYMD = (date: Date) => {
     return `${y}-${m}-${d}`;
 };
 
+// --- Status config ---
+const statusConfig: Record<string, { dot: string; badge: string; label?: string }> = {
+    pending:   { dot: "bg-yellow-500", badge: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700" },
+    confirmed: { dot: "bg-blue-500",   badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-300 dark:border-blue-700" },
+    completed: { dot: "bg-green-500",  badge: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700" },
+    canceled:  { dot: "bg-red-500",    badge: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-700" },
+    "no-show": { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600" },
+};
+
+const StatusBadge = ({ status }: { status: string }) => {
+    const cfg = statusConfig[status] ?? statusConfig["pending"];
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+            {status}
+        </span>
+    );
+};
+
 // --- Komponent główny ---
 const AdminAppointments = () => {
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === 'pl' ? pl : enUS;
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [clients, setClients] = useState<SelectOption[]>([]);
     const [barbers, setBarbers] = useState<SelectOption[]>([]);
@@ -275,7 +296,7 @@ const AdminAppointments = () => {
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Failed to update appointment");
             }
-            toast.success("Appointment updated successfully");
+            toast.success(t('adminPanel.appointments.updated'));
             setEditingAppointment(null);
             fetchAppointments();
         } catch (error: any) {
@@ -299,7 +320,7 @@ const AdminAppointments = () => {
                 }
             );
             if (!response.ok) throw new Error("Failed to delete appointment");
-            toast.success("Appointment deleted successfully");
+            toast.success(t('adminPanel.appointments.deleted'));
             setIsDeleteModalOpen(false);
             setAppointmentToDelete(null);
             fetchAppointments();
@@ -320,7 +341,7 @@ const AdminAppointments = () => {
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
-                    <CardTitle>Zarządzanie wizytami</CardTitle>
+                    <CardTitle>{t('adminPanel.appointments.title')}</CardTitle>
                     <Button
                         variant="outline"
                         size="sm"
@@ -328,25 +349,25 @@ const AdminAppointments = () => {
                         className="flex items-center gap-2"
                     >
                         <RotateCcw className="h-4 w-4" />
-                        Wyczyść filtry
+                        {t('adminPanel.appointments.clearFilters')}
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4 p-4 border rounded-lg bg-gray-50/50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4 p-4 border rounded-lg bg-muted/50">
                     <Select
                         value={filters.status}
                         onValueChange={(value) => handleFilterChange("status", value)}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Filtruj według statusu" />
+                            <SelectValue placeholder={t('adminPanel.appointments.filterByStatus')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Wszystkie statusy</SelectItem>
-                            <SelectItem value="pending">Oczekujące</SelectItem>
-                            <SelectItem value="confirmed">Potwierdzone</SelectItem>
-                            <SelectItem value="completed">Zrealizowane</SelectItem>
-                            <SelectItem value="canceled">Anulowane</SelectItem>
-                            <SelectItem value="no-show">Nieobecność</SelectItem>
+                            <SelectItem value="all">{t('adminPanel.appointments.allStatuses')}</SelectItem>
+                            <SelectItem value="pending">{t('adminPanel.appointments.pending')}</SelectItem>
+                            <SelectItem value="confirmed">{t('adminPanel.appointments.confirmed')}</SelectItem>
+                            <SelectItem value="completed">{t('adminPanel.appointments.completed')}</SelectItem>
+                            <SelectItem value="canceled">{t('adminPanel.appointments.cancelled')}</SelectItem>
+                            <SelectItem value="no-show">{t('adminPanel.appointments.noShow')}</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -355,10 +376,10 @@ const AdminAppointments = () => {
                         onValueChange={(value) => handleFilterChange("clientId", value)}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Filtruj według klienta" />
+                            <SelectValue placeholder={t('adminPanel.appointments.filterByClient')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Wszyscy klienci</SelectItem>
+                            <SelectItem value="all">{t('adminPanel.appointments.allClients')}</SelectItem>
                             {clients.map((c) => (
                                 <SelectItem key={c.id} value={String(c.id)}>
                                     {c.first_name} {c.last_name}
@@ -372,10 +393,10 @@ const AdminAppointments = () => {
                         onValueChange={(value) => handleFilterChange("barberId", value)}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Filtruj według barbera" />
+                            <SelectValue placeholder={t('adminPanel.appointments.filterByBarber')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Wszyscy barberzy</SelectItem>
+                            <SelectItem value="all">{t('adminPanel.appointments.allBarbers')}</SelectItem>
                             {barbers.map((b) => (
                                 <SelectItem key={b.id} value={String(b.id)}>
                                     {b.first_name} {b.last_name}
@@ -389,10 +410,10 @@ const AdminAppointments = () => {
                         onValueChange={(value) => handleFilterChange("serviceId", value)}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Filtruj według usługi" />
+                            <SelectValue placeholder={t('adminPanel.appointments.filterByService')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Wszystkie usługi</SelectItem>
+                            <SelectItem value="all">{t('adminPanel.appointments.allServices')}</SelectItem>
                             {services.map((s) => (
                                 <SelectItem key={s.id} value={String(s.id)}>
                                     {s.name}
@@ -409,11 +430,11 @@ const AdminAppointments = () => {
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {filters.date
-                                    ? format(filters.date, "PPP", { locale: pl })
-                                    : <span>Filtruj według daty</span>}
+                                    ? format(filters.date, "PPP", { locale: dateLocale })
+                                    : <span>{t('adminPanel.appointments.filterByDate')}</span>}
                                 {filters.date && (
                                     <X
-                                        className="h-4 w-4 absolute right-2 text-gray-500 hover:text-gray-800"
+                                        className="h-4 w-4 absolute right-2 text-muted-foreground hover:text-foreground"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleFilterChange("date", null);
@@ -444,13 +465,13 @@ const AdminAppointments = () => {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Data i godzina</TableHead>
-                                        <TableHead>Klient</TableHead>
-                                        <TableHead>Barber</TableHead>
-                                        <TableHead>Usługa</TableHead>
-                                        <TableHead className="text-right">Cena</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Akcje</TableHead>
+                                        <TableHead>{t('adminPanel.appointments.colDateTime')}</TableHead>
+                                        <TableHead>{t('adminPanel.appointments.colClient')}</TableHead>
+                                        <TableHead>{t('adminPanel.appointments.colBarber')}</TableHead>
+                                        <TableHead>{t('adminPanel.appointments.colService')}</TableHead>
+                                        <TableHead className="text-right">{t('adminPanel.appointments.colPrice')}</TableHead>
+                                        <TableHead>{t('adminPanel.appointments.colStatus')}</TableHead>
+                                        <TableHead className="text-right">{t('adminPanel.appointments.colActions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -461,7 +482,7 @@ const AdminAppointments = () => {
                                                     {format(
                                                         parseISO(appointment.appointment_time),
                                                         "d MMM yyyy HH:mm",
-                                                        { locale: pl }
+                                                        { locale: dateLocale }
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
@@ -477,41 +498,36 @@ const AdminAppointments = () => {
                                                     {appointment.service_price.toFixed(2)} zł
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge
-                                                        variant={
-                                                            appointment.status === "completed"
-                                                                ? "default"
-                                                                : appointment.status === "canceled"
-                                                                    ? "destructive"
-                                                                    : "secondary"
-                                                        }
-                                                    >
-                                                        {appointment.status}
-                                                    </Badge>
+                                                    <StatusBadge status={appointment.status} />
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleEditClick(appointment)}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-red-500"
-                                                        onClick={() => handleDeleteClick(appointment)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleEditClick(appointment)}
+                                                            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                            {t('adminPanel.appointments.edit')}
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleDeleteClick(appointment)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                            {t('adminPanel.appointments.delete')}
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center h-24">
-                                                Nie znaleziono wizyt dla wybranych filtrów.
+                                                {t('adminPanel.appointments.notFound')}
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -528,43 +544,33 @@ const AdminAppointments = () => {
                                         className="border rounded-lg p-4 space-y-3 shadow-sm"
                                     >
                                         <div className="flex justify-between items-start font-medium">
-                                            <span className="text-gray-800">
+                                            <span className="text-foreground">
                                                 {appointment.client_first_name}{" "}
                                                 {appointment.client_last_name}
                                             </span>
-                                            <Badge
-                                                variant={
-                                                    appointment.status === "completed"
-                                                        ? "default"
-                                                        : appointment.status === "canceled"
-                                                            ? "destructive"
-                                                            : "secondary"
-                                                }
-                                            >
-                                                {appointment.status}
-                                            </Badge>
+                                            <StatusBadge status={appointment.status} />
                                         </div>
-                                        <div className="text-sm text-gray-600 space-y-2">
+                                        <div className="text-sm text-muted-foreground space-y-2">
                                             <p>
-                                                <strong className="font-medium text-gray-700">
-                                                    Data:
+                                                <strong className="font-medium text-foreground">
+                                                    {t('adminPanel.appointments.datePrefix')}
                                                 </strong>{" "}
                                                 {format(
                                                     parseISO(appointment.appointment_time),
                                                     "d MMM yyyy HH:mm",
-                                                    { locale: pl }
+                                                    { locale: dateLocale }
                                                 )}
                                             </p>
                                             <p>
-                                                <strong className="font-medium text-gray-700">
-                                                    Barber:
+                                                <strong className="font-medium text-foreground">
+                                                    {t('adminPanel.appointments.barberPrefix')}
                                                 </strong>{" "}
                                                 {appointment.barber_first_name}{" "}
                                                 {appointment.barber_last_name}
                                             </p>
                                             <p>
-                                                <strong className="font-medium text-gray-700">
-                                                    Usługa:
+                                                <strong className="font-medium text-foreground">
+                                                    {t('adminPanel.appointments.servicePrefix')}
                                                 </strong>{" "}
                                                 {appointment.service_name} (
                                                 {appointment.service_price.toFixed(2)} zł)
@@ -576,21 +582,21 @@ const AdminAppointments = () => {
                                                 size="sm"
                                                 onClick={() => handleEditClick(appointment)}
                                             >
-                                                <Pencil className="h-4 w-4 mr-1.5" /> Edytuj
+                                                <Pencil className="h-4 w-4 mr-1.5" /> {t('adminPanel.appointments.edit')}
                                             </Button>
                                             <Button
                                                 variant="destructive"
                                                 size="sm"
                                                 onClick={() => handleDeleteClick(appointment)}
                                             >
-                                                <Trash2 className="h-4 w-4 mr-1.5" /> Usuń
+                                                <Trash2 className="h-4 w-4 mr-1.5" /> {t('adminPanel.appointments.delete')}
                                             </Button>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-10 text-gray-500">
-                                    <p>Nie znaleziono wizyt dla wybranych filtrów.</p>
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <p>{t('adminPanel.appointments.notFound')}</p>
                                 </div>
                             )}
                         </div>
@@ -603,150 +609,189 @@ const AdminAppointments = () => {
                 open={!!editingAppointment}
                 onOpenChange={(open) => !open && setEditingAppointment(null)}
             >
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Edytuj wizytę</DialogTitle>
+                <DialogContent className="flex flex-col max-h-[90dvh] w-[calc(100vw-2rem)] sm:w-auto sm:max-w-lg p-0 gap-0">
+                    {/* Sticky header */}
+                    <DialogHeader className="px-5 pt-5 pb-4 border-b shrink-0">
+                        <DialogTitle className="text-base sm:text-lg">
+                            {t('adminPanel.appointments.editAppointment')}
+                        </DialogTitle>
                     </DialogHeader>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="client_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Klient</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Wybierz klienta" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {clients.map((c) => (
-                                                    <SelectItem key={c.id} value={String(c.id)}>
-                                                        {c.first_name} {c.last_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
 
-                            <FormField
-                                control={form.control}
-                                name="barber_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Barber</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Wybierz barbera" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {barbers.map((b) => (
-                                                    <SelectItem key={b.id} value={String(b.id)}>
-                                                        {b.first_name} {b.last_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                    {/* Scrollable body */}
+                    <div className="overflow-y-auto flex-1 px-5 py-4">
+                        <Form {...form}>
+                            <form
+                                id="edit-appointment-form"
+                                onSubmit={form.handleSubmit(onSubmit)}
+                                className="space-y-3"
+                            >
+                                {/* Client + Barber – 2 cols on sm+ */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <FormField
+                                        control={form.control}
+                                        name="client_id"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs sm:text-sm">
+                                                    {t('adminPanel.appointments.colClient')}
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-9 text-sm">
+                                                            <SelectValue placeholder={t('adminPanel.appointments.selectClient')} />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {clients.map((c) => (
+                                                            <SelectItem key={c.id} value={String(c.id)}>
+                                                                {c.first_name} {c.last_name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                            <FormField
-                                control={form.control}
-                                name="service_id"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Usługa</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Wybierz usługę" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {services.map((s) => (
-                                                    <SelectItem key={s.id} value={String(s.id)}>
-                                                        {s.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                    <FormField
+                                        control={form.control}
+                                        name="barber_id"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs sm:text-sm">
+                                                    {t('adminPanel.appointments.colBarber')}
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-9 text-sm">
+                                                            <SelectValue placeholder={t('adminPanel.appointments.selectBarber')} />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {barbers.map((b) => (
+                                                            <SelectItem key={b.id} value={String(b.id)}>
+                                                                {b.first_name} {b.last_name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
 
-                            <FormField
-                                control={form.control}
-                                name="appointment_date"
-                                render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Data</FormLabel>
-                                        <MuiCalendar value={field.value} onChange={field.onChange} />
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                {/* Service */}
+                                <FormField
+                                    control={form.control}
+                                    name="service_id"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs sm:text-sm">
+                                                {t('adminPanel.appointments.colService')}
+                                            </FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="h-9 text-sm">
+                                                        <SelectValue placeholder={t('adminPanel.appointments.selectService')} />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {services.map((s) => (
+                                                        <SelectItem key={s.id} value={String(s.id)}>
+                                                            {s.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            <FormField
-                                control={form.control}
-                                name="appointment_time"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Godzina</FormLabel>
-                                        <FormControl>
-                                            <Input type="time" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                {/* Calendar */}
+                                <FormField
+                                    control={form.control}
+                                    name="appointment_date"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel className="text-xs sm:text-sm">
+                                                {t('adminPanel.appointments.dateLabel')}
+                                            </FormLabel>
+                                            <MuiCalendar value={field.value} onChange={field.onChange} />
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Wybierz status" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="pending">Oczekujące</SelectItem>
-                                                <SelectItem value="confirmed">Potwierdzone</SelectItem>
-                                                <SelectItem value="completed">Zrealizowane</SelectItem>
-                                                <SelectItem value="canceled">Anulowane</SelectItem>
-                                                <SelectItem value="no-show">Nieobecność</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                {/* Time + Status – 2 cols */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField
+                                        control={form.control}
+                                        name="appointment_time"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs sm:text-sm">
+                                                    {t('adminPanel.appointments.timeLabel')}
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="time" className="h-9 text-sm" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                            <DialogFooter>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setEditingAppointment(null)}
-                                >
-                                    Anuluj
-                                </Button>
-                                <Button type="submit">Zapisz zmiany</Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
+                                    <FormField
+                                        control={form.control}
+                                        name="status"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs sm:text-sm">
+                                                    {t('adminPanel.appointments.statusLabel')}
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-9 text-sm">
+                                                            <SelectValue placeholder={t('adminPanel.appointments.selectStatus')} />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="pending">{t('adminPanel.appointments.pending')}</SelectItem>
+                                                        <SelectItem value="confirmed">{t('adminPanel.appointments.confirmed')}</SelectItem>
+                                                        <SelectItem value="completed">{t('adminPanel.appointments.completed')}</SelectItem>
+                                                        <SelectItem value="canceled">{t('adminPanel.appointments.cancelled')}</SelectItem>
+                                                        <SelectItem value="no-show">{t('adminPanel.appointments.noShow')}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </form>
+                        </Form>
+                    </div>
+
+                    {/* Sticky footer */}
+                    <DialogFooter className="px-5 py-4 border-t shrink-0 flex-row justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingAppointment(null)}
+                        >
+                            {t('adminPanel.appointments.cancel')}
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="edit-appointment-form"
+                            size="sm"
+                        >
+                            {t('adminPanel.appointments.saveChanges')}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
@@ -754,17 +799,17 @@ const AdminAppointments = () => {
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Usuń wizytę</DialogTitle>
+                        <DialogTitle>{t('adminPanel.appointments.deleteAppointment')}</DialogTitle>
                         <DialogDescription>
-                            Czy na pewno chcesz usunąć tę wizytę? Tej akcji nie można cofnąć.
+                            {t('adminPanel.appointments.deleteConfirm')}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-                            Anuluj
+                            {t('adminPanel.appointments.cancel')}
                         </Button>
                         <Button variant="destructive" onClick={handleDeleteConfirm}>
-                            Usuń
+                            {t('adminPanel.appointments.delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

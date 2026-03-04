@@ -1,20 +1,18 @@
-// src/pages/Services.tsx
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
     Clock,
-    Star, // Możemy zostawić, jeśli planujesz dodać system ocen w przyszłości
     Calendar,
     Loader2,
-    Scissors, // Domyślna ikona usługi
-    Zap, // Przykładowa ikona dla 'Beard'
-    Smile, // Przykładowa ikona dla 'Facial'
-    Heart, // Przykładowa ikona dla 'Kids'
+    Scissors,
+    Zap,
+    Smile,
+    Heart,
 } from "lucide-react";
 import Layout from "@/components/Layout";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import { format } from "date-fns"; // Jeśli będziesz potrzebował formatować daty
 
 interface Service {
     id: number;
@@ -37,28 +35,21 @@ const serviceIconMap: Record<string, React.ElementType> = {
 
 const assignIconToService = (service: Service): Service => {
     let assignedIcon = serviceIconMap.default;
-    const serviceNameLower = service.name.toLowerCase();
-
-    if (
-        serviceNameLower.includes("haircut") ||
-        serviceNameLower.includes("cut")
-    ) {
+    const lower = service.name.toLowerCase();
+    if (lower.includes("haircut") || lower.includes("cut")) {
         assignedIcon = serviceIconMap.haircut;
-    } else if (serviceNameLower.includes("beard")) {
+    } else if (lower.includes("beard")) {
         assignedIcon = serviceIconMap.beard;
-    } else if (
-        serviceNameLower.includes("facial") ||
-        serviceNameLower.includes("shave")
-    ) {
+    } else if (lower.includes("facial") || lower.includes("shave")) {
         assignedIcon = serviceIconMap.facial;
-    } else if (serviceNameLower.includes("kid")) {
+    } else if (lower.includes("kid")) {
         assignedIcon = serviceIconMap.kids;
     }
-
     return { ...service, icon: assignedIcon };
 };
 
 const ServicesPage = () => {
+    const { t } = useLanguage();
     const [services, setServicesData] = useState<Service[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -69,17 +60,13 @@ const ServicesPage = () => {
                 const response = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/public/services`
                 );
-                if (!response.ok) {
-                    throw new Error("Failed to fetch services from API");
-                }
+                if (!response.ok) throw new Error("Failed to fetch services");
                 let data: Service[] = await response.json();
                 data = data.map(assignIconToService);
                 setServicesData(data);
             } catch (error) {
                 console.error("Error fetching services:", error);
-                toast.error(
-                    "Nie udało się wczytać listy usług. Spróbuj ponownie później."
-                );
+                toast.error(t("services.loading"));
                 setServicesData([]);
             } finally {
                 setIsLoading(false);
@@ -88,91 +75,76 @@ const ServicesPage = () => {
         fetchServices();
     }, []);
 
-    const filteredServices = services;
-
     return (
         <Layout>
-            {/* Sekcja hero */}
-            <section className="relative py-24 md:py-32">
+            {/* ── Hero ── */}
+            <section className="relative py-24 md:py-36">
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{
                         backgroundImage:
-                            "linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1622288432428-5937a421a05c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80')",
+                            "linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.72)), url('https://images.unsplash.com/photo-1622288432428-5937a421a05c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80')",
                     }}
-                ></div>
+                />
                 <div className="container mx-auto px-4 relative z-10 text-center">
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-fade-in">
-                        Nasze usługi
+                        {t("services.title")}
                     </h1>
                     <p
-                        className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 animate-fade-in"
+                        className="text-xl text-gray-300 max-w-3xl mx-auto animate-fade-in"
                         style={{ animationDelay: "0.2s" }}
                     >
-                        Od klasycznych cięć po zabiegi pielęgnacyjne premium – oferujemy
-                        szeroki zakres usług dopasowanych do nowoczesnego mężczyzny.
+                        {t("services.subtitle")}
                     </p>
                 </div>
             </section>
 
-            <section className="py-16 bg-white">
+            {/* ── Services grid ── */}
+            <section className="py-16 bg-background">
                 <div className="container mx-auto px-4">
                     {isLoading ? (
-                        <div className="text-center py-10">
+                        <div className="text-center py-16">
                             <Loader2 className="h-12 w-12 text-barber animate-spin mx-auto" />
-                            <p className="mt-3 text-gray-600">
-                                Ładowanie listy usług...
-                            </p>
+                            <p className="mt-4 text-muted-foreground">{t("services.loading")}</p>
                         </div>
-                    ) : filteredServices.length > 0 ? (
+                    ) : services.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {filteredServices.map((service, index) => {
+                            {services.map((service, index) => {
                                 const ServiceIcon = service.icon || Scissors;
                                 return (
                                     <div
                                         key={service.id}
-                                        className="bg-white rounded-lg border-2 border-gray-100 hover:border-barber/30 hover:shadow-xl transition-all duration-300 card-hover animate-fade-in flex flex-col"
-                                        style={{
-                                            animationDelay: `${0.1 * index}s`,
-                                        }}
+                                        className="bg-card rounded-xl border border-border hover:border-barber/40 hover:shadow-xl transition-all duration-300 flex flex-col animate-fade-in"
+                                        style={{ animationDelay: `${0.08 * index}s` }}
                                     >
                                         <div className="p-6 flex-grow flex flex-col">
-                                            <div className="w-16 h-16 bg-barber/10 rounded-full flex items-center justify-center mb-5 self-center">
+                                            <div className="w-16 h-16 bg-barber/10 dark:bg-barber/20 rounded-full flex items-center justify-center mb-5 self-center">
                                                 <ServiceIcon className="h-8 w-8 text-barber" />
                                             </div>
-
-                                            <h3 className="text-xl font-semibold mb-3 text-barber-dark text-center">
+                                            <h3 className="text-xl font-semibold mb-3 text-foreground text-center">
                                                 {service.name}
                                             </h3>
-
-                                            <p className="text-gray-600 mb-4 text-sm min-h-[4.5rem] line-clamp-3 flex-grow">
+                                            <p className="text-muted-foreground mb-4 text-sm min-h-[4.5rem] line-clamp-3 flex-grow">
                                                 {service.description}
                                             </p>
-
-                                            <div className="flex items-center justify-between text-sm text-gray-700 mb-4 mt-auto">
-                                                <div className="flex items-center">
-                                                    <Clock className="h-4 w-4 text-barber mr-1.5" />
-                                                    <span>
-                                                        {service.duration} min
-                                                    </span>
-                                                </div>
+                                            <div className="flex items-center text-sm text-muted-foreground mb-4 mt-auto">
+                                                <Clock className="h-4 w-4 text-barber mr-1.5" />
+                                                <span>
+                                                    {service.duration} {t("services.duration")}
+                                                </span>
                                             </div>
-
-                                            <div className="border-t pt-4 flex items-center justify-between">
+                                            <div className="border-t border-border pt-4 flex items-center justify-between">
                                                 <span className="text-2xl font-bold text-barber">
-                                                    {service.price.toFixed(2)}{" "}
-                                                    PLN
+                                                    {service.price.toFixed(2)} PLN
                                                 </span>
                                                 <Button
                                                     asChild
                                                     size="sm"
                                                     className="bg-barber hover:bg-barber-muted text-white"
                                                 >
-                                                    <Link
-                                                        to={`/booking?serviceId=${service.id}`}
-                                                    >
-                                                        <Calendar className="h-4 w-4 mr-2" />{" "}
-                                                        Zarezerwuj wizytę
+                                                    <Link to={`/booking?serviceId=${service.id}`}>
+                                                        <Calendar className="h-4 w-4 mr-2" />
+                                                        {t("services.bookAppointment")}
                                                     </Link>
                                                 </Button>
                                             </div>
@@ -182,13 +154,13 @@ const ServicesPage = () => {
                             })}
                         </div>
                     ) : (
-                        <div className="text-center py-10">
-                            <Scissors className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-600 text-lg">
-                                Obecnie brak dostępnych usług.
+                        <div className="text-center py-16">
+                            <Scissors className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+                            <p className="text-foreground text-lg font-medium">
+                                {t("services.noServices")}
                             </p>
-                            <p className="text-gray-500">
-                                Sprawdź ponownie w późniejszym terminie.
+                            <p className="text-muted-foreground mt-1">
+                                {t("services.noServicesHint")}
                             </p>
                         </div>
                     )}

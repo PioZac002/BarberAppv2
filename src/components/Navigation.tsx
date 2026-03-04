@@ -5,255 +5,337 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, User, ChevronDown } from "lucide-react";
+import { Menu, X, User, ChevronDown, Sun, Moon } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Navigation = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userRole, setUserRole] = useState<"client" | "barber" | "admin" | null>(null);
+    const [isScrolled, setIsScrolled]   = useState(false);
     const location = useLocation();
 
+    const { isAuthenticated, user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
+    const { lang, toggleLang, t } = useLanguage();
+
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (token) {
-            setIsLoggedIn(true);
-            const storedRole = localStorage.getItem("userRole");
-            setUserRole(storedRole as "client" | "barber" | "admin" || "client");
-        }
-
-        const handleScroll = () => {
-            if (window.scrollY > 10) {
-                setIsScrolled(true);
-            } else {
-                setIsScrolled(false);
-            }
-        };
-
+        const handleScroll = () => setIsScrolled(window.scrollY > 10);
         window.addEventListener("scroll", handleScroll);
-        return () => {
-            window.removeEventListener("scroll", handleScroll);
-        };
+        return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userRole");
-        setIsLoggedIn(false);
-        setUserRole(null);
-        window.location.href = "/";
+    useEffect(() => {
+        setIsMenuOpen(false);
+    }, [location.pathname]);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        document.body.style.overflow = isMenuOpen ? "hidden" : "";
+        return () => { document.body.style.overflow = ""; };
+    }, [isMenuOpen]);
+
+    const getDashboardUrl = () => {
+        if (!user) return "/";
+        switch (user.role) {
+            case "admin":  return "/admin-dashboard";
+            case "barber": return "/barber-dashboard";
+            default:       return "/user-dashboard";
+        }
+    };
+
+    const getProfileUrl = () => {
+        if (!user) return "/login";
+        switch (user.role) {
+            case "admin":  return "/admin-dashboard/profile";
+            case "barber": return "/barber-dashboard/profile";
+            default:       return "/user-dashboard/profile";
+        }
     };
 
     const navLinks = [
-        { name: "Strona główna", path: "/" },
-        { name: "Usługi", path: "/services" },
-        { name: "Zespół", path: "/team" },
-        { name: "Opinie", path: "/reviews" },
-        { name: "Zarezerwuj wizytę", path: "/booking", isButton: true },
+        { name: t("nav.home"),            path: "/" },
+        { name: t("nav.services"),        path: "/services" },
+        { name: t("nav.team"),            path: "/team" },
+        { name: t("nav.reviews"),         path: "/reviews" },
+        { name: t("nav.bookAppointment"), path: "/booking", isButton: true },
     ];
-
-    const getDashboardUrl = () => {
-        if (!userRole) return "/";
-        switch (userRole) {
-            case "admin":
-                return "/admin-dashboard";
-            case "barber":
-                return "/barber-dashboard";
-            case "client":
-            default:
-                return "/user-dashboard";
-        }
-    };
 
     const adminSubMenu = [
-        { name: "Przegląd", path: "/admin-dashboard" },
-        { name: "Użytkownicy", path: "/admin-dashboard/users" },
-        { name: "Wizyty", path: "/admin-dashboard/appointments" },
-        { name: "Usługi", path: "/admin-dashboard/services" },
-        { name: "Opinie", path: "/admin-dashboard/reviews" },
+        { name: t("adminMenu.overview"),     path: "/admin-dashboard" },
+        { name: t("adminMenu.users"),        path: "/admin-dashboard/users" },
+        { name: t("adminMenu.appointments"), path: "/admin-dashboard/appointments" },
+        { name: t("adminMenu.services"),     path: "/admin-dashboard/services" },
+        { name: t("adminMenu.reviews"),      path: "/admin-dashboard/reviews" },
     ];
 
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-    const closeMenu = () => setIsMenuOpen(false);
+    // Fully opaque — no transparency, no blur
+    const navBg = theme === "dark"
+        ? "bg-[#181816] border-b border-border shadow-sm"
+        : "bg-white border-b border-border shadow-sm";
+
+    const linkCls = "text-foreground hover:text-barber";
+    const activeCls = "text-barber border-b-2 border-barber";
+    const iconCls = "text-foreground hover:text-barber hover:bg-barber/10";
+    const langBtnCls = "border-border text-foreground hover:border-barber hover:text-barber";
 
     return (
-        <header
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-                isScrolled
-                    ? "bg-barber-dark shadow-md py-2"
-                    : "bg-transparent py-4"
-            }`}
-        >
-            <div className="container mx-auto px-4 flex justify-between items-center">
-                <Link to="/" className="text-2xl font-bold text-barber">
-                    BarberShop
-                </Link>
+        <>
+            <header
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}
+                style={{ height: "64px" }}
+            >
+                <div className="h-full max-w-screen-xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
+                    {/* Logo */}
+                    <Link
+                        to="/"
+                        className="text-xl font-bold text-barber tracking-tight flex-shrink-0"
+                    >
+                        BarberShop
+                    </Link>
 
-                <nav className="hidden md:flex items-center space-x-6">
-                    {navLinks.map((link) =>
-                        link.isButton ? (
-                            <Button
-                                key={link.name}
-                                asChild
-                                className="bg-barber hover:bg-barber-muted text-white btn-hover"
-                            >
-                                <Link to={link.path}>{link.name}</Link>
-                            </Button>
-                        ) : (
-                            <Link
-                                key={link.name}
-                                to={link.path}
-                                className={`text-white hover:text-barber transition-colors ${
-                                    location.pathname === link.path
-                                        ? "border-b-2 border-barber"
-                                        : ""
-                                }`}
-                            >
-                                {link.name}
-                            </Link>
-                        )
-                    )}
+                    {/* Desktop nav */}
+                    <nav className="hidden md:flex items-center gap-5 flex-1 justify-end">
+                        {navLinks.map(link =>
+                            link.isButton ? (
+                                <Button
+                                    key={link.name}
+                                    asChild
+                                    size="sm"
+                                    className="bg-barber hover:bg-barber-muted text-white btn-hover ml-2"
+                                >
+                                    <Link to={link.path}>{link.name}</Link>
+                                </Button>
+                            ) : (
+                                <Link
+                                    key={link.name}
+                                    to={link.path}
+                                    className={`text-sm font-medium transition-colors pb-0.5 whitespace-nowrap ${linkCls} ${
+                                        location.pathname === link.path ? activeCls : ""
+                                    }`}
+                                >
+                                    {link.name}
+                                </Link>
+                            )
+                        )}
 
-                    <div className="hidden md:flex items-center space-x-4">
-                        {isLoggedIn ? (
+                        {/* Divider */}
+                        <div className="w-px h-5 bg-border" />
+
+                        {/* Theme + Language toggles */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={toggleTheme}
+                                className={`p-1.5 rounded-md transition-colors ${iconCls}`}
+                                aria-label="Toggle theme"
+                            >
+                                {theme === "dark"
+                                    ? <Sun className="h-4 w-4" />
+                                    : <Moon className="h-4 w-4" />}
+                            </button>
+                            <button
+                                onClick={toggleLang}
+                                className={`px-2 py-0.5 rounded border text-xs font-bold tracking-wide transition-colors ${langBtnCls}`}
+                                aria-label="Toggle language"
+                            >
+                                {lang === "pl" ? "EN" : "PL"}
+                            </button>
+                        </div>
+
+                        {/* Account */}
+                        {isAuthenticated ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="flex items-center text-white">
-                                        <User className="mr-2 h-4 w-4" />
-                                        <span>Konto</span>
-                                        <ChevronDown className="ml-1 h-4 w-4" />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={`flex items-center gap-1 ${linkCls} hover:bg-barber/10`}
+                                    >
+                                        <User className="h-4 w-4" />
+                                        <span className="text-sm hidden lg:inline">{t("nav.account")}</span>
+                                        <ChevronDown className="h-3 w-3" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="w-52">
                                     <DropdownMenuItem asChild>
-                                        <Link to="/profile">Profil</Link>
+                                        <Link to={getProfileUrl()}>{t("nav.profile")}</Link>
                                     </DropdownMenuItem>
-                                    {userRole === "admin" ? (
-                                        adminSubMenu.map((subLink) => (
-                                            <DropdownMenuItem key={subLink.name} asChild>
-                                                <Link to={subLink.path}>{subLink.name}</Link>
-                                            </DropdownMenuItem>
-                                        ))
+                                    {user?.role === "admin" ? (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            {adminSubMenu.map(sub => (
+                                                <DropdownMenuItem key={sub.path} asChild>
+                                                    <Link to={sub.path}>{sub.name}</Link>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </>
                                     ) : (
                                         <DropdownMenuItem asChild>
-                                            <Link to={getDashboardUrl()}>Panel</Link>
+                                            <Link to={getDashboardUrl()}>{t("nav.dashboard")}</Link>
                                         </DropdownMenuItem>
                                     )}
-                                    <DropdownMenuItem onClick={handleLogout}>
-                                        Wyloguj
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        onClick={logout}
+                                        className="text-destructive focus:text-destructive"
+                                    >
+                                        {t("nav.logout")}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
-                            <>
-                                <Button asChild variant="ghost" className="text-white">
-                                    <Link to="/login">Zaloguj się</Link>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    asChild
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`text-sm ${linkCls}`}
+                                >
+                                    <Link to="/login">{t("nav.login")}</Link>
                                 </Button>
                                 <Button
                                     asChild
+                                    size="sm"
                                     className="bg-barber hover:bg-barber-muted text-white btn-hover"
                                 >
-                                    <Link to="/register">Zarejestruj się</Link>
+                                    <Link to="/register">{t("nav.register")}</Link>
                                 </Button>
-                            </>
+                            </div>
                         )}
+                    </nav>
+
+                    {/* Mobile: toggles + hamburger */}
+                    <div className="md:hidden flex items-center gap-1 flex-shrink-0">
+                        <button
+                            onClick={toggleTheme}
+                            className={`p-1.5 rounded-md transition-colors ${iconCls}`}
+                            aria-label="Toggle theme"
+                        >
+                            {theme === "dark"
+                                ? <Sun className="h-4 w-4" />
+                                : <Moon className="h-4 w-4" />}
+                        </button>
+                        <button
+                            onClick={toggleLang}
+                            className={`px-2 py-0.5 rounded border text-xs font-bold tracking-wide transition-colors ${langBtnCls}`}
+                            aria-label="Toggle language"
+                        >
+                            {lang === "pl" ? "EN" : "PL"}
+                        </button>
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            className={`p-1.5 rounded-md transition-colors ${iconCls}`}
+                            aria-label="Toggle menu"
+                        >
+                            {isMenuOpen
+                                ? <X className="h-5 w-5" />
+                                : <Menu className="h-5 w-5" />}
+                        </button>
                     </div>
-                </nav>
+                </div>
+            </header>
 
-                <button
-                    className="md:hidden text-white"
-                    onClick={toggleMenu}
-                    aria-label="Przełącz menu"
-                >
-                    {isMenuOpen ? (
-                        <X className="h-6 w-6" />
-                    ) : (
-                        <Menu className="h-6 w-6" />
-                    )}
-                </button>
-            </div>
-
+            {/* Mobile menu — full-screen overlay, separate from header so it doesn't affect layout */}
             {isMenuOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-90 z-40 md:hidden animate-fade-in">
-                    <div className="flex flex-col h-full justify-center items-center space-y-8 p-4">
-                        {navLinks.map((link) => (
+                <div
+                    className={`fixed inset-0 z-40 md:hidden flex flex-col ${
+                        theme === "dark" ? "bg-[#181816]" : "bg-white"
+                    }`}
+                >
+                    {/* Top bar replicated */}
+                    <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+                        <span className="text-xl font-bold text-barber">BarberShop</span>
+                        <button
+                            onClick={() => setIsMenuOpen(false)}
+                            className="p-1.5 rounded-md text-foreground hover:text-barber hover:bg-barber/10 transition-colors"
+                            aria-label="Close menu"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Nav links */}
+                    <nav className="flex-1 overflow-y-auto flex flex-col items-center justify-center gap-4 py-8 px-6">
+                        {navLinks.map(link => (
                             <Link
                                 key={link.name}
                                 to={link.path}
-                                className={`text-xl ${
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`text-lg font-medium transition-colors w-full text-center py-3 rounded-lg ${
                                     link.isButton
-                                        ? "bg-barber text-white px-6 py-2 rounded-md"
-                                        : "text-white"
-                                } ${location.pathname === link.path ? "text-barber" : ""}`}
-                                onClick={closeMenu}
+                                        ? "bg-barber text-white hover:bg-barber-muted"
+                                        : location.pathname === link.path
+                                            ? "text-barber bg-barber/5"
+                                            : "text-foreground hover:text-barber hover:bg-barber/5"
+                                }`}
                             >
                                 {link.name}
                             </Link>
                         ))}
 
-                        {isLoggedIn ? (
+                        <div className="w-full h-px bg-border my-2" />
+
+                        {isAuthenticated ? (
                             <>
                                 <Link
-                                    to="/profile"
-                                    className="text-xl text-white"
-                                    onClick={closeMenu}
+                                    to={getProfileUrl()}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="text-lg text-foreground hover:text-barber transition-colors w-full text-center py-3 rounded-lg hover:bg-barber/5"
                                 >
-                                    Profil
+                                    {t("nav.profile")}
                                 </Link>
-                                {userRole === "admin" ? (
-                                    adminSubMenu.map((subLink) => (
+                                {user?.role === "admin" ? (
+                                    adminSubMenu.map(sub => (
                                         <Link
-                                            key={subLink.name}
-                                            to={subLink.path}
-                                            className="text-xl text-white"
-                                            onClick={closeMenu}
+                                            key={sub.path}
+                                            to={sub.path}
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className="text-base text-muted-foreground hover:text-barber transition-colors w-full text-center py-2"
                                         >
-                                            {subLink.name}
+                                            {sub.name}
                                         </Link>
                                     ))
                                 ) : (
                                     <Link
                                         to={getDashboardUrl()}
-                                        className="text-xl text-white"
-                                        onClick={closeMenu}
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="text-lg text-foreground hover:text-barber transition-colors w-full text-center py-3 rounded-lg hover:bg-barber/5"
                                     >
-                                        Panel
+                                        {t("nav.dashboard")}
                                     </Link>
                                 )}
                                 <button
-                                    className="text-xl text-white"
-                                    onClick={() => {
-                                        handleLogout();
-                                        closeMenu();
-                                    }}
+                                    onClick={() => { logout(); setIsMenuOpen(false); }}
+                                    className="text-lg text-destructive w-full text-center py-3"
                                 >
-                                    Wyloguj
+                                    {t("nav.logout")}
                                 </button>
                             </>
                         ) : (
                             <>
                                 <Link
                                     to="/login"
-                                    className="text-xl text-white"
-                                    onClick={closeMenu}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="text-lg text-foreground hover:text-barber transition-colors w-full text-center py-3 rounded-lg hover:bg-barber/5"
                                 >
-                                    Zaloguj się
+                                    {t("nav.login")}
                                 </Link>
                                 <Link
                                     to="/register"
-                                    className="text-xl text-white bg-barber px-6 py-2 rounded-md"
-                                    onClick={closeMenu}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="text-lg bg-barber text-white hover:bg-barber-muted transition-colors w-full text-center py-3 rounded-lg"
                                 >
-                                    Zarejestruj się
+                                    {t("nav.register")}
                                 </Link>
                             </>
                         )}
-                    </div>
+                    </nav>
                 </div>
             )}
-        </header>
+        </>
     );
 };
 

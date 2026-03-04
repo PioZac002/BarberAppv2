@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
-    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
+    CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import Layout from "@/components/Layout";
 
 interface FormData {
@@ -25,6 +26,7 @@ interface FormData {
 }
 
 const Register = () => {
+    const { t } = useLanguage();
     const [formData, setFormData] = useState<FormData>({
         firstName: "",
         lastName: "",
@@ -33,42 +35,28 @@ const Register = () => {
         password: "",
         confirmPassword: "",
     });
-
     const [errors, setErrors] = useState<Partial<FormData>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { register } = useAuth();
 
     const validateForm = () => {
         const newErrors: Partial<FormData> = {};
-
-        if (!formData.firstName) {
-            newErrors.firstName = "Imię jest wymagane";
-        }
-
-        if (!formData.lastName) {
-            newErrors.lastName = "Nazwisko jest wymagane";
-        }
-
+        if (!formData.firstName) newErrors.firstName = t("auth.firstNameRequired");
+        if (!formData.lastName)  newErrors.lastName  = t("auth.lastNameRequired");
         if (!formData.email) {
-            newErrors.email = "Adres e‑mail jest wymagany";
+            newErrors.email = t("auth.emailRequired");
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = "Adres e‑mail jest nieprawidłowy";
+            newErrors.email = t("auth.emailInvalid");
         }
-
-        if (!formData.phone) {
-            newErrors.phone = "Numer telefonu jest wymagany";
-        }
-
+        if (!formData.phone)     newErrors.phone     = t("auth.phoneRequired");
         if (!formData.password) {
-            newErrors.password = "Hasło jest wymagane";
+            newErrors.password = t("auth.passwordRequired");
         } else if (formData.password.length < 6) {
-            newErrors.password = "Hasło musi mieć co najmniej 6 znaków";
+            newErrors.password = t("auth.passwordMin");
         }
-
         if (formData.password !== formData.confirmPassword) {
-            newErrors.confirmPassword = "Hasła nie są zgodne";
+            newErrors.confirmPassword = t("auth.passwordsMismatch");
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -80,13 +68,8 @@ const Register = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!validateForm()) {
-            return;
-        }
-
+        if (!validateForm()) return;
         setIsSubmitting(true);
-
         try {
             await register({
                 firstName: formData.firstName,
@@ -95,9 +78,8 @@ const Register = () => {
                 phone: formData.phone,
                 password: formData.password,
             });
-            // toast.success jest w useAuth.tsx
-        } catch (error) {
-            toast.error("Rejestracja nie powiodła się. Spróbuj ponownie.");
+        } catch {
+            toast.error(t("auth.registerFailed"));
         } finally {
             setIsSubmitting(false);
         }
@@ -105,15 +87,18 @@ const Register = () => {
 
     return (
         <Layout>
-            <div className="flex items-center justify-center min-h-screen bg-gray-50 py-12">
+            <div className="flex items-center justify-center min-h-screen bg-background py-12">
                 <div className="w-full max-w-md px-4">
-                    <Card className="animate-fade-in">
-                        <CardHeader className="space-y-1 text-center">
-                            <CardTitle className="text-3xl font-bold text-barber-dark">
-                                Utwórz konto
+                    <Card className="animate-fade-in shadow-lg border-border">
+                        <CardHeader className="space-y-1 text-center pb-6">
+                            <div className="w-12 h-12 bg-barber rounded-full flex items-center justify-center mx-auto mb-3">
+                                <span className="text-white font-bold text-xl">B</span>
+                            </div>
+                            <CardTitle className="text-3xl font-bold text-foreground">
+                                {t("auth.registerTitle")}
                             </CardTitle>
-                            <CardDescription>
-                                Wprowadź swoje dane, aby utworzyć nowe konto
+                            <CardDescription className="text-muted-foreground">
+                                {t("auth.registerSubtitleFull")}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -121,40 +106,36 @@ const Register = () => {
                                 <div className="grid gap-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="firstName">Imię</Label>
+                                            <Label htmlFor="firstName">{t("auth.firstName")}</Label>
                                             <Input
                                                 id="firstName"
                                                 name="firstName"
                                                 placeholder="Jan"
                                                 value={formData.firstName}
                                                 onChange={handleChange}
-                                                className={errors.firstName ? "border-red-500" : ""}
+                                                className={errors.firstName ? "border-destructive" : ""}
                                             />
                                             {errors.firstName && (
-                                                <p className="text-red-500 text-sm">
-                                                    {errors.firstName}
-                                                </p>
+                                                <p className="text-destructive text-sm">{errors.firstName}</p>
                                             )}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="lastName">Nazwisko</Label>
+                                            <Label htmlFor="lastName">{t("auth.lastName")}</Label>
                                             <Input
                                                 id="lastName"
                                                 name="lastName"
                                                 placeholder="Kowalski"
                                                 value={formData.lastName}
                                                 onChange={handleChange}
-                                                className={errors.lastName ? "border-red-500" : ""}
+                                                className={errors.lastName ? "border-destructive" : ""}
                                             />
                                             {errors.lastName && (
-                                                <p className="text-red-500 text-sm">
-                                                    {errors.lastName}
-                                                </p>
+                                                <p className="text-destructive text-sm">{errors.lastName}</p>
                                             )}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">E‑mail</Label>
+                                        <Label htmlFor="email">{t("auth.email")}</Label>
                                         <Input
                                             id="email"
                                             name="email"
@@ -162,14 +143,14 @@ const Register = () => {
                                             placeholder="name@example.com"
                                             value={formData.email}
                                             onChange={handleChange}
-                                            className={errors.email ? "border-red-500" : ""}
+                                            className={errors.email ? "border-destructive" : ""}
                                         />
                                         {errors.email && (
-                                            <p className="text-red-500 text-sm">{errors.email}</p>
+                                            <p className="text-destructive text-sm">{errors.email}</p>
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Numer telefonu</Label>
+                                        <Label htmlFor="phone">{t("auth.phone")}</Label>
                                         <Input
                                             id="phone"
                                             name="phone"
@@ -177,14 +158,14 @@ const Register = () => {
                                             placeholder="+48 123 456 789"
                                             value={formData.phone}
                                             onChange={handleChange}
-                                            className={errors.phone ? "border-red-500" : ""}
+                                            className={errors.phone ? "border-destructive" : ""}
                                         />
                                         {errors.phone && (
-                                            <p className="text-red-500 text-sm">{errors.phone}</p>
+                                            <p className="text-destructive text-sm">{errors.phone}</p>
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="password">Hasło</Label>
+                                        <Label htmlFor="password">{t("auth.password")}</Label>
                                         <Input
                                             id="password"
                                             name="password"
@@ -192,16 +173,14 @@ const Register = () => {
                                             placeholder="••••••••"
                                             value={formData.password}
                                             onChange={handleChange}
-                                            className={errors.password ? "border-red-500" : ""}
+                                            className={errors.password ? "border-destructive" : ""}
                                         />
                                         {errors.password && (
-                                            <p className="text-red-500 text-sm">
-                                                {errors.password}
-                                            </p>
+                                            <p className="text-destructive text-sm">{errors.password}</p>
                                         )}
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="confirmPassword">Potwierdź hasło</Label>
+                                        <Label htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
                                         <Input
                                             id="confirmPassword"
                                             name="confirmPassword"
@@ -209,31 +188,27 @@ const Register = () => {
                                             placeholder="••••••••"
                                             value={formData.confirmPassword}
                                             onChange={handleChange}
-                                            className={
-                                                errors.confirmPassword ? "border-red-500" : ""
-                                            }
+                                            className={errors.confirmPassword ? "border-destructive" : ""}
                                         />
                                         {errors.confirmPassword && (
-                                            <p className="text-red-500 text-sm">
-                                                {errors.confirmPassword}
-                                            </p>
+                                            <p className="text-destructive text-sm">{errors.confirmPassword}</p>
                                         )}
                                     </div>
                                     <Button
                                         type="submit"
-                                        className="bg-barber hover:bg-barber-muted btn-hover"
+                                        className="bg-barber hover:bg-barber-muted text-white btn-hover w-full"
                                         disabled={isSubmitting}
                                     >
-                                        {isSubmitting ? "Tworzenie konta..." : "Zarejestruj się"}
+                                        {isSubmitting ? t("auth.creatingAccount") : t("auth.registerButton")}
                                     </Button>
                                 </div>
                             </form>
                         </CardContent>
-                        <CardFooter className="text-center">
-                            <div className="text-sm">
-                                Masz już konto?{" "}
-                                <Link to="/login" className="text-barber hover:underline">
-                                    Zaloguj się
+                        <CardFooter className="text-center pt-2">
+                            <div className="text-sm text-muted-foreground w-full">
+                                {t("auth.hasAccount")}{" "}
+                                <Link to="/login" className="text-barber font-medium hover:underline">
+                                    {t("auth.signInLink")}
                                 </Link>
                             </div>
                         </CardFooter>

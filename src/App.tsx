@@ -4,7 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import ReloadPrompt from './components/ReloadPrompt'; // <-- 1. DODAJ IMPORT
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import ReloadPrompt from './components/ReloadPrompt';
 
 // Pages
 import Home from "./pages/Home";
@@ -21,51 +23,49 @@ import UserDashboard from "./pages/user-dashboard/UserDashboard";
 
 // Barber Dashboard
 import BarberDashboard from "./pages/barber-dashboard/BarberDashboard";
-// Importy podstron BarberDashboard nie są tu potrzebne, jeśli BarberDashboard.tsx ma własne <Routes>
 
 // Admin Dashboard
 import AdminDashboard from "./pages/admin-dashboard/AdminDashboard";
-// Importy podstron AdminDashboard nie są tu potrzebne, jeśli AdminDashboard.tsx ma własne <Routes>
 
 const queryClient = new QueryClient();
 
 const App = () => (
     <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-            <AuthProvider>
-                <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <ReloadPrompt /> {/* <-- 2. DODAJ KOMPONENT TUTAJ */}
-                    <Routes>
-                        {/* Public Routes */}
-                        <Route path="/" element={<Home />} />
-                        <Route path="/services" element={<PublicServices />} />
-                        <Route path="/team" element={<Team />} />
-                        <Route path="/reviews" element={<Reviews />} />
-                        <Route path="/booking" element={<Booking />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
+        <ThemeProvider>
+            <LanguageProvider>
+                <BrowserRouter>
+                    <AuthProvider>
+                        <TooltipProvider>
+                            <Toaster />
+                            <Sonner />
+                            <ReloadPrompt />
+                            <Routes>
+                                {/* Public Routes */}
+                                <Route path="/" element={<Home />} />
+                                <Route path="/services" element={<PublicServices />} />
+                                <Route path="/team" element={<Team />} />
+                                <Route path="/reviews" element={<Reviews />} />
+                                <Route path="/booking" element={<Booking />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
 
-                        {/* Client Dashboard Routes */}
-                        {/* Użyj /* aby UserDashboard mógł obsługiwać zagnieżdżone trasy np. /:tab */}
-                        <Route path="/user-dashboard/*" element={<UserDashboard />} />
+                                {/* Client Dashboard Routes */}
+                                <Route path="/user-dashboard/*" element={<UserDashboard />} />
 
-                        {/* Barber Dashboard Routes */}
-                        {/* Użyj /* aby BarberDashboard mógł obsługiwać zagnieżdżone trasy */}
-                        <Route path="/barber-dashboard/*" element={<BarberDashboard />} />
+                                {/* Barber Dashboard Routes */}
+                                <Route path="/barber-dashboard/*" element={<BarberDashboard />} />
 
-                        {/* Admin Dashboard Routes */}
-                        {/* KLUCZOWA ZMIANA: Użyj "/*", aby AdminDashboard mógł obsługiwać wszystkie zagnieżdżone trasy */}
-                        <Route path="/admin-dashboard/*" element={<AdminDashboard />} />
-                        {/* Usuwamy zagnieżdżone <Route> stąd, ponieważ są one teraz w AdminDashboard.tsx */}
+                                {/* Admin Dashboard Routes */}
+                                <Route path="/admin-dashboard/*" element={<AdminDashboard />} />
 
-                        {/* 404 Page */}
-                        <Route path="*" element={<NotFound />} />
-                    </Routes>
-                </TooltipProvider>
-            </AuthProvider>
-        </BrowserRouter>
+                                {/* 404 Page */}
+                                <Route path="*" element={<NotFound />} />
+                            </Routes>
+                        </TooltipProvider>
+                    </AuthProvider>
+                </BrowserRouter>
+            </LanguageProvider>
+        </ThemeProvider>
     </QueryClientProvider>
 );
 

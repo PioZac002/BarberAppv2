@@ -1,54 +1,207 @@
-# React + TypeScript + Vite
+# BarberShop App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack barbershop management application with online booking, role-based dashboards, dark/light mode, and bilingual (PL/EN) support.
 
-Currently, two official plugins are available:
+**Live demo:** [https://barberappv2-1.onrender.com](https://barberappv2-1.onrender.com)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+> The live instance runs on Render's free tier — the backend may take 30–60 seconds to wake up on first load.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Features
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+**Public pages**
+- Home page with service highlights and CTA
+- Services catalogue
+- Team / barber profiles with portfolio
+- Customer reviews
+- Online appointment booking
+
+**User dashboard**
+- View, track and cancel appointments
+- Write reviews for completed visits
+- Notification centre
+- Profile management
+
+**Barber dashboard**
+- Appointment calendar and schedule overview
+- Accept / complete / mark no-show on appointments
+- Portfolio gallery (upload file, paste from clipboard, or add by URL)
+- Profile and photo management
+- Notification centre
+
+**Admin dashboard**
+- Overview with live stats and charts
+- User management (roles: admin / barber / client)
+- Full appointment management with filters
+- Services management (add / edit / delete)
+- Reviews moderation
+- Reports with PDF export (bar, line, pie charts)
+- Notification centre
+- Profile management
+
+**UI / UX**
+- Dark / light mode toggle (persisted in localStorage)
+- Polish / English language toggle (persisted in localStorage)
+- Fully responsive — mobile, tablet, desktop
+- PWA — installable on mobile devices
+
+---
+
+## Tech Stack
+
+| Layer          | Technology                        |
+|----------------|-----------------------------------|
+| Frontend       | React 19, TypeScript, Vite        |
+| Styling        | Tailwind CSS, shadcn/ui, Radix UI |
+| Forms          | React Hook Form, Zod              |
+| Data fetching  | TanStack Query v5                 |
+| Charts         | Recharts                          |
+| PDF export     | jsPDF, html2canvas                |
+| Animations     | GSAP (home page)                  |
+| Backend        | Node.js, Express 5                |
+| Database       | PostgreSQL (hosted on Render)     |
+| Auth           | JWT (jsonwebtoken), bcryptjs      |
+| File uploads   | Multer                            |
+
+---
+
+## Running Locally
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+- A PostgreSQL database (local or remote, e.g. Render free tier)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/PioZac002/BarberAppv2.git
+cd Barberapplication
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Configure the backend
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+cd backend
 ```
+
+Create a `.env` file:
+
+```env
+DATABASE_URL=postgresql:
+PORT=
+JWT_SECRET=
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=--
+```
+
+Install dependencies and start:
+
+```bash
+npm install
+node index.js
+```
+
+
+### 3. Configure the frontend
+
+Go back to the project root:
+
+```bash
+cd ..
+```
+
+The `.env.development` file is already present and points to the local backend:
+
+```env
+VITE_API_URL=http:
+```
+
+Install dependencies and start the dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Frontend runs at `http://localhost:5173`.
+
+---
+
+## Environment Variables
+
+### Frontend (`/.env.development` / `/.env.production`)
+
+| Variable        | Description                  |
+|-----------------|------------------------------|
+| `VITE_API_URL`  | Base URL of the backend API  |
+
+### Backend (`/backend/.env`)
+
+| Variable        | Description                                              |
+|-----------------|----------------------------------------------------------|
+| `DATABASE_URL`  | PostgreSQL connection string                             |
+| `PORT`          | Port the server listens on (default: `3000`)             |
+| `JWT_SECRET`    | Secret key used to sign JWT tokens                       |
+| `FRONTEND_URL`  | Allowed CORS origin(s), comma-separated                  |
+| `BACKEND_URL`   | Public URL of the backend (used for uploaded file URLs)  |
+
+---
+
+## Scripts
+
+### Frontend
+
+| Command             | Description                          |
+|---------------------|--------------------------------------|
+| `npm run dev`       | Start Vite dev server                |
+| `npm run build`     | TypeScript check + production build  |
+| `npm run preview`   | Preview production build locally     |
+| `npm run test`      | Run unit tests (Vitest)              |
+
+### Backend
+
+| Command          | Description                  |
+|------------------|------------------------------|
+| `node index.js`  | Start the Express server     |
+| `npm test`       | Run backend tests (Vitest)   |
+
+---
+
+## Project Structure
+
+```
+Barberapplication/
+├── src/                        # Frontend source
+│   ├── components/             # Shared UI components (Navigation, Footer, etc.)
+│   ├── contexts/               # React contexts (Auth, Theme, Language)
+│   ├── hooks/                  # Custom hooks
+│   ├── pages/
+│   │   ├── admin-dashboard/    # Admin panel pages
+│   │   ├── barber-dashboard/   # Barber panel pages
+│   │   ├── user-dashboard/     # User panel pages
+│   │   └── *.tsx               # Public pages (Home, Booking, etc.)
+│   └── index.css               # Global styles + dark mode CSS vars
+├── backend/
+│   ├── controllers/            # Route handler logic
+│   ├── middleware/             # Auth middleware (verifyToken, requireAdmin, etc.)
+│   ├── routes/                 # Express routers
+│   ├── uploads/                # Uploaded files (portfolio, profile photos)
+│   └── index.js                # Express app entry point
+├── .env.development            # Frontend env — local dev
+└── .env.production             # Frontend env — production
+```
+
+---
+
+## User Roles
+
+| Role      | Access                                  |
+|-----------|-----------------------------------------|
+| `client`  | Public pages + User dashboard           |
+| `barber`  | Public pages + Barber dashboard         |
+| `admin`   | All pages + Admin dashboard             |
+
+Register a new account via `/register`. Role assignment is done by an admin through the Users panel.

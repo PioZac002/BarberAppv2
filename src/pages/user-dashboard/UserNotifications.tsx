@@ -19,8 +19,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, isValid } from "date-fns";
-import { pl } from "date-fns/locale";
+import { pl, enUS } from "date-fns/locale";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Notification {
     id: number;
@@ -35,6 +36,8 @@ interface Notification {
 const UserNotifications = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["client"] });
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === "pl" ? pl : enUS;
 
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isDataLoading, setIsDataLoading] = useState(true);
@@ -47,7 +50,6 @@ const UserNotifications = () => {
         if (!token || !authUser) {
             setIsDataLoading(false);
             setNotifications([]);
-            // toast.error("Wymagane jest logowanie, aby zobaczyć powiadomienia.");
             return;
         }
 
@@ -56,24 +58,20 @@ const UserNotifications = () => {
             try {
                 const response = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/user/notifications`,
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
+                    { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (!response.ok) {
-                    let errorMsg = "Nie udało się pobrać powiadomień";
+                    let errorMsg = t("userPanel.notifications.loadFailed");
                     try {
                         const errorData = await response.json();
                         errorMsg = errorData.error || errorMsg;
-                    } catch (e) {
-                        /*ignore*/
-                    }
+                    } catch (e) { /*ignore*/ }
                     throw new Error(errorMsg);
                 }
                 const data: Notification[] = await response.json();
                 setNotifications(data);
             } catch (error: any) {
-                toast.error(error.message || "Nie udało się wczytać powiadomień.");
+                toast.error(error.message || t("userPanel.notifications.loadFailed"));
                 setNotifications([]);
             } finally {
                 setIsDataLoading(false);
@@ -86,24 +84,17 @@ const UserNotifications = () => {
 
     const markAsRead = async (id: number) => {
         if (!token) {
-            toast.error("Błąd uwierzytelniania.");
+            toast.error(t("userPanel.notifications.authError"));
             return;
         }
         try {
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/user/notifications/${id}/read`,
-                {
-                    method: "PUT",
-                    headers: { Authorization: `Bearer ${token}` },
-                }
+                { method: "PUT", headers: { Authorization: `Bearer ${token}` } }
             );
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({
-                    error: "Nie udało się oznaczyć jako przeczytane",
-                }));
-                throw new Error(
-                    errorData.error || "Nie udało się oznaczyć powiadomienia jako przeczytane"
-                );
+                const errorData = await response.json().catch(() => ({ error: t("userPanel.notifications.markReadFailed") }));
+                throw new Error(errorData.error || t("userPanel.notifications.markReadFailed"));
             }
             setNotifications((prev) =>
                 prev.map((notification) =>
@@ -111,9 +102,7 @@ const UserNotifications = () => {
                 )
             );
         } catch (error: any) {
-            toast.error(
-                error.message || "Nie udało się oznaczyć powiadomienia jako przeczytane."
-            );
+            toast.error(error.message || t("userPanel.notifications.markReadFailed"));
         }
     };
 
@@ -122,56 +111,41 @@ const UserNotifications = () => {
         try {
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/user/notifications/read-all`,
-                {
-                    method: "PUT",
-                    headers: { Authorization: `Bearer ${token}` },
-                }
+                { method: "PUT", headers: { Authorization: `Bearer ${token}` } }
             );
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({
-                    error: "Nie udało się oznaczyć wszystkich jako przeczytane",
-                }));
-                throw new Error(
-                    errorData.error || "Nie udało się oznaczyć wszystkich jako przeczytane"
-                );
+                const errorData = await response.json().catch(() => ({ error: t("userPanel.notifications.markAllFailed") }));
+                throw new Error(errorData.error || t("userPanel.notifications.markAllFailed"));
             }
-            setNotifications((prev) =>
-                prev.map((notification) => ({ ...notification, is_read: true }))
-            );
-            toast.success("Wszystkie powiadomienia oznaczono jako przeczytane.");
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+            toast.success(t("userPanel.notifications.markedAllRead"));
         } catch (error: any) {
-            toast.error(
-                error.message || "Nie udało się oznaczyć wszystkich jako przeczytane."
-            );
+            toast.error(error.message || t("userPanel.notifications.markAllFailed"));
         }
     };
 
     const deleteNotification = async (id: number) => {
         if (!token) {
-            toast.error("Błąd uwierzytelniania.");
+            toast.error(t("userPanel.notifications.authError"));
             return;
         }
-        if (!window.confirm("Czy na pewno chcesz usunąć to powiadomienie?")) return;
+        const confirmMsg = lang === "pl"
+            ? "Czy na pewno chcesz usunąć to powiadomienie?"
+            : "Are you sure you want to delete this notification?";
+        if (!window.confirm(confirmMsg)) return;
         try {
             const response = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/user/notifications/${id}`,
-                {
-                    method: "DELETE",
-                    headers: { Authorization: `Bearer ${token}` },
-                }
+                { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
             );
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({
-                    error: "Nie udało się usunąć powiadomienia",
-                }));
-                throw new Error(errorData.error || "Nie udało się usunąć powiadomienia");
+                const errorData = await response.json().catch(() => ({ error: t("userPanel.notifications.deleteFailed") }));
+                throw new Error(errorData.error || t("userPanel.notifications.deleteFailed"));
             }
-            setNotifications((prev) =>
-                prev.filter((notification) => notification.id !== id)
-            );
-            toast.success("Powiadomienie zostało usunięte.");
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+            toast.success(t("userPanel.notifications.deleted"));
         } catch (error: any) {
-            toast.error(error.message || "Nie udało się usunąć powiadomienia.");
+            toast.error(error.message || t("userPanel.notifications.deleteFailed"));
         }
     };
 
@@ -201,27 +175,17 @@ const UserNotifications = () => {
 
     const getNotificationColorClass = (type: string) => {
         switch (type) {
-            case "appointment_confirmed":
-                return "text-green-600";
-            case "appointment_canceled":
-                return "text-red-600";
-            case "appointment_pending":
-                return "text-yellow-600";
-            case "promotion":
-                return "text-purple-600";
-            case "reminder":
-                return "text-orange-600";
-            case "review_request":
-                return "text-yellow-500";
+            case "appointment_confirmed": return "text-green-600";
+            case "appointment_canceled":  return "text-red-600";
+            case "appointment_pending":   return "text-yellow-600";
+            case "promotion":             return "text-purple-600";
+            case "reminder":              return "text-orange-600";
+            case "review_request":        return "text-yellow-500";
             case "system_update":
-            case "new_feature":
-                return "text-indigo-600";
-            case "account_security":
-                return "text-red-700";
-            case "welcome":
-                return "text-barber";
-            default:
-                return "text-gray-600";
+            case "new_feature":           return "text-indigo-600";
+            case "account_security":      return "text-red-700";
+            case "welcome":               return "text-barber";
+            default:                      return "text-muted-foreground";
         }
     };
 
@@ -236,11 +200,9 @@ const UserNotifications = () => {
     if (!authContextLoading && !authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">
-                    Nie udało się uwierzytelnić użytkownika, aby wyświetlić powiadomienia.
-                </p>
+                <p className="text-red-500">{t("userPanel.authErrorDesc")}</p>
                 <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
-                    <Link to="/login">Przejdź do logowania</Link>
+                    <Link to="/login">{t("userPanel.goToLogin")}</Link>
                 </Button>
             </div>
         );
@@ -252,13 +214,10 @@ const UserNotifications = () => {
                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <CardTitle className="flex items-center text-xl sm:text-2xl">
                         <Bell className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-barber" />
-                        Powiadomienia
+                        {t("userPanel.notifications.title")}
                         {unreadCount > 0 && (
-                            <Badge
-                                variant="destructive"
-                                className="ml-2 text-xs sm:text-sm"
-                            >
-                                {unreadCount} nowe
+                            <Badge variant="destructive" className="ml-2 text-xs sm:text-sm">
+                                {unreadCount} {t("userPanel.notifications.newBadge")}
                             </Badge>
                         )}
                     </CardTitle>
@@ -270,7 +229,7 @@ const UserNotifications = () => {
                             className="flex items-center self-start sm:self-center"
                         >
                             <CheckCircle className="h-4 w-4 mr-1.5" />
-                            Oznacz wszystkie jako przeczytane
+                            {t("userPanel.notifications.markAllRead")}
                         </Button>
                     )}
                 </CardHeader>
@@ -278,14 +237,13 @@ const UserNotifications = () => {
                     {notifications.length > 0 ? (
                         <div className="space-y-3 sm:space-y-4">
                             {notifications.map((notification) => {
-                                const IconComponent =
-                                    getNotificationIcon(notification.type);
+                                const IconComponent = getNotificationIcon(notification.type);
                                 const notificationElement = (
                                     <div
                                         className={`p-3 sm:p-4 rounded-lg border transition-colors ${
                                             notification.is_read
-                                                ? "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                                                : "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                                                ? "bg-muted/50 border-border hover:bg-muted"
+                                                : "bg-blue-50 border-blue-200 hover:bg-blue-100 dark:bg-blue-950/30 dark:border-blue-800"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between">
@@ -293,56 +251,37 @@ const UserNotifications = () => {
                                                 <div
                                                     className={`flex-shrink-0 p-2 rounded-full ${
                                                         notification.is_read
-                                                            ? "bg-gray-200"
-                                                            : "bg-white shadow-sm"
+                                                            ? "bg-muted"
+                                                            : "bg-card shadow-sm"
                                                     }`}
                                                 >
                                                     <IconComponent
-                                                        className={`h-5 w-5 ${getNotificationColorClass(
-                                                            notification.type
-                                                        )}`}
+                                                        className={`h-5 w-5 ${getNotificationColorClass(notification.type)}`}
                                                     />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center space-x-2 mb-0.5 sm:mb-1">
-                                                        <h3
-                                                            className={`font-medium text-sm sm:text-base ${
-                                                                notification.is_read
-                                                                    ? "text-gray-700"
-                                                                    : "text-gray-900"
-                                                            }`}
-                                                        >
+                                                        <h3 className={`font-medium text-sm sm:text-base ${
+                                                            notification.is_read ? "text-muted-foreground" : "text-foreground"
+                                                        }`}>
                                                             {notification.title}
                                                         </h3>
                                                         {!notification.is_read && (
                                                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse flex-shrink-0"></div>
                                                         )}
                                                     </div>
-                                                    <p
-                                                        className={`text-xs sm:text-sm ${
-                                                            notification.is_read
-                                                                ? "text-gray-600"
-                                                                : "text-gray-700"
-                                                        }`}
-                                                    >
+                                                    <p className={`text-xs sm:text-sm ${
+                                                        notification.is_read ? "text-muted-foreground" : "text-foreground/80"
+                                                    }`}>
                                                         {notification.message}
                                                     </p>
-                                                    <p className="text-xs text-gray-500 mt-1.5 sm:mt-2">
-                                                        {isValid(
-                                                            new Date(
-                                                                notification.created_at
-                                                            )
-                                                        )
-                                                            ? formatDistanceToNow(
-                                                                new Date(
-                                                                    notification.created_at
-                                                                ),
-                                                                {
-                                                                    addSuffix: true,
-                                                                    locale: pl,
-                                                                }
-                                                            )
-                                                            : "Nieprawidłowa data"}
+                                                    <p className="text-xs text-muted-foreground mt-1.5 sm:mt-2">
+                                                        {isValid(new Date(notification.created_at))
+                                                            ? formatDistanceToNow(new Date(notification.created_at), {
+                                                                addSuffix: true,
+                                                                locale: dateLocale,
+                                                            })
+                                                            : "—"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -351,13 +290,9 @@ const UserNotifications = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            markAsRead(notification.id);
-                                                        }}
+                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); markAsRead(notification.id); }}
                                                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-7 w-7 sm:h-8 sm:w-8"
-                                                        title="Oznacz jako przeczytane"
+                                                        title={t("userPanel.notifications.markAllRead")}
                                                     >
                                                         <CheckCircle className="h-4 w-4" />
                                                     </Button>
@@ -365,13 +300,9 @@ const UserNotifications = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        deleteNotification(notification.id);
-                                                    }}
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteNotification(notification.id); }}
                                                     className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 sm:h-8 sm:w-8"
-                                                    title="Usuń powiadomienie"
+                                                    title={t("userPanel.notifications.deleteFailed")}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -380,11 +311,7 @@ const UserNotifications = () => {
                                     </div>
                                 );
                                 return notification.link ? (
-                                    <Link
-                                        to={notification.link}
-                                        key={notification.id}
-                                        className="block no-underline"
-                                    >
+                                    <Link to={notification.link} key={notification.id} className="block no-underline">
                                         {notificationElement}
                                     </Link>
                                 ) : (
@@ -394,12 +321,12 @@ const UserNotifications = () => {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <Info className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-1">
-                                Brak powiadomień
+                            <Info className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-foreground mb-1">
+                                {t("userPanel.notifications.noNotifications")}
                             </h3>
-                            <p className="text-gray-500">
-                                Wszystko nadrobione! Nowe powiadomienia pojawią się tutaj.
+                            <p className="text-muted-foreground">
+                                {t("userPanel.notifications.allDone")}
                             </p>
                         </div>
                     )}

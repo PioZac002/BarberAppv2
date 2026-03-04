@@ -25,7 +25,9 @@ import {
     formatDistanceToNow,
     isValid as isValidDate,
 } from "date-fns";
+import { pl, enUS } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
     BarChart,
     Bar,
@@ -72,6 +74,8 @@ interface AdminNotification {
 
 const AdminOverview = () => {
     const { token, loading: authLoading } = useAuth();
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === 'pl' ? pl : enUS;
     const [stats, setStats] = useState<StatsData | null>(null);
     const [todaysHourlyData, setTodaysHourlyData] = useState<HourlyReportDataItem[]>([]);
     const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
@@ -86,7 +90,7 @@ const AdminOverview = () => {
             setLoadingStats(false);
             setLoadingTodaysData(false);
             setLoadingNotifications(false);
-            toast.error("Błąd autoryzacji. Proszę się zalogować.");
+            toast.error(t('adminPanel.authError'));
             return;
         }
 
@@ -120,7 +124,7 @@ const AdminOverview = () => {
                         "Failed to fetch stats. Status:",
                         statsRes.status
                     );
-                    toast.error("Nie udało się wczytać statystyk ogólnych.");
+                    toast.error(t('adminPanel.overview.errorStats'));
                 }
 
                 if (todaysDataRes.ok) {
@@ -132,9 +136,7 @@ const AdminOverview = () => {
                         "Failed to fetch today's hourly data. Status:",
                         todaysDataRes.status
                     );
-                    toast.error(
-                        "Nie udało się wczytać dzisiejszej aktywności."
-                    );
+                    toast.error(t('adminPanel.overview.errorActivity'));
                 }
 
                 if (notificationsRes.ok) {
@@ -145,12 +147,12 @@ const AdminOverview = () => {
                         "Failed to fetch admin notifications. Status:",
                         notificationsRes.status
                     );
-                    toast.error("Nie udało się wczytać powiadomień.");
+                    toast.error(t('adminPanel.overview.errorNotifications'));
                 }
             } catch (error: any) {
                 console.error("Error fetching dashboard data:", error);
                 toast.error(
-                    error.message || "Nie udało się wczytać danych panelu."
+                    error.message || t('adminPanel.overview.errorDashboard')
                 );
             } finally {
                 setLoadingStats(false);
@@ -174,22 +176,22 @@ const AdminOverview = () => {
             case "new_user_registered":
                 return <Users className="h-5 w-5 text-green-500" />;
             default:
-                return <Bell className="h-5 w-5 text-gray-500" />;
+                return <Bell className="h-5 w-5 text-muted-foreground" />;
         }
     };
 
     const todaysChartConfig = useMemo(
         () => ({
             appointments: {
-                label: "Wizyty (liczba)",
+                label: t('adminPanel.overview.visitsByCount'),
                 color: "hsl(var(--chart-1))",
             },
             revenue: {
-                label: "Przychód (PLN)",
+                label: t('adminPanel.overview.revenueLabel'),
                 color: "hsl(var(--chart-2))",
             },
         }),
-        []
+        [t]
     );
 
     const pageLoading =
@@ -217,10 +219,10 @@ const AdminOverview = () => {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">
-                                    Użytkownicy
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    {t('adminPanel.overview.users')}
                                 </p>
-                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                <h4 className="text-3xl font-bold text-foreground mt-1">
                                     {stats?.users ?? 0}
                                 </h4>
                             </div>
@@ -234,10 +236,10 @@ const AdminOverview = () => {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">
-                                    Aktywne Wizyty
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    {t('adminPanel.overview.activeAppointments')}
                                 </p>
-                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                <h4 className="text-3xl font-bold text-foreground mt-1">
                                     {stats?.activeAppointments ?? 0}
                                 </h4>
                             </div>
@@ -251,10 +253,10 @@ const AdminOverview = () => {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">
-                                    Wszystkie usługi
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    {t('adminPanel.overview.allServices')}
                                 </p>
-                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                <h4 className="text-3xl font-bold text-foreground mt-1">
                                     {stats?.services ?? 0}
                                 </h4>
                             </div>
@@ -268,10 +270,10 @@ const AdminOverview = () => {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">
-                                    Miesięczny przychód
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    {t('adminPanel.overview.monthlyRevenue')}
                                 </p>
-                                <h4 className="text-3xl font-bold text-barber-dark mt-1">
+                                <h4 className="text-3xl font-bold text-foreground mt-1">
                                     {stats?.revenue
                                         ? `${stats.revenue.toFixed(2)} PLN`
                                         : "0.00 PLN"}
@@ -291,12 +293,10 @@ const AdminOverview = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center">
                             <Clock className="h-5 w-5 mr-2 text-barber" />
-                            Zakończone wizyty dzisiaj
+                            {t('adminPanel.overview.todayCompleted')}
                         </CardTitle>
                         <CardDescription>
-                            Godzinowe zestawienie liczby zakończonych wizyt
-                            (status „completed”) i przychodów z nich
-                            wygenerowanych.
+                            {t('adminPanel.overview.todayChartDesc')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -330,7 +330,7 @@ const AdminOverview = () => {
                                             axisLine={false}
                                             interval="preserveStartEnd"
                                             label={{
-                                                value: "Godzina",
+                                                value: t('adminPanel.overview.hour'),
                                                 position: "insideBottom",
                                                 offset: -10,
                                                 fontSize: 12,
@@ -350,7 +350,7 @@ const AdminOverview = () => {
                                                 `${value}`
                                             }
                                             label={{
-                                                value: "Liczba wizyt",
+                                                value: t('adminPanel.overview.appointmentCount'),
                                                 angle: -90,
                                                 position: "insideLeft",
                                                 offset: 10,
@@ -370,7 +370,7 @@ const AdminOverview = () => {
                                                 `${value} zł`
                                             }
                                             label={{
-                                                value: "Przychód (PLN)",
+                                                value: t('adminPanel.overview.revenueLabel'),
                                                 angle: 90,
                                                 position: "insideRight",
                                                 offset: 10,
@@ -383,12 +383,12 @@ const AdminOverview = () => {
                                                 <ChartTooltipContent
                                                     indicator="dot"
                                                     labelFormatter={value =>
-                                                        `Godzina: ${value}`
+                                                        `${t('adminPanel.overview.hour')}: ${value}`
                                                     }
                                                     formatter={(value, name) => {
                                                         if (
                                                             name ===
-                                                            "Przychód (PLN)"
+                                                            t('adminPanel.overview.revenueLabel')
                                                         ) {
                                                             return [
                                                                 `${Number(
@@ -417,7 +417,7 @@ const AdminOverview = () => {
                                                     .color
                                             }
                                             radius={[4, 4, 0, 0]}
-                                            name="Wizyty (completed)"
+                                            name={t('adminPanel.overview.visitsByCount')}
                                             barSize={18}
                                         />
                                         <Line
@@ -430,22 +430,15 @@ const AdminOverview = () => {
                                             strokeWidth={2}
                                             dot={{ r: 2 }}
                                             activeDot={{ r: 4 }}
-                                            name="Przychód (PLN)"
+                                            name={t('adminPanel.overview.revenueLabel')}
                                         />
                                     </ComposedChart>
                                 </ResponsiveContainer>
                             </ChartContainer>
                         ) : (
-                            <div className="h-80 flex flex-col items-center justify-center text-gray-500 text-center px-4">
+                            <div className="h-80 flex flex-col items-center justify-center text-muted-foreground text-center px-4">
                                 <Info className="h-10 w-10 mb-2" />
-                                Na dziś nie odnotowano jeszcze żadnych
-                                zakończonych wizyt ani przychodów.
-                                <p className="mt-1 text-xs text-gray-400">
-                                    (Wykres opiera się na danych zwracanych
-                                    przez endpoint raportowy – upewnij się, że
-                                    API liczy tylko wizyty o statusie
-                                    „completed”.)
-                                </p>
+                                {t('adminPanel.overview.noDataToday')}
                             </div>
                         )}
                     </CardContent>
@@ -456,10 +449,10 @@ const AdminOverview = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center">
                             <Bell className="h-5 w-5 mr-2 text-barber" />
-                            Powiadomienia
+                            {t('adminPanel.overview.notifications')}
                         </CardTitle>
                         <CardDescription>
-                            Ostatnie najważniejsze powiadomienia.
+                            {t('adminPanel.overview.latestNotifications')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -475,16 +468,16 @@ const AdminOverview = () => {
                                         key={notification.id}
                                         className={`p-3 rounded-md border ${
                                             notification.is_read
-                                                ? "bg-gray-50 border-gray-200"
-                                                : "bg-blue-50 border-blue-200"
+                                                ? "bg-muted/50 border-border"
+                                                : "bg-barber/10 border-barber/30"
                                         }`}
                                     >
                                         <div className="flex items-start space-x-3">
                                             <div
                                                 className={`flex-shrink-0 p-2 rounded-full ${
                                                     notification.is_read
-                                                        ? "bg-gray-200"
-                                                        : "bg-white shadow-sm"
+                                                        ? "bg-muted"
+                                                        : "bg-card shadow-sm"
                                                 }`}
                                             >
                                                 {getNotificationIcon(
@@ -496,20 +489,20 @@ const AdminOverview = () => {
                                                     <h4
                                                         className={`text-sm font-medium ${
                                                             notification.is_read
-                                                                ? "text-gray-700"
-                                                                : "text-gray-900"
+                                                                ? "text-foreground"
+                                                                : "text-foreground"
                                                         } truncate`}
                                                     >
                                                         {notification.title}
                                                     </h4>
                                                     {!notification.is_read && (
-                                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse ml-2"></div>
+                                                        <div className="w-2 h-2 bg-barber rounded-full flex-shrink-0 animate-pulse ml-2"></div>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                                                     {notification.message}
                                                 </p>
-                                                <div className="text-xs text-gray-400 mt-1 flex justify-between items-center">
+                                                <div className="text-xs text-muted-foreground mt-1 flex justify-between items-center">
                                                     <span>
                                                         {isValidDate(
                                                             new Date(
@@ -523,9 +516,10 @@ const AdminOverview = () => {
                                                                 {
                                                                     addSuffix:
                                                                         true,
+                                                                    locale: dateLocale,
                                                                 }
                                                             )
-                                                            : "Nieprawidłowa data"}
+                                                            : t('adminPanel.notifications.invalidDate')}
                                                     </span>
                                                     {notification.link && (
                                                         <Link
@@ -534,7 +528,7 @@ const AdminOverview = () => {
                                                             }
                                                             className="text-barber hover:underline text-xs"
                                                         >
-                                                            Pokaż
+                                                            {t('adminPanel.notifications.show')}
                                                         </Link>
                                                     )}
                                                 </div>
@@ -549,7 +543,7 @@ const AdminOverview = () => {
                                             size="sm"
                                             className="w-full"
                                         >
-                                            Pokaż{" "}
+                                            {t('adminPanel.notifications.show')}{" "}
                                             <ArrowRight className="h-4 w-4 ml-2" />
                                         </Button>
                                     </Link>
@@ -557,9 +551,9 @@ const AdminOverview = () => {
                             </div>
                         ) : (
                             <div className="text-center py-10">
-                                <Info className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                                <p className="text-sm text-gray-500">
-                                    Brak nowych powiadomień
+                                <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                                <p className="text-sm text-muted-foreground">
+                                    {t('adminPanel.overview.noNewNotifications')}
                                 </p>
                             </div>
                         )}

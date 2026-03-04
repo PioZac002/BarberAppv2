@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Service {
     id: number;
@@ -40,14 +41,16 @@ interface Service {
     created_at: string;
 }
 
-const serviceFormSchema = z.object({
-    name: z.string().min(2, "Nazwa usługi musi mieć co najmniej 2 znaki"),
-    description: z.string().min(10, "Opis musi mieć co najmniej 10 znaków"),
-    price: z.coerce.number().positive("Cena musi być dodatnia"),
-    duration: z.coerce.number().int("Czas trwania musi być liczbą całkowitą").positive("Czas trwania musi być dodatni"),
-});
-
 const AdminServices = () => {
+    const { t } = useLanguage();
+
+    const serviceFormSchema = z.object({
+        name: z.string().min(2, t("adminPanel.services.nameMin")),
+        description: z.string().min(10, t("adminPanel.services.descMin")),
+        price: z.coerce.number().positive(t("adminPanel.services.pricePositive")),
+        duration: z.coerce.number().int(t("adminPanel.services.durationInt")).positive(t("adminPanel.services.durationPositive")),
+    });
+
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -59,22 +62,12 @@ const AdminServices = () => {
 
     const addForm = useForm<z.infer<typeof serviceFormSchema>>({
         resolver: zodResolver(serviceFormSchema),
-        defaultValues: {
-            name: "",
-            description: "",
-            price: 0,
-            duration: 0,
-        },
+        defaultValues: { name: "", description: "", price: 0, duration: 0 },
     });
 
     const editForm = useForm<z.infer<typeof serviceFormSchema>>({
         resolver: zodResolver(serviceFormSchema),
-        defaultValues: {
-            name: "",
-            description: "",
-            price: 0,
-            duration: 0,
-        },
+        defaultValues: { name: "", description: "", price: 0, duration: 0 },
     });
 
     useEffect(() => {
@@ -92,7 +85,6 @@ const AdminServices = () => {
                 setLoading(false);
             }
         };
-
         fetchServices();
     }, []);
 
@@ -128,10 +120,10 @@ const AdminServices = () => {
             setServices([...services, newService]);
             setIsAddModalOpen(false);
             addForm.reset();
-            toast.success('Usługa została dodana pomyślnie');
+            toast.success(t('adminPanel.services.added'));
         } catch (error) {
             console.error('Error adding service:', error);
-            toast.error('Nie udało się dodać usługi');
+            toast.error(t('adminPanel.services.addFailed'));
         }
     };
 
@@ -151,10 +143,10 @@ const AdminServices = () => {
             setServices(services.map(service => service.id === updatedService.id ? updatedService : service));
             setIsEditModalOpen(false);
             setSelectedService(null);
-            toast.success('Usługa została zaktualizowana pomyślnie');
+            toast.success(t('adminPanel.services.updated'));
         } catch (error) {
             console.error('Error updating service:', error);
-            toast.error('Nie udało się zaktualizować usługi');
+            toast.error(t('adminPanel.services.updateFailed'));
         }
     };
 
@@ -169,10 +161,10 @@ const AdminServices = () => {
             setServices(services.filter(service => service.id !== selectedService.id));
             setIsDeleteModalOpen(false);
             setSelectedService(null);
-            toast.success('Usługa została usunięta pomyślnie');
+            toast.success(t('adminPanel.services.deleted'));
         } catch (error) {
             console.error('Error deleting service:', error);
-            toast.error('Nie udało się usunąć usługi');
+            toast.error(t('adminPanel.services.deleteFailed'));
         }
     };
 
@@ -188,13 +180,13 @@ const AdminServices = () => {
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                    <span>Zarządzanie Usługami</span>
+                    <span>{t('adminPanel.services.title')}</span>
                     <Button
                         onClick={() => setIsAddModalOpen(true)}
                         className="bg-barber hover:bg-barber-muted"
                     >
                         <Plus className="h-4 w-4 mr-1" />
-                        Dodaj Nową Usługę
+                        {t('adminPanel.services.addNew')}
                     </Button>
                 </CardTitle>
             </CardHeader>
@@ -204,23 +196,23 @@ const AdminServices = () => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("name")}>
-                                    Nazwa
+                                    {t('adminPanel.services.colName')}
                                     {sortField === "name" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
-                                <TableHead>Opis</TableHead>
+                                <TableHead>{t('adminPanel.services.colDescription')}</TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("price")}>
-                                    Cena
+                                    {t('adminPanel.services.colPrice')}
                                     {sortField === "price" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("duration")}>
-                                    Czas trwania (min)
+                                    {t('adminPanel.services.colDuration')}
                                     {sortField === "duration" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => handleSortChange("created_at")}>
-                                    Utworzono
+                                    {t('adminPanel.services.colCreated')}
                                     {sortField === "created_at" && (sortDirection === "asc" ? <SortAsc className="h-4 w-4 inline ml-1" /> : <SortDesc className="h-4 w-4 inline ml-1" />)}
                                 </TableHead>
-                                <TableHead>Akcje</TableHead>
+                                <TableHead>{t('adminPanel.services.colActions')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -229,7 +221,7 @@ const AdminServices = () => {
                                     <TableCell>{service.name}</TableCell>
                                     <TableCell>{service.description}</TableCell>
                                     <TableCell>{service.price} zł</TableCell>
-                                    <TableCell>{service.duration}</TableCell>
+                                    <TableCell>{service.duration} min</TableCell>
                                     <TableCell>{new Date(service.created_at).toLocaleString()}</TableCell>
                                     <TableCell>
                                         <Button variant="outline" size="sm" className="mr-2" onClick={() => {
@@ -265,17 +257,17 @@ const AdminServices = () => {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h3 className="font-medium">{service.name}</h3>
-                                    <p className="text-sm text-gray-500">{service.description}</p>
+                                    <p className="text-sm text-muted-foreground">{service.description}</p>
                                 </div>
                                 <span className="px-2 py-1 rounded-full text-xs font-medium">{service.price} zł</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
-                                    <p className="text-gray-500">Czas trwania:</p>
+                                    <p className="text-muted-foreground">{t('adminPanel.services.colDuration')}:</p>
                                     <p>{service.duration} min</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-500">Utworzono:</p>
+                                    <p className="text-muted-foreground">{t('adminPanel.services.colCreated')}:</p>
                                     <p>{new Date(service.created_at).toLocaleString()}</p>
                                 </div>
                             </div>
@@ -289,14 +281,14 @@ const AdminServices = () => {
                                     setIsEditModalOpen(true);
                                 }}>
                                     <Pencil className="h-4 w-4 mr-1" />
-                                    Edytuj
+                                    {t('adminPanel.services.edit')}
                                 </Button>
                                 <Button variant="outline" size="sm" className="text-red-500" onClick={() => {
                                     setSelectedService(service);
                                     setIsDeleteModalOpen(true);
                                 }}>
                                     <Trash2 className="h-4 w-4 mr-1" />
-                                    Usuń
+                                    {t('adminPanel.services.delete')}
                                 </Button>
                             </div>
                         </div>
@@ -308,41 +300,41 @@ const AdminServices = () => {
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Dodaj Nową Usługę</DialogTitle>
-                        <DialogDescription>Wypełnij poniższe dane, aby dodać nową usługę.</DialogDescription>
+                        <DialogTitle>{t('adminPanel.services.addDialog')}</DialogTitle>
+                        <DialogDescription>{t('adminPanel.services.addDialogDesc')}</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={addForm.handleSubmit(handleAddService)} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Nazwa Usługi</Label>
-                            <Input id="name" {...addForm.register("name")} />
+                            <Label htmlFor="add-name">{t('adminPanel.services.serviceName')}</Label>
+                            <Input id="add-name" {...addForm.register("name")} />
                             {addForm.formState.errors.name && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.name.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">Opis</Label>
-                            <Textarea id="description" {...addForm.register("description")} />
+                            <Label htmlFor="add-description">{t('adminPanel.services.colDescription')}</Label>
+                            <Textarea id="add-description" {...addForm.register("description")} />
                             {addForm.formState.errors.description && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.description.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="price">Cena (zł)</Label>
-                            <Input id="price" type="number" {...addForm.register("price")} />
+                            <Label htmlFor="add-price">{t('adminPanel.services.priceLabel')}</Label>
+                            <Input id="add-price" type="number" {...addForm.register("price")} />
                             {addForm.formState.errors.price && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.price.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="duration">Czas trwania (minuty)</Label>
-                            <Input id="duration" type="number" {...addForm.register("duration")} />
+                            <Label htmlFor="add-duration">{t('adminPanel.services.durationLabel')}</Label>
+                            <Input id="add-duration" type="number" {...addForm.register("duration")} />
                             {addForm.formState.errors.duration && (
                                 <p className="text-sm text-red-500">{addForm.formState.errors.duration.message}</p>
                             )}
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Anuluj</Button>
-                            <Button type="submit">Dodaj Usługę</Button>
+                            <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>{t('adminPanel.services.cancel')}</Button>
+                            <Button type="submit">{t('adminPanel.services.addButton')}</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -352,41 +344,41 @@ const AdminServices = () => {
             <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edytuj Usługę</DialogTitle>
-                        <DialogDescription>Zmodyfikuj poniższe dane usługi.</DialogDescription>
+                        <DialogTitle>{t('adminPanel.services.editDialog')}</DialogTitle>
+                        <DialogDescription>{t('adminPanel.services.editDialogDesc')}</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={editForm.handleSubmit(handleEditService)} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Nazwa Usługi</Label>
-                            <Input id="name" {...editForm.register("name")} />
+                            <Label htmlFor="edit-name">{t('adminPanel.services.serviceName')}</Label>
+                            <Input id="edit-name" {...editForm.register("name")} />
                             {editForm.formState.errors.name && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.name.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">Opis</Label>
-                            <Textarea id="description" {...editForm.register("description")} />
+                            <Label htmlFor="edit-description">{t('adminPanel.services.colDescription')}</Label>
+                            <Textarea id="edit-description" {...editForm.register("description")} />
                             {editForm.formState.errors.description && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.description.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="price">Cena (zł)</Label>
-                            <Input id="price" type="number" {...editForm.register("price")} />
+                            <Label htmlFor="edit-price">{t('adminPanel.services.priceLabel')}</Label>
+                            <Input id="edit-price" type="number" {...editForm.register("price")} />
                             {editForm.formState.errors.price && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.price.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="duration">Czas trwania (minuty)</Label>
-                            <Input id="duration" type="number" {...editForm.register("duration")} />
+                            <Label htmlFor="edit-duration">{t('adminPanel.services.durationLabel')}</Label>
+                            <Input id="edit-duration" type="number" {...editForm.register("duration")} />
                             {editForm.formState.errors.duration && (
                                 <p className="text-sm text-red-500">{editForm.formState.errors.duration.message}</p>
                             )}
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Anuluj</Button>
-                            <Button type="submit">Zapisz Zmiany</Button>
+                            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>{t('adminPanel.services.cancel')}</Button>
+                            <Button type="submit">{t('adminPanel.services.saveChanges')}</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -396,18 +388,18 @@ const AdminServices = () => {
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Usuń Usługę</DialogTitle>
-                        <DialogDescription>Czy na pewno chcesz usunąć tę usługę? Ta akcja jest nieodwracalna.</DialogDescription>
+                        <DialogTitle>{t('adminPanel.services.deleteDialog')}</DialogTitle>
+                        <DialogDescription>{t('adminPanel.services.deleteConfirm')}</DialogDescription>
                     </DialogHeader>
                     {selectedService && (
-                        <div>
-                            <p><strong>Nazwa:</strong> {selectedService.name}</p>
-                            <p><strong>Cena:</strong> {selectedService.price} zł</p>
+                        <div className="py-2 space-y-1">
+                            <p><strong>{t('adminPanel.services.colName')}:</strong> {selectedService.name}</p>
+                            <p><strong>{t('adminPanel.services.colPrice')}:</strong> {selectedService.price} zł</p>
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Anuluj</Button>
-                        <Button variant="destructive" onClick={handleDelete}>Usuń</Button>
+                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>{t('adminPanel.services.cancel')}</Button>
+                        <Button variant="destructive" onClick={handleDelete}>{t('adminPanel.services.delete')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

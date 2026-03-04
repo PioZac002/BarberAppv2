@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-// useRequireAuth jest już w komponencie nadrzędnym (BarberDashboard.tsx)
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
     Card,
     CardContent,
@@ -25,8 +25,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format, isValid, formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import dayjs from "dayjs";
 import "dayjs/locale/pl";
+import "dayjs/locale/en";
 
 dayjs.locale("pl");
 
@@ -71,7 +73,7 @@ const getNotificationColorClass = (type: string) => {
         case "new_review":
             return "text-yellow-500";
         default:
-            return "text-gray-500";
+            return "text-muted-foreground";
     }
 };
 
@@ -89,35 +91,42 @@ const getStatusBadgeVariant = (status: string) => {
         case "no-show":
             return "bg-orange-100 text-orange-800";
         default:
-            return "bg-gray-100 text-gray-800";
-    }
-};
-
-const getStatusLabel = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "pending":
-            return "Oczekująca";
-        case "confirmed":
-            return "Potwierdzona";
-        case "completed":
-            return "Zrealizowana";
-        case "canceled":
-        case "cancelled":
-            return "Anulowana";
-        case "no-show":
-            return "Nieobecność";
-        default:
-            return status;
+            return "bg-muted text-foreground";
     }
 };
 
 const BarberScheduleOverview = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
+    const { t, lang } = useLanguage();
+    const dateLocale = lang === 'pl' ? pl : enUS;
+
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [dailyAppointments, setDailyAppointments] = useState<DailyAppointment[]>([]);
     const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
     const [latestNotifications, setLatestNotifications] = useState<Notification[]>([]);
     const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
+
+    useEffect(() => {
+        dayjs.locale(lang === 'pl' ? 'pl' : 'en');
+    }, [lang]);
+
+    const getStatusLabel = (status: string) => {
+        switch (status.toLowerCase()) {
+            case "pending":
+                return t("barberPanel.appointments.pending");
+            case "confirmed":
+                return t("barberPanel.appointments.confirmed");
+            case "completed":
+                return t("barberPanel.appointments.completed");
+            case "canceled":
+            case "cancelled":
+                return t("barberPanel.appointments.cancelled");
+            case "no-show":
+                return t("barberPanel.appointments.noShow");
+            default:
+                return status;
+        }
+    };
 
     useEffect(() => {
         if (authContextLoading) {
@@ -133,7 +142,6 @@ const BarberScheduleOverview = () => {
             return;
         }
 
-        // Pobierz harmonogram dnia
         if (selectedDate && isValid(selectedDate)) {
             const fetchDailySchedule = async () => {
                 if (!token) return;
@@ -147,7 +155,7 @@ const BarberScheduleOverview = () => {
                         }
                     );
                     if (!response.ok) {
-                        let errorMsg = "Nie udało się pobrać harmonogramu dnia";
+                        let errorMsg = t("barberPanel.schedule.noAppointments");
                         try {
                             const errorData = await response.json();
                             errorMsg = errorData.error || errorMsg;
@@ -160,7 +168,7 @@ const BarberScheduleOverview = () => {
                     setDailyAppointments(data);
                 } catch (error: any) {
                     console.error("Error fetching daily schedule:", error);
-                    toast.error(error.message || "Nie udało się wczytać harmonogramu dnia");
+                    toast.error(error.message || t("barberPanel.schedule.noAppointments"));
                     setDailyAppointments([]);
                 } finally {
                     setIsLoadingAppointments(false);
@@ -172,7 +180,6 @@ const BarberScheduleOverview = () => {
             setIsLoadingAppointments(false);
         }
 
-        // Pobierz ostatnie powiadomienia
         const fetchLatestNotifications = async () => {
             if (!token) return;
             setIsLoadingNotifications(true);
@@ -184,7 +191,7 @@ const BarberScheduleOverview = () => {
                     }
                 );
                 if (!response.ok) {
-                    let errorMsg = "Nie udało się pobrać powiadomień";
+                    let errorMsg = t("barberPanel.notifications.loadFailed");
                     try {
                         const errorData = await response.json();
                         errorMsg = errorData.error || errorMsg;
@@ -197,7 +204,7 @@ const BarberScheduleOverview = () => {
                 setLatestNotifications(data);
             } catch (error: any) {
                 console.error("Error fetching notifications:", error);
-                toast.error(error.message || "Nie udało się wczytać powiadomień");
+                toast.error(error.message || t("barberPanel.notifications.loadFailed"));
                 setLatestNotifications([]);
             } finally {
                 setIsLoadingNotifications(false);
@@ -210,7 +217,6 @@ const BarberScheduleOverview = () => {
         setSelectedDate(newDate || undefined);
     };
 
-    // Połączony stan ładowania dla całego widoku
     if (
         authContextLoading ||
         (isLoadingAppointments &&
@@ -218,7 +224,6 @@ const BarberScheduleOverview = () => {
             dailyAppointments.length === 0 &&
             latestNotifications.length === 0)
     ) {
-        // Pokaż loader tylko jeśli oba są w trakcie ładowania *i* nie ma jeszcze żadnych danych
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
@@ -227,17 +232,16 @@ const BarberScheduleOverview = () => {
     }
 
     return (
-        // Ten komponent NIE renderuje DashboardLayout
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 items-start">
             <div className="xl:col-span-1 w-full space-y-4 md:space-y-6">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center text-lg sm:text-xl">
                             <CalendarDays className="h-5 w-5 mr-2 text-barber" />
-                            Wybierz datę
+                            {t("barberPanel.schedule.selectDate")}
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Zobacz wizyty dla wybranego dnia.
+                            {t("barberPanel.schedule.selectDateDesc")}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center p-2 sm:p-4">
@@ -252,42 +256,41 @@ const BarberScheduleOverview = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center text-lg sm:text-xl">
                             <Bell className="h-5 w-5 mr-2 text-barber" />
-                            Ostatnie powiadomienia
+                            {t("barberPanel.schedule.latestNotifications")}
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Twoje najnowsze powiadomienia.
+                            {t("barberPanel.schedule.latestNotifications")}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0 px-3 sm:px-4">
                         {isLoadingNotifications && latestNotifications.length === 0 ? (
-                            // Pokaż loader tylko jeśli nie ma jeszcze danych
                             <div className="text-center py-4">
                                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-barber mx-auto"></div>
                             </div>
                         ) : latestNotifications.length > 0 ? (
                             <div className="space-y-3">
-                                {latestNotifications.map((notification) => {
+                                {latestNotifications.slice(0, 5).map((notification) => {
                                     const IconComponent = getNotificationIcon(notification.type);
                                     const timeAgo = isValid(new Date(notification.created_at))
                                         ? formatDistanceToNow(
                                             new Date(notification.created_at),
-                                            { addSuffix: true, locale: pl }
+                                            { addSuffix: true, locale: dateLocale }
                                         )
-                                        : "Nieprawidłowa data";
+                                        : "—";
                                     return (
                                         <Link
                                             to="/barber-dashboard/notifications"
                                             key={notification.id}
                                             className={`block p-2.5 rounded-md border transition-colors ${
                                                 notification.is_read
-                                                    ? "bg-gray-50 hover:bg-gray-100 border-gray-200"
-                                                    : "bg-blue-50 hover:bg-blue-100 border-blue-200"
+                                                    ? "bg-muted/50 hover:bg-muted border-border"
+                                                    : "bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
                                             }`}
                                         >
                                             <div className="flex items-center space-x-2.5">
                                                 <div
                                                     className={`flex-shrink-0 p-1.5 rounded-full ${
-                                                        notification.is_read ? "bg-gray-200" : "bg-white"
+                                                        notification.is_read ? "bg-muted" : "bg-card"
                                                     }`}
                                                 >
                                                     <IconComponent
@@ -300,13 +303,13 @@ const BarberScheduleOverview = () => {
                                                     <p
                                                         className={`text-xs sm:text-sm font-medium truncate ${
                                                             notification.is_read
-                                                                ? "text-gray-700"
-                                                                : "text-gray-900"
+                                                                ? "text-muted-foreground"
+                                                                : "text-foreground"
                                                         }`}
                                                     >
                                                         {notification.title}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">{timeAgo}</p>
+                                                    <p className="text-xs text-muted-foreground">{timeAgo}</p>
                                                 </div>
                                                 {!notification.is_read && (
                                                     <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse"></div>
@@ -320,16 +323,16 @@ const BarberScheduleOverview = () => {
                                     className="block mt-3"
                                 >
                                     <Button variant="outline" size="sm" className="w-full">
-                                        Zobacz wszystkie powiadomienia
+                                        {t("barberPanel.schedule.viewAllNotifications")}
                                         <ArrowRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </Link>
                             </div>
                         ) : (
                             <div className="text-center py-6">
-                                <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500">
-                                    Brak nowych powiadomień.
+                                <Bell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">
+                                    {t("barberPanel.notifications.noNotifications")}
                                 </p>
                             </div>
                         )}
@@ -342,28 +345,27 @@ const BarberScheduleOverview = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center text-lg sm:text-xl">
                             <Clock className="h-5 w-5 mr-2 text-barber" />
-                            Wizyty na{" "}
+                            {t("barberPanel.schedule.appointmentsFor")}{" "}
                             {selectedDate && isValid(selectedDate)
-                                ? format(selectedDate, "PPP", { locale: pl })
+                                ? format(selectedDate, "PPP", { locale: dateLocale })
                                 : "..."}
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Zaplanowane wizyty na wybrany dzień.
+                            {t("barberPanel.schedule.appointmentsDesc")}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoadingAppointments && dailyAppointments.length === 0 ? (
-                            // Pokaż loader tylko jeśli nie ma jeszcze danych
                             <div className="text-center py-8">
                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-barber mx-auto mb-2"></div>
-                                <p className="text-gray-500 text-sm">Ładowanie wizyt...</p>
+                                <p className="text-muted-foreground text-sm">{t("barberPanel.loading")}</p>
                             </div>
                         ) : dailyAppointments.length > 0 ? (
                             <div className="space-y-3 sm:space-y-4">
                                 {dailyAppointments.map((apt) => (
                                     <div
                                         key={apt.id}
-                                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
                                     >
                                         <div className="flex items-center mb-2 sm:mb-0 w-full sm:w-auto">
                                             <div
@@ -374,25 +376,25 @@ const BarberScheduleOverview = () => {
                                                 <User className="h-5 w-5" />
                                             </div>
                                             <div className="ml-3 min-w-0 flex-1">
-                                                <h4 className="font-medium text-gray-800 text-sm sm:text-base truncate">
+                                                <h4 className="font-medium text-foreground text-sm sm:text-base truncate">
                                                     {apt.client_name}
                                                 </h4>
-                                                <p className="text-xs sm:text-sm text-gray-600 truncate">
+                                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                                     {apt.service_name} &bull;{" "}
                                                     {parseFloat(String(apt.price)).toFixed(2)} PLN
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto mt-1 sm:mt-0">
-                                            <p className="font-medium text-gray-700 flex items-center text-xs sm:text-sm whitespace-nowrap">
-                                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-gray-500" />
+                                            <p className="font-medium text-foreground flex items-center text-xs sm:text-sm whitespace-nowrap">
+                                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-muted-foreground" />
                                                 {isValid(new Date(apt.appointment_time))
                                                     ? format(
                                                         new Date(apt.appointment_time),
                                                         "p",
-                                                        { locale: pl }
+                                                        { locale: dateLocale }
                                                     )
-                                                    : "Nieprawidłowa godzina"}
+                                                    : "—"}
                                             </p>
                                             <Badge
                                                 className={`${
@@ -407,16 +409,15 @@ const BarberScheduleOverview = () => {
                             </div>
                         ) : (
                             <div className="text-center py-10">
-                                <Info className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                                <h3 className="text-md font-medium text-gray-700 mb-1">
-                                    Brak umówionych wizyt na{" "}
+                                <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                                <h3 className="text-md font-medium text-foreground mb-1">
+                                    {t("barberPanel.schedule.noAppointments")}{" "}
                                     {selectedDate && isValid(selectedDate)
-                                        ? format(selectedDate, "PPP", { locale: pl })
-                                        : "ten dzień"}
-                                    .
+                                        ? format(selectedDate, "PPP", { locale: dateLocale })
+                                        : ""}
                                 </h3>
-                                <p className="text-sm text-gray-500">
-                                    Twój grafik jest pusty w tym dniu.
+                                <p className="text-sm text-muted-foreground">
+                                    {t("barberPanel.schedule.todaySchedule")}
                                 </p>
                             </div>
                         )}
