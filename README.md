@@ -6,6 +6,18 @@ A full-stack barbershop management application with online booking, role-based d
 
 > The live instance runs on Render's free tier — the backend may take 30–60 seconds to wake up on first load.
 
+### Try it instantly — demo accounts
+
+Use the one-click demo login buttons on the login page, or enter the credentials manually:
+
+| Role      | Email                  | Password     |
+|-----------|------------------------|--------------|
+| Admin     | admin@barbershop.com   | `Admin1234!` |
+| Barber    | marek@barbershop.com   | `User1234!`  |
+| Client    | jan@example.com        | `User1234!`  |
+
+> Demo accounts cannot change their email or password, and cannot be deleted — everything else is fully functional.
+
 ---
 
 ## Features
@@ -160,15 +172,25 @@ cd Barberapplication
 cd backend
 ```
 
-Create a `.env` file:
+Create a `backend/.env` file (or copy from an existing example):
 
 ```env
-DATABASE_URL=postgresql:
-PORT=
-JWT_SECRET=
+DATABASE_URL=postgresql://<user>:<password>@<host>/<dbname>
+PORT=3000
+JWT_SECRET=your_long_random_secret
 FRONTEND_URL=http://localhost:5173
-BACKEND_URL=--
+BACKEND_URL=http://localhost:3000
 ```
+
+**Using the local Docker database instead of a remote one?**
+
+Start the Docker DB container first (`docker compose up db`), then create a local override:
+
+```bash
+cp backend/.env.local.example backend/.env.local
+```
+
+`backend/.env.local` is gitignored and overrides only `DATABASE_URL` and `DATABASE_SSL` — everything else is inherited from `.env`. The Docker database is pre-seeded with demo data (see [Demo accounts](#try-it-instantly--demo-accounts)).
 
 Install dependencies and start:
 
@@ -221,6 +243,16 @@ Frontend runs at `http://localhost:5173`.
 | `FRONTEND_URL`  | Allowed CORS origin(s), comma-separated                  |
 | `BACKEND_URL`   | Public URL of the backend (used for uploaded file URLs)  |
 
+### Local override (`/backend/.env.local`)
+
+Overrides variables from `.env` for local development. Gitignored — never committed.
+Copy from the example: `cp backend/.env.local.example backend/.env.local`
+
+| Variable        | Description                                      |
+|-----------------|--------------------------------------------------|
+| `DATABASE_URL`  | Points to the local Docker DB (`localhost:5432`) |
+| `DATABASE_SSL`  | Set to `false` for local Docker                  |
+
 ---
 
 ## Scripts
@@ -259,10 +291,14 @@ Barberapplication/
 │   └── index.css               # Global styles + dark mode CSS vars
 ├── backend/
 │   ├── controllers/            # Route handler logic
-│   ├── middleware/             # Auth middleware (verifyToken, requireAdmin, etc.)
+│   ├── db/                     # SQL schema + seed file
+│   ├── middleware/             # Auth middleware (verifyToken, requireAdmin, demoGuard, etc.)
 │   ├── routes/                 # Express routers
 │   ├── uploads/                # Uploaded files (portfolio, profile photos)
-│   └── index.js                # Express app entry point
+│   ├── index.js                # Express app entry point
+│   ├── .env                    # Backend env — gitignored
+│   ├── .env.local              # Local DB override — gitignored, copy from .env.local.example
+│   └── .env.local.example      # Template for local Docker DB setup
 ├── .env.development            # Frontend env — local dev
 └── .env.production             # Frontend env — production
 ```

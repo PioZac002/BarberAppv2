@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken, requireClient } = require('../middleware/authMiddleware');
+const { verifyToken, requireClient, blockDemoProfileChange } = require('../middleware/authMiddleware');
 const {
     getUserAppointments,
     cancelUserAppointment,
@@ -34,7 +34,7 @@ router.delete('/notifications/:notificationId', deleteUserNotification);
 
 // Trasy Profilu Klienta
 router.get('/profile', getUserProfile);
-router.put('/profile', updateUserProfile);
+router.put('/profile', blockDemoProfileChange, updateUserProfile);
 
 // Trasy Statystyk Klienta
 router.get('/stats', getUserStats);

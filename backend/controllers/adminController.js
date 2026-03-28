@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { isDemoEmail } = require('../middleware/authMiddleware');
 const {
     format, subDays, startOfDay, endOfDay,
     startOfWeek, endOfWeek, startOfMonth, endOfMonth,
@@ -24,6 +25,17 @@ const updateUser = async (req, res) => {
     const { first_name, last_name, email, phone, role: incomingRole } = req.body;
     const userId = req.params.id;
     const client = await pool.connect();
+
+    // Guard: demo accounts cannot be modified by admin (email / role / password)
+    try {
+        const targetUser = await pool.query('SELECT email, role FROM users WHERE id = $1', [userId]);
+        if (targetUser.rows.length && isDemoEmail(targetUser.rows[0].email)) {
+            return res.status(403).json({
+                error: 'Demo accounts cannot be modified.',
+                code: 'DEMO_RESTRICTED',
+            });
+        }
+    } catch (_) { /* allow through on DB error */ }
 
     // Normalizacja roli – backend przyjmuje tylko: 'client', 'barber', 'admin'
     // Jeśli front wyśle 'user', zapisujemy to jako 'client'
@@ -96,6 +108,18 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
     const userId = req.params.id;
+
+    // Guard: demo accounts cannot be deleted
+    try {
+        const targetUser = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
+        if (targetUser.rows.length && isDemoEmail(targetUser.rows[0].email)) {
+            return res.status(403).json({
+                error: 'Demo accounts cannot be deleted.',
+                code: 'DEMO_RESTRICTED',
+            });
+        }
+    } catch (_) { /* allow through on DB error */ }
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');

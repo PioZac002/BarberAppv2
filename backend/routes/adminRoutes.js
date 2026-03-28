@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken, requireAdmin } = require('../middleware/authMiddleware');
+const { verifyToken, requireAdmin, blockDemoProfileChange } = require('../middleware/authMiddleware');
 const {
     getStats,
     getRevenue,
@@ -62,6 +62,6 @@ router.delete('/reviews/:id', deleteReview);
 
 // Admin Profile
 router.get('/profile', getUserProfile);
-router.put('/profile', updateUserProfile);
+router.put('/profile', blockDemoProfileChange, updateUserProfile);
 
 module.exports = router;
