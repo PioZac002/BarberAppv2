@@ -11,7 +11,14 @@ import {
     X,
     Sun,
     Moon,
+    FlaskConical,
 } from "lucide-react";
+
+const DEMO_EMAILS = [
+    'admin@barbershop.com',
+    'marek@barbershop.com',
+    'jan@example.com',
+];
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -77,6 +84,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
 
     const sidebarItems = getUserSidebarItems();
     const toggleMobileSidebar = () => setIsMobileSidebarOpen(!isMobileSidebarOpen);
+    const isDemo = user?.email ? DEMO_EMAILS.includes(user.email.toLowerCase()) : false;
 
     const isActive = (href: string) =>
         location.pathname === href ||
@@ -191,6 +199,15 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
 
                 {/* Main Content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+                    {isDemo && (
+                        <div className="mb-6 flex items-start gap-3 rounded-lg border border-barber/40 bg-barber/10 px-4 py-3 text-sm">
+                            <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-barber" />
+                            <div>
+                                <span className="font-semibold text-barber">{t('auth.demoBanner')} </span>
+                                <span className="text-muted-foreground">{t('auth.demoBannerDesc')}</span>
+                            </div>
+                        </div>
+                    )}
                     <h1 className="text-2xl font-semibold text-foreground mb-6">{title}</h1>
                     {children}
                 </main>

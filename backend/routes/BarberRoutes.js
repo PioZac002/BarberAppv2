@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const multer = require('multer');
-const { verifyToken, requireBarber } = require('../middleware/authMiddleware');
+const { verifyToken, requireBarber, blockDemoProfileChange } = require('../middleware/authMiddleware');
 const {
     getBarberPortfolio,
     addPortfolioImage,
@@ -73,7 +73,7 @@ router.delete('/portfolio/:imageId', deletePortfolioImage);
 
 // Profile routes
 router.get('/profile', getBarberProfile);
-router.put('/profile', updateBarberProfile);
+router.put('/profile', blockDemoProfileChange, updateBarberProfile);
 router.post('/profile/upload-photo', uploadProfile.single('photo'), uploadProfilePhoto);
 
 // Notifications

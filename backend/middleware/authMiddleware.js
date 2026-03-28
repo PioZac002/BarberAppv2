@@ -1,6 +1,15 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// Emails of seeded demo accounts
+const DEMO_EMAILS = [
+    'admin@barbershop.com',
+    'marek@barbershop.com',
+    'jan@example.com',
+];
+
+const isDemoEmail = (email) => DEMO_EMAILS.includes(email?.toLowerCase());
+
 // Weryfikacja tokenu JWT
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -46,9 +55,24 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
+// Block demo accounts from changing their own email or password
+const blockDemoProfileChange = (req, res, next) => {
+    if (!isDemoEmail(req.user?.email)) return next();
+    if (req.body?.password !== undefined || req.body?.email !== undefined) {
+        return res.status(403).json({
+            error: 'Demo accounts cannot change email or password.',
+            code: 'DEMO_RESTRICTED',
+        });
+    }
+    next();
+};
+
 module.exports = {
     verifyToken,
     requireClient,
     requireBarber,
-    requireAdmin
+    requireAdmin,
+    blockDemoProfileChange,
+    isDemoEmail,
+    DEMO_EMAILS,
 };
