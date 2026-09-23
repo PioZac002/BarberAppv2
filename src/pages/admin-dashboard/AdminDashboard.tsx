@@ -10,6 +10,7 @@ import AdminReviews from "./AdminReviews";
 import AdminReports from "./AdminReports"; // Importujemy nowy komponent
 import AdminNotificationsPage from "./AdminNotificationsPage"; // Importujemy nowy komponent dla powiadomień
 import AdminProfile from "./AdminProfile";
+import { JarLoader } from "@/components/szlif/Loading";
 
 const AdminDashboard = () => {
     const { loading } = useRequireAuth({ allowedRoles: ["admin"] });
@@ -18,7 +19,7 @@ const AdminDashboard = () => {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }

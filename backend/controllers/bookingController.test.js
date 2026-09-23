@@ -210,7 +210,8 @@ describe("getAvailableTimeSlots", () => {
         const payload = res.json.mock.calls[0][0];
         expect(Array.isArray(payload)).toBe(true);
         expect(payload.length).toBeGreaterThan(0);
-        expect(payload).toContain("9:00 AM");
+        // slots are a locale-free 24-hour value now; the client formats them
+        expect(payload).toContain("09:00");
     });
 
     it("zwraca 500 przy błędzie bazy", async () => {

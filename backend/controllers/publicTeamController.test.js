@@ -84,7 +84,8 @@ describe("getAllBarberSummaries", () => {
                 rating: 0,
                 experience: 0,
                 specializations: [],
-                image: "https://via.placeholder.com/300/CCCCCC/808080?Text=No+Image",
+                // no photo on file is null now; the client draws its own fallback
+                image: null,
             },
         ]);
     });
@@ -278,7 +279,7 @@ describe("getBarberDetailsById", () => {
             certifications: [],
             portfolioImages: [],
             image:
-                "https://via.placeholder.com/400/CCCCCC/808080?Text=No+Profile+Image",
+                null,
         });
     });
 

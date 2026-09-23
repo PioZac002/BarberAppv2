@@ -1,11 +1,14 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 
 export type Language = 'pl' | 'en';
+
+/** Values substituted into a translation's {placeholders}. */
+export type TranslationVars = Record<string, string | number>;
 
 interface LanguageContextType {
     lang: Language;
     toggleLang: () => void;
-    t: (path: string) => string;
+    t: (path: string, vars?: TranslationVars) => string;
 }
 
 const translations = {
@@ -22,6 +25,157 @@ const translations = {
             logout: 'Wyloguj',
             login: 'Zaloguj się',
             register: 'Zarejestruj się',
+            toggleTheme: 'Przełącz tryb jasny i ciemny',
+            toggleLanguage: 'Przełącz język',
+            openMenu: 'Otwórz menu',
+        },
+        reports: {
+            title: 'Raporty statystyk',
+            subtitle: 'Analizuj dane dotyczące wizyt i przychodów.',
+            range24h: 'Ostatnie 24 h',
+            range7d: 'Ostatnie 7 dni',
+            rangeMonth: 'Bieżący miesiąc',
+            chartBar: 'Słupkowy (wizyty per barber)',
+            chartTrend: 'Trend (wizyty + przychód)',
+            chartPie: 'Kołowy (udział barberów)',
+            generatePdf: 'Generuj PDF',
+            reportHeading: 'Raport przychodów i liczby wizyt',
+            totalVisits: 'Łączne wizyty',
+            totalRevenue: 'Łączny przychód',
+            avgVisits: 'Średnio wizyt',
+            avgRevenue: 'Średnio przychód',
+            details: 'Szczegółowe dane',
+            visits: 'Wizyty',
+            revenue: 'Przychód (PLN)',
+            noData: 'Brak danych do wyświetlenia dla wybranego okresu.',
+            noBarberData: 'Brak danych o wizytach barberów.',
+        },
+        errors: {
+            generic: 'Coś poszło nie tak. Spróbuj ponownie.',
+            loadFailed: 'Nie udało się wczytać danych.',
+            saveFailed: 'Nie udało się zapisać zmian.',
+            deleteFailed: 'Nie udało się usunąć.',
+            network: 'Brak połączenia z serwerem.',
+            loginRequired: 'Dostęp tylko dla zalogowanych użytkowników.',
+            forbidden: 'Nie masz uprawnień, aby otworzyć tę stronę.',
+        },
+        auth2: {
+            loggedIn: 'Zalogowano pomyślnie.',
+            registered: 'Konto utworzone. Możesz się teraz zalogować.',
+            loggedOut: 'Wylogowano.',
+        },
+        app: {
+            updateAvailable: 'Dostępna jest nowa wersja aplikacji.',
+            reload: 'Odśwież',
+            later: 'Później',
+            offlineReady: 'Aplikacja działa teraz offline.',
+        },
+        notif: {
+            empty: 'Brak powiadomień',
+            emptyHint: 'Kiedy coś się wydarzy, wyląduje tutaj.',
+            markAllRead: 'Oznacz wszystkie jako przeczytane',
+            markRead: 'Oznacz jako przeczytane',
+            delete: 'Usuń powiadomienie',
+            deleteConfirm: 'Usunąć to powiadomienie?',
+            unread: 'nieprzeczytane',
+            seeAll: 'Zobacz wszystkie powiadomienia',
+            loadFailed: 'Nie udało się wczytać powiadomień.',
+            markFailed: 'Nie udało się oznaczyć powiadomienia.',
+            deleteFailed: 'Nie udało się usunąć powiadomienia.',
+            deleted: 'Powiadomienie usunięte.',
+            allRead: 'Wszystkie powiadomienia oznaczone jako przeczytane.',
+            status: {
+                pending: 'oczekująca',
+                confirmed: 'potwierdzona',
+                completed: 'zrealizowana',
+                canceled: 'anulowana',
+                cancelled: 'anulowana',
+                'no-show': 'nieobecność',
+            },
+            booking_pending: {
+                title: 'Rezerwacja czeka na potwierdzenie',
+                body: '{service} u {barber}, {when}. Damy znać, gdy barber potwierdzi.',
+            },
+            appointment_confirmed: {
+                title: 'Wizyta potwierdzona',
+                body: '{service} u {barber}, {when}. Do zobaczenia.',
+            },
+            appointment_completed: {
+                title: 'Wizyta zrealizowana',
+                body: '{service} u {barber}, {when}. Możesz teraz wystawić opinię.',
+            },
+            appointment_canceled: {
+                title: 'Wizyta anulowana',
+                body: '{service} u {barber}, {when} — wizyta została anulowana.',
+            },
+            appointment_no_show: {
+                title: 'Odnotowano nieobecność',
+                body: '{service} u {barber}, {when} — wizyta oznaczona jako nieobecność.',
+            },
+            new_booking_barber: {
+                title: 'Nowa rezerwacja',
+                body: '{client} — {service}, {when}.',
+            },
+            new_appointment_booked: {
+                title: 'Nowa wizyta w kalendarzu',
+                body: '{client} u {barber} — {service}, {when}. Partia {appointmentId}.',
+            },
+            appointment_status_changed_by_barber: {
+                title: 'Barber zmienił status wizyty',
+                body: 'Partia {appointmentId}: {client} u {barber} ({service}) — teraz {status}. Zmienił: {actor}.',
+            },
+        },
+        room: {
+            heading: 'Lokal, w którym to się dzieje',
+            body: 'Dwa stanowiska pod heksagonalnym światłem, ułożone narzędzia, ręczniki na półce i słup przy wejściu — czerwień i błękit, od których zaczyna się cała ta kolorystyka.',
+            floor: 'Sala z dwoma stanowiskami pod heksagonalnym oświetleniem',
+            work: 'Barberzy przy pracy na sali',
+            towels: 'Półki z ręcznikami i kosmetykami do pielęgnacji',
+            tools: 'Maszynki, nożyczki i grzebienie ułożone w szufladzie',
+            pole: 'Słup barberski przy wejściu do zakładu',
+            backBar: 'Ścianka z produktami w łukowych niszach',
+            poleNote: 'Czerwień i błękit z tego słupa to dwa inki tej strony.',
+            tagFloor: 'Sala',
+            tagWork: 'Przy pracy',
+            tagTowels: 'Ręczniki',
+            tagTools: 'Narzędzia',
+            tagPole: 'Słup',
+            tagBackBar: 'Produkty',
+        },
+        cut: {
+            label: 'Suwak przed i po strzyżeniu',
+            before: 'Przed',
+            after: 'Po',
+            caption: 'Przesuń, żeby zobaczyć robotę',
+            heading: 'Ten sam fotel. Ta sama godzina.',
+            body: 'Jedno ujęcie, jedno światło, jedna osoba — zmienia się tylko to, co zrobiliśmy. Przeciągnij linię cięcia przez kadr.',
+        },
+        notFound: {
+            title: 'Nie ma takiej pozycji',
+            body: 'Strona, której szukasz, nie istnieje albo została przeniesiona. Wróć na stronę główną albo przejdź prosto do rezerwacji.',
+            back: 'Wróć na stronę główną',
+        },
+        plate: {
+            trade: 'Zakład fryzjerski męski',
+            lot: 'Partia',
+            net: 'Netto',
+            price: 'Cena',
+            duration: 'Czas',
+            directions: 'Sposób użycia',
+            station: 'Stanowisko',
+            shelf: 'Półka',
+            item: 'Pozycja',
+            demoNotice: 'Treść demonstracyjna',
+            demoNoticeBody: 'Szlif jest zakładem fikcyjnym. Opinie, zespół i wizyty to dane demonstracyjne tego projektu — nie są potwierdzonymi opiniami klientów.',
+            demoShort: 'Dane demonstracyjne',
+            rev: 'Rew.',
+            filed: 'Wpisano',
+            capacity: 'Obłożenie',
+            empty: 'Brak pozycji',
+            emptyHint: 'Kiedy coś tu trafi, pojawi się na półce.',
+            waking: 'Budzimy zaplecze',
+            wakingHint: 'Serwer demonstracyjny wstaje po bezczynności. Zwykle trwa to 30–60 sekund.',
+            of: 'z',
         },
         adminMenu: {
             overview: 'Przegląd',
@@ -50,6 +204,7 @@ const translations = {
             ctaDescription: 'Zarezerwuj wizytę już dziś i skorzystaj z naszych usług premium. Dobrze wyglądać jeszcze nigdy nie było tak prosto.',
             ctaButton: 'Zarezerwuj teraz',
             ctaImageAlt: 'Wnętrze barber shopu',
+            backBarAlt: 'Ścianka z produktami w zakładzie',
         },
         footer: {
             tagline: 'Usługi premium dla mężczyzny. Doświadcz tradycji barberskiej w nowoczesnym wydaniu.',
@@ -83,6 +238,8 @@ const translations = {
             adminPanel: 'Panel Administratora',
             barberPanel: 'Panel Barbera',
             clientPanel: 'Panel Klienta',
+            pinRail: 'Przypnij menu',
+            unpinRail: 'Odepnij menu',
         },
         services: {
             title: 'Nasze usługi',
@@ -736,6 +893,13 @@ const translations = {
             },
         },
         bookingPage: {
+            stepIncomplete: 'Uzupełnij wymagane pola na tym etapie.',
+            pickFirst: 'Najpierw wybierz usługę, barbera i datę.',
+            notSelected: 'Nie wybrano',
+            clientLabel: 'Klient',
+            netAmount: 'Suma netto:',
+            estimatedTax: 'Szacowany podatek (10%):',
+            total: 'Razem:',
             title: 'Zarezerwuj wizytę',
             subtitle: 'Wybierz usługę, barbera i termin który Ci odpowiada.',
             step1: 'Usługa',
@@ -787,6 +951,157 @@ const translations = {
             logout: 'Sign Out',
             login: 'Sign In',
             register: 'Sign Up',
+            toggleTheme: 'Switch light and dark',
+            toggleLanguage: 'Switch language',
+            openMenu: 'Open menu',
+        },
+        reports: {
+            title: 'Statistics reports',
+            subtitle: 'Review appointment and revenue figures.',
+            range24h: 'Last 24 h',
+            range7d: 'Last 7 days',
+            rangeMonth: 'This month',
+            chartBar: 'Bars (visits per barber)',
+            chartTrend: 'Trend (visits + revenue)',
+            chartPie: 'Pie (share per barber)',
+            generatePdf: 'Generate PDF',
+            reportHeading: 'Revenue and appointment volume report',
+            totalVisits: 'Total visits',
+            totalRevenue: 'Total revenue',
+            avgVisits: 'Average visits',
+            avgRevenue: 'Average revenue',
+            details: 'Detailed figures',
+            visits: 'Visits',
+            revenue: 'Revenue (PLN)',
+            noData: 'No data for the selected period.',
+            noBarberData: 'No per-barber appointment data.',
+        },
+        errors: {
+            generic: 'Something went wrong. Please try again.',
+            loadFailed: 'Could not load the data.',
+            saveFailed: 'Could not save your changes.',
+            deleteFailed: 'Could not delete that.',
+            network: 'No connection to the server.',
+            loginRequired: 'You need to be signed in to view this.',
+            forbidden: 'You do not have permission to open this page.',
+        },
+        auth2: {
+            loggedIn: 'Signed in.',
+            registered: 'Account created. You can sign in now.',
+            loggedOut: 'Signed out.',
+        },
+        app: {
+            updateAvailable: 'A new version of the app is available.',
+            reload: 'Reload',
+            later: 'Later',
+            offlineReady: 'The app now works offline.',
+        },
+        notif: {
+            empty: 'No notifications',
+            emptyHint: 'When something happens, it lands here.',
+            markAllRead: 'Mark all as read',
+            markRead: 'Mark as read',
+            delete: 'Delete notification',
+            deleteConfirm: 'Delete this notification?',
+            unread: 'unread',
+            seeAll: 'See all notifications',
+            loadFailed: 'Could not load notifications.',
+            markFailed: 'Could not mark the notification.',
+            deleteFailed: 'Could not delete the notification.',
+            deleted: 'Notification deleted.',
+            allRead: 'All notifications marked as read.',
+            status: {
+                pending: 'pending',
+                confirmed: 'confirmed',
+                completed: 'completed',
+                canceled: 'cancelled',
+                cancelled: 'cancelled',
+                'no-show': 'no-show',
+            },
+            booking_pending: {
+                title: 'Booking awaiting confirmation',
+                body: '{service} with {barber}, {when}. We will tell you once the barber confirms.',
+            },
+            appointment_confirmed: {
+                title: 'Appointment confirmed',
+                body: '{service} with {barber}, {when}. See you then.',
+            },
+            appointment_completed: {
+                title: 'Appointment completed',
+                body: '{service} with {barber}, {when}. You can leave a review now.',
+            },
+            appointment_canceled: {
+                title: 'Appointment cancelled',
+                body: '{service} with {barber}, {when} — the appointment was cancelled.',
+            },
+            appointment_no_show: {
+                title: 'Marked as a no-show',
+                body: '{service} with {barber}, {when} — recorded as a no-show.',
+            },
+            new_booking_barber: {
+                title: 'New booking',
+                body: '{client} — {service}, {when}.',
+            },
+            new_appointment_booked: {
+                title: 'New appointment on the books',
+                body: '{client} with {barber} — {service}, {when}. Lot {appointmentId}.',
+            },
+            appointment_status_changed_by_barber: {
+                title: 'A barber changed an appointment status',
+                body: 'Lot {appointmentId}: {client} with {barber} ({service}) — now {status}. Changed by {actor}.',
+            },
+        },
+        room: {
+            heading: 'The room it happens in',
+            body: 'Two stations under hexagonal light, tools laid out, towels on the shelf, and the pole by the door — the red and the blue this whole palette starts from.',
+            floor: 'The floor: two stations under hexagonal lighting',
+            work: 'Barbers at work on the floor',
+            towels: 'Shelves of towels and grooming product',
+            tools: 'Clippers, scissors and combs laid out in the drawer',
+            pole: 'The barber pole by the shop door',
+            backBar: 'The product wall in its arched niches',
+            poleNote: 'The red and blue on this pole are the two inks of this page.',
+            tagFloor: 'The floor',
+            tagWork: 'At work',
+            tagTowels: 'Towels',
+            tagTools: 'Tools',
+            tagPole: 'The pole',
+            tagBackBar: 'Product',
+        },
+        cut: {
+            label: 'Before and after haircut slider',
+            before: 'Before',
+            after: 'After',
+            caption: 'Drag to see the work',
+            heading: 'Same chair. Same hour.',
+            body: 'One frame, one light, one person — the only thing that changes is the work. Drag the cut line across it.',
+        },
+        notFound: {
+            title: 'Nothing filed here',
+            body: 'The page you are looking for does not exist, or it moved. Head back to the front page, or go straight to booking.',
+            back: 'Back to the front page',
+        },
+        plate: {
+            trade: 'Men\u2019s grooming works',
+            lot: 'Lot',
+            net: 'Net',
+            price: 'Price',
+            duration: 'Time',
+            directions: 'Directions',
+            station: 'Station',
+            shelf: 'Shelf',
+            item: 'Item',
+            demoNotice: 'Demonstration content',
+            demoNoticeBody: 'Szlif is a fictional shop. The reviews, team and appointments are demonstration data for this project — not verified customer feedback.',
+            demoShort: 'Demonstration data',
+            rev: 'Rev.',
+            filed: 'Filed',
+            capacity: 'Load',
+            empty: 'Nothing on file',
+            emptyHint: 'When something lands here it goes on the shelf.',
+            waking: 'Waking the back room',
+            wakingHint: 'The demo server sleeps when idle. This usually takes 30\u201360 seconds.',
+            of: 'of',
         },
         adminMenu: {
             overview: 'Overview',
@@ -815,6 +1130,7 @@ const translations = {
             ctaDescription: 'Book an appointment today and take advantage of our premium services. Looking great has never been this easy.',
             ctaButton: 'Book Now',
             ctaImageAlt: 'Barbershop interior',
+            backBarAlt: 'The product wall on the shop floor',
         },
         footer: {
             tagline: 'Premium services for men. Experience barbering tradition in a modern setting.',
@@ -848,6 +1164,8 @@ const translations = {
             adminPanel: 'Admin Panel',
             barberPanel: 'Barber Panel',
             clientPanel: 'Client Panel',
+            pinRail: 'Pin the menu',
+            unpinRail: 'Unpin the menu',
         },
         services: {
             title: 'Our Services',
@@ -1487,6 +1805,13 @@ const translations = {
             },
         },
         bookingPage: {
+            stepIncomplete: 'Please fill in the required fields for this step.',
+            pickFirst: 'Pick a service, a barber and a date first.',
+            notSelected: 'Not selected',
+            clientLabel: 'Client',
+            netAmount: 'Net amount:',
+            estimatedTax: 'Estimated tax (10%):',
+            total: 'Total:',
             title: 'Book an Appointment',
             subtitle: 'Choose a service, barber, and time that works for you.',
             step1: 'Service',
@@ -1534,25 +1859,56 @@ function getNestedValue(obj: Record<string, any>, path: string): string {
     return typeof result === 'string' ? result : path;
 }
 
+/**
+ * Fills {placeholders} in a translated string.
+ *
+ * Sentences differ in word order between languages, so the values have to be
+ * placed by the translation rather than concatenated by the caller. A
+ * placeholder with no matching value is left visible instead of printing
+ * "undefined", so a missing value shows up as a bug rather than as prose.
+ */
+function interpolate(template: string, vars?: TranslationVars): string {
+    if (!vars) return template;
+    return template.replace(/\{(\w+)\}/g, (match, key) =>
+        Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : match
+    );
+}
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     const [lang, setLang] = useState<Language>(() => {
-        return (localStorage.getItem('language') as Language) || 'pl';
+        // Anything but a language we ship falls back to Polish. Trusting the
+        // stored value meant one stale or corrupted entry indexed into
+        // `translations` with undefined and every label on every page
+        // rendered as its own lookup path.
+        try {
+            const stored = localStorage.getItem('language');
+            return stored === 'en' || stored === 'pl' ? stored : 'pl';
+        } catch {
+            return 'pl';
+        }
     });
 
-    const toggleLang = () => {
-        const newLang = lang === 'pl' ? 'en' : 'pl';
-        setLang(newLang);
-        localStorage.setItem('language', newLang);
-    };
+    const toggleLang = useCallback(() => {
+        setLang(prev => {
+            const next: Language = prev === 'pl' ? 'en' : 'pl';
+            try { localStorage.setItem('language', next); } catch { /* storage blocked */ }
+            return next;
+        });
+    }, []);
 
-    const t = (path: string): string => {
-        return getNestedValue(translations[lang] as Record<string, any>, path);
-    };
+    const t = useCallback(
+        (path: string, vars?: TranslationVars): string =>
+            interpolate(getNestedValue(translations[lang] as Record<string, any>, path), vars),
+        [lang]
+    );
+
+    // a stable value, so every consumer does not re-render on each provider render
+    const value = useMemo(() => ({ lang, toggleLang, t }), [lang, toggleLang, t]);
 
     return (
-        <LanguageContext.Provider value={{ lang, toggleLang, t }}>
+        <LanguageContext.Provider value={value}>
             {children}
         </LanguageContext.Provider>
     );

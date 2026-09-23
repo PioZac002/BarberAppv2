@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS barbers (
     instagram         VARCHAR(255),
     facebook          VARCHAR(255),
     specialties       TEXT[],
+    certifications    TEXT[],
     experience        INT,
+    job_title         VARCHAR(120),
     profile_image_url VARCHAR(255),
     created_at        TIMESTAMPTZ  DEFAULT NOW()
 );

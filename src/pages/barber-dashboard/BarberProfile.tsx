@@ -9,6 +9,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { mediaUrl } from "@/lib/media-url";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,10 +29,12 @@ import {
     Facebook,
     Camera,
     Upload,
+    Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface BarberProfileData {
     firstName: string;
@@ -244,7 +247,7 @@ const BarberProfilePage = () => {
     if (authContextLoading || isLoadingData) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -252,8 +255,8 @@ const BarberProfilePage = () => {
     if (!profile) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">{t("barberPanel.profile.loadFailed")}</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                <p className="text-destructive">{t("barberPanel.profile.loadFailed")}</p>
+                <Button asChild className="mt-4 bg-primary hover:bg-primary/90">
                     <Link to="/barber-dashboard">{t("barberPanel.goToLogin")}</Link>
                 </Button>
             </div>
@@ -274,7 +277,7 @@ const BarberProfilePage = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center justify-between">
                             <div className="flex items-center">
-                                <User className="h-5 w-5 mr-2 text-barber" />
+                                <User className="h-5 w-5 mr-2 text-primary" />
                                 {t("barberPanel.profile.viewProfile")}
                             </div>
                             {!isEditing && (
@@ -293,12 +296,12 @@ const BarberProfilePage = () => {
                         <div className="flex flex-col items-center text-center">
                             {/* Avatar with upload overlay in edit mode */}
                             <div className="relative mb-4">
-                                <Avatar className="h-24 w-24 border-2 border-barber">
+                                <Avatar className="h-24 w-24 border-2 border-primary">
                                     <AvatarImage
-                                        src={photoPreview || profile.profile_image_url}
+                                        src={mediaUrl(photoPreview || profile.profile_image_url)}
                                         alt={`${profile.firstName} ${profile.lastName}`}
                                     />
-                                    <AvatarFallback className="bg-barber text-white text-3xl">
+                                    <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
                                         {profile.firstName?.[0]?.toUpperCase()}
                                         {profile.lastName?.[0]?.toUpperCase()}
                                     </AvatarFallback>
@@ -308,11 +311,11 @@ const BarberProfilePage = () => {
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isUploadingPhoto}
-                                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full text-white opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                                        className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[2px] bg-ink/70 text-label opacity-0 transition-opacity hover:opacity-100"
                                         title={t("barberPanel.profile.uploadPhotoHint")}
                                     >
                                         {isUploadingPhoto
-                                            ? <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white" />
+                                            ? <Loader2 className="h-5 w-5 animate-spin text-primary" />
                                             : <Camera className="h-6 w-6" />}
                                     </button>
                                 )}
@@ -327,13 +330,13 @@ const BarberProfilePage = () => {
                             <h3 className="text-2xl font-semibold text-foreground">
                                 {profile.firstName} {profile.lastName}
                             </h3>
-                            <p className="text-barber">{t("barberPanel.profile.professionalBarber")}</p>
+                            <p className="text-primary">{t("barberPanel.profile.professionalBarber")}</p>
                         </div>
 
                         <div className="text-sm text-muted-foreground space-y-2">
                             {profile.rating !== undefined && profile.totalReviews !== undefined && (
                                 <div className="flex items-center justify-center">
-                                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 mr-1" />
+                                    <Star className="h-4 w-4 text-primary fill-primary mr-1" />
                                     <span className="font-medium text-foreground">{profile.rating.toFixed(1)}</span>
                                     <span className="ml-1">({profile.totalReviews} {t("barberPanel.profile.reviews")})</span>
                                 </div>
@@ -365,7 +368,7 @@ const BarberProfilePage = () => {
                                 </h4>
                                 <div className="flex flex-wrap gap-2">
                                     {displaySpecialties.map((specialty, index) => (
-                                        <Badge key={index} variant="secondary" className="bg-barber/10 text-barber">
+                                        <Badge key={index} variant="secondary" className="bg-primary/10 text-primary">
                                             {specialty}
                                         </Badge>
                                     ))}
@@ -382,12 +385,12 @@ const BarberProfilePage = () => {
                         )}
                         {profile.instagram && !isEditing && (
                             <div className="flex items-center text-sm">
-                                <Instagram className="h-4 w-4 mr-2 text-pink-600 flex-shrink-0" />
+                                <Instagram className="h-4 w-4 mr-2 text-series-5 flex-shrink-0" />
                                 <a
                                     href={`https://instagram.com/${profile.instagram}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
+                                    className="text-series-7 hover:underline"
                                 >
                                     @{profile.instagram}
                                 </a>
@@ -395,12 +398,12 @@ const BarberProfilePage = () => {
                         )}
                         {profile.facebook && !isEditing && (
                             <div className="flex items-center text-sm">
-                                <Facebook className="h-4 w-4 mr-2 text-blue-700 flex-shrink-0" />
+                                <Facebook className="h-4 w-4 mr-2 text-series-7 flex-shrink-0" />
                                 <a
                                     href={profile.facebook}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
+                                    className="text-series-7 hover:underline"
                                 >
                                     {t("barberPanel.profile.facebook")}
                                 </a>
@@ -426,7 +429,7 @@ const BarberProfilePage = () => {
                                         <X className="h-4 w-4 mr-1" />
                                         {t("barberPanel.profile.cancel")}
                                     </Button>
-                                    <Button size="sm" onClick={handleSave} className="bg-barber hover:bg-barber-muted">
+                                    <Button size="sm" onClick={handleSave} className="bg-primary hover:bg-primary/90">
                                         <Save className="h-4 w-4 mr-1" />
                                         {t("barberPanel.profile.save")}
                                     </Button>
@@ -576,10 +579,10 @@ const BarberProfilePage = () => {
                                                 type="button"
                                                 onClick={() => fileInputRef.current?.click()}
                                                 disabled={isUploadingPhoto}
-                                                className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-border rounded-lg text-sm text-muted-foreground hover:border-barber hover:text-barber transition-colors w-full justify-center"
+                                                className="flex w-full items-center justify-center gap-2 rounded-[2px] border border-dashed border-foreground/40 px-4 py-2.5 text-sm text-muted-foreground transition-colors duration-200 hover:border-primary hover:text-primary"
                                             >
                                                 {isUploadingPhoto
-                                                    ? <><div className="animate-spin rounded-full h-4 w-4 border-t-2 border-barber" /> Przesyłanie...</>
+                                                    ? <><Loader2 className="h-4 w-4 animate-spin text-primary" /> Przesyłanie...</>
                                                     : <><Upload className="h-4 w-4" /> {t("barberPanel.profile.uploadPhotoHint")}</>}
                                             </button>
                                             <div className="flex items-center gap-2">
@@ -620,7 +623,7 @@ const BarberProfilePage = () => {
                                             href={`https://instagram.com/${profile.instagram}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline flex items-center min-h-[40px]"
+                                            className="text-sm text-series-7 hover:underline flex items-center min-h-[40px]"
                                         >
                                             <Instagram className="h-4 w-4 mr-1" />
                                             @{profile.instagram}
@@ -649,7 +652,7 @@ const BarberProfilePage = () => {
                                             href={profile.facebook}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline flex items-center min-h-[40px]"
+                                            className="text-sm text-series-7 hover:underline flex items-center min-h-[40px]"
                                         >
                                             <Facebook className="h-4 w-4 mr-1" />
                                             {t("barberPanel.profile.facebook")}

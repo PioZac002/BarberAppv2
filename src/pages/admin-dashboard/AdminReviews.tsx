@@ -25,6 +25,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface Review {
     id: number;
@@ -54,7 +55,7 @@ const AdminReviews = () => {
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/reviews`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
-                if (!response.ok) throw new Error('Failed to fetch reviews');
+                if (!response.ok) throw new Error(t("errors.loadFailed"));
                 const data = await response.json();
                 setReviews(data);
             } catch (error) {
@@ -100,7 +101,7 @@ const AdminReviews = () => {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
-            if (!response.ok) throw new Error('Failed to delete review');
+            if (!response.ok) throw new Error(t("errors.deleteFailed"));
             setReviews(reviews.filter((review) => review.id !== selectedReview.id));
             setIsDeleteModalOpen(false);
             setSelectedReview(null);
@@ -117,7 +118,7 @@ const AdminReviews = () => {
                 {[...Array(5)].map((_, index) => (
                     <Star
                         key={index}
-                        className={`h-4 w-4 ${index < rating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground/30'}`}
+                        className={`h-4 w-4 ${index < rating ? 'text-primary fill-primary' : 'text-muted-foreground/30'}`}
                     />
                 ))}
             </div>
@@ -127,7 +128,7 @@ const AdminReviews = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -176,7 +177,7 @@ const AdminReviews = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-red-500 hover:text-red-700"
+                                                    className="text-destructive hover:text-destructive"
                                                     onClick={() => handleDeleteClick(review)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -191,7 +192,7 @@ const AdminReviews = () => {
                         {/* Mobile view */}
                         <div className="md:hidden space-y-4">
                             {sortedReviews.map((review) => (
-                                <div key={review.id} className="border rounded-lg p-4 space-y-3 shadow-sm bg-card">
+                                <div key={review.id} className="plate space-y-3 p-4">
                                     <div className="flex justify-between items-start">
                                         <div className="font-medium text-foreground">{review.client_name}</div>
                                         {renderStars(review.rating)}

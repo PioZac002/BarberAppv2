@@ -1,13 +1,10 @@
 const express = require('express');
+const notifications = require('../controllers/notificationsController');
 const router = express.Router();
 const { verifyToken, requireAdmin, blockDemoProfileChange } = require('../middleware/authMiddleware');
 const {
     getStats,
     getRevenue,
-    getAdminNotifications,
-    markNotificationAsRead,      // DODANO
-    markAllNotificationsAsRead,  // DODANO
-    deleteNotification,          // DODANO
     getUsers,
     updateUser,
     deleteUser,
@@ -34,10 +31,13 @@ router.get('/revenue', getRevenue);
 router.get('/reports-data', getReportData);
 
 // Powiadomienia
-router.get('/notifications', getAdminNotifications);
-router.put('/notifications/read-all', markAllNotificationsAsRead);
-router.put('/notifications/:id/read', markNotificationAsRead);
-router.delete('/notifications/:id', deleteNotification);
+// Notifications are the same four operations for every role; the recipient is
+// whoever is holding the token, so one controller serves all three panels.
+router.get('/notifications', notifications.list);
+router.get('/notifications/unread-count', notifications.unreadCount);
+router.put('/notifications/read-all', notifications.markAllRead);
+router.put('/notifications/:id/read', notifications.markRead);
+router.delete('/notifications/:id', notifications.remove);
 
 // Zarządzanie Użytkownikami i Barberami
 router.get('/users', getUsers);

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -8,31 +7,28 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, User, ChevronDown, Sun, Moon } from "lucide-react";
+import { Menu, X, ChevronDown, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { MarkWithName } from "@/components/brand/Szlif";
+import { cn } from "@/lib/utils";
 
+/**
+ * The public bar reads as the steriliser cabinet above the back bar:
+ * the glaze runs edge to edge, the chrome lip closes it, and the one
+ * cream object on it is the label you can act on.
+ */
 const Navigation = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isScrolled, setIsScrolled]   = useState(false);
     const location = useLocation();
 
     const { isAuthenticated, user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const { lang, toggleLang, t } = useLanguage();
 
-    useEffect(() => {
-        const handleScroll = () => setIsScrolled(window.scrollY > 10);
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    useEffect(() => { setIsMenuOpen(false); }, [location.pathname]);
 
-    useEffect(() => {
-        setIsMenuOpen(false);
-    }, [location.pathname]);
-
-    // Prevent body scroll when mobile menu is open
     useEffect(() => {
         document.body.style.overflow = isMenuOpen ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
@@ -57,11 +53,10 @@ const Navigation = () => {
     };
 
     const navLinks = [
-        { name: t("nav.home"),            path: "/" },
-        { name: t("nav.services"),        path: "/services" },
-        { name: t("nav.team"),            path: "/team" },
-        { name: t("nav.reviews"),         path: "/reviews" },
-        { name: t("nav.bookAppointment"), path: "/booking", isButton: true },
+        { name: t("nav.home"),     path: "/" },
+        { name: t("nav.services"), path: "/services" },
+        { name: t("nav.team"),     path: "/team" },
+        { name: t("nav.reviews"),  path: "/reviews" },
     ];
 
     const adminSubMenu = [
@@ -72,94 +67,71 @@ const Navigation = () => {
         { name: t("adminMenu.reviews"),      path: "/admin-dashboard/reviews" },
     ];
 
-    // Fully opaque — no transparency, no blur
-    const navBg = theme === "dark"
-        ? "bg-[#181816] border-b border-border shadow-sm"
-        : "bg-white border-b border-border shadow-sm";
-
-    const linkCls = "text-foreground hover:text-barber";
-    const activeCls = "text-barber border-b-2 border-barber";
-    const iconCls = "text-foreground hover:text-barber hover:bg-barber/10";
-    const langBtnCls = "border-border text-foreground hover:border-barber hover:text-barber";
+    /* a chrome chip: the small metal controls screwed to the cabinet */
+    const chip =
+        "inline-flex items-center justify-center h-8 min-w-8 px-2 rounded-[1px] border " +
+        "border-sidebar-border/80 text-sidebar-foreground/90 transition-colors duration-200 " +
+        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground " +
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring";
 
     return (
         <>
-            <header
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}
-                style={{ height: "64px" }}
-            >
-                <div className="h-full max-w-screen-xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
-                    {/* Logo */}
-                    <Link
-                        to="/"
-                        className="text-xl font-bold text-barber tracking-tight flex-shrink-0"
-                    >
-                        BarberShop
+            <header className="fixed inset-x-0 top-0 z-50 h-16 bg-sidebar text-sidebar-foreground">
+                <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-4 px-5 md:px-8">
+                    <Link to="/" className="shrink-0 rounded-[1px] text-sidebar-foreground">
+                        <MarkWithName />
+                        <span className="sr-only">SZLIF</span>
                     </Link>
 
-                    {/* Desktop nav */}
-                    <nav className="hidden md:flex items-center gap-5 flex-1 justify-end">
-                        {navLinks.map(link =>
-                            link.isButton ? (
-                                <Button
-                                    key={link.name}
-                                    asChild
-                                    size="sm"
-                                    className="bg-barber hover:bg-barber-muted text-white btn-hover ml-2"
-                                >
-                                    <Link to={link.path}>{link.name}</Link>
-                                </Button>
-                            ) : (
+                    <nav className="hidden flex-1 items-center justify-end gap-6 md:flex">
+                        {navLinks.map(link => {
+                            const active = location.pathname === link.path;
+                            return (
                                 <Link
-                                    key={link.name}
+                                    key={link.path}
                                     to={link.path}
-                                    className={`text-sm font-medium transition-colors pb-0.5 whitespace-nowrap ${linkCls} ${
-                                        location.pathname === link.path ? activeCls : ""
-                                    }`}
+                                    aria-current={active ? "page" : undefined}
+                                    className={cn(
+                                        "label-caps relative whitespace-nowrap py-1 text-[0.8125rem] transition-opacity duration-200",
+                                        active ? "opacity-100" : "opacity-70 hover:opacity-100"
+                                    )}
                                 >
                                     {link.name}
+                                    {/* where you are, in the page's own ink */}
+                                    <span
+                                        className={cn(
+                                            "absolute -bottom-0.5 left-0 h-[2px] bg-current transition-all duration-300",
+                                            active ? "w-full" : "w-0"
+                                        )}
+                                    />
                                 </Link>
-                            )
-                        )}
+                            );
+                        })}
 
-                        {/* Divider */}
-                        <div className="w-px h-5 bg-border" />
+                        <span className="h-5 w-px bg-sidebar-border" aria-hidden />
 
-                        {/* Theme + Language toggles */}
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={toggleTheme}
-                                className={`p-1.5 rounded-md transition-colors ${iconCls}`}
-                                aria-label="Toggle theme"
-                            >
-                                {theme === "dark"
-                                    ? <Sun className="h-4 w-4" />
-                                    : <Moon className="h-4 w-4" />}
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={toggleTheme} className={chip} aria-label={t("nav.toggleTheme")}>
+                                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                             </button>
                             <button
                                 onClick={toggleLang}
-                                className={`px-2 py-0.5 rounded border text-xs font-bold tracking-wide transition-colors ${langBtnCls}`}
-                                aria-label="Toggle language"
+                                className={cn(chip, "font-mono text-micro font-semibold")}
+                                aria-label={t("nav.toggleLanguage")}
                             >
                                 {lang === "pl" ? "EN" : "PL"}
                             </button>
                         </div>
 
-                        {/* Account */}
                         {isAuthenticated ? (
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={`flex items-center gap-1 ${linkCls} hover:bg-barber/10`}
-                                    >
-                                        <User className="h-4 w-4" />
-                                        <span className="text-sm hidden lg:inline">{t("nav.account")}</span>
-                                        <ChevronDown className="h-3 w-3" />
-                                    </Button>
+                                <DropdownMenuTrigger
+                                    className={cn(chip, "label-caps gap-1.5 px-3 text-[0.75rem]")}
+                                >
+                                    {t("nav.account")}
+                                    <ChevronDown className="h-3 w-3" />
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52">
+                                <DropdownMenuContent align="end" className="w-56">
                                     <DropdownMenuItem asChild>
                                         <Link to={getProfileUrl()}>{t("nav.profile")}</Link>
                                     </DropdownMenuItem>
@@ -178,160 +150,141 @@ const Navigation = () => {
                                         </DropdownMenuItem>
                                     )}
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        onClick={logout}
-                                        className="text-destructive focus:text-destructive"
-                                    >
+                                    <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                                         {t("nav.logout")}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    asChild
-                                    variant="ghost"
-                                    size="sm"
-                                    className={`text-sm ${linkCls}`}
-                                >
-                                    <Link to="/login">{t("nav.login")}</Link>
-                                </Button>
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className="bg-barber hover:bg-barber-muted text-white btn-hover"
-                                >
-                                    <Link to="/register">{t("nav.register")}</Link>
-                                </Button>
-                            </div>
+                            <Link
+                                to="/login"
+                                className="label-caps whitespace-nowrap py-1 text-[0.8125rem] opacity-70 transition-opacity duration-200 hover:opacity-100"
+                            >
+                                {t("nav.login")}
+                            </Link>
                         )}
+
+                        {/* booking stays reachable from every page, but the loud
+                            object is the jar on the shelf, not a sticky bar CTA */}
+                        <Link
+                            to="/booking"
+                            className="label-caps relative whitespace-nowrap py-1 text-[0.8125rem]"
+                        >
+                            {t("nav.bookAppointment")}
+                            <span className="absolute -bottom-0.5 left-0 h-[2px] w-full bg-ink2" aria-hidden />
+                        </Link>
                     </nav>
 
-                    {/* Mobile: toggles + hamburger */}
-                    <div className="md:hidden flex items-center gap-1 flex-shrink-0">
-                        <button
-                            onClick={toggleTheme}
-                            className={`p-1.5 rounded-md transition-colors ${iconCls}`}
-                            aria-label="Toggle theme"
-                        >
-                            {theme === "dark"
-                                ? <Sun className="h-4 w-4" />
-                                : <Moon className="h-4 w-4" />}
+                    <div className="flex shrink-0 items-center gap-1.5 md:hidden">
+                        <button onClick={toggleTheme} className={chip} aria-label={t("nav.toggleTheme")}>
+                            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                         </button>
                         <button
                             onClick={toggleLang}
-                            className={`px-2 py-0.5 rounded border text-xs font-bold tracking-wide transition-colors ${langBtnCls}`}
-                            aria-label="Toggle language"
+                            className={cn(chip, "font-mono text-micro font-semibold")}
+                            aria-label={t("nav.toggleLanguage")}
                         >
                             {lang === "pl" ? "EN" : "PL"}
                         </button>
                         <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className={`p-1.5 rounded-md transition-colors ${iconCls}`}
-                            aria-label="Toggle menu"
+                            onClick={() => setIsMenuOpen(true)}
+                            className={chip}
+                            aria-label={t("nav.openMenu")}
+                            aria-expanded={isMenuOpen}
                         >
-                            {isMenuOpen
-                                ? <X className="h-5 w-5" />
-                                : <Menu className="h-5 w-5" />}
+                            <Menu className="h-5 w-5" />
                         </button>
                     </div>
                 </div>
+                <div className="shelf absolute inset-x-0 bottom-0" aria-hidden />
             </header>
 
-            {/* Mobile menu — full-screen overlay, separate from header so it doesn't affect layout */}
+            {/* Mobile: the whole wall swings open */}
             {isMenuOpen && (
-                <div
-                    className={`fixed inset-0 z-40 md:hidden flex flex-col ${
-                        theme === "dark" ? "bg-[#181816]" : "bg-white"
-                    }`}
-                >
-                    {/* Top bar replicated */}
-                    <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-                        <span className="text-xl font-bold text-barber">BarberShop</span>
+                <div className="tile-wall fixed inset-0 z-[60] flex flex-col md:hidden">
+                    <div className="flex h-16 shrink-0 items-center justify-between px-5 text-wall">
+                        <MarkWithName />
                         <button
                             onClick={() => setIsMenuOpen(false)}
-                            className="p-1.5 rounded-md text-foreground hover:text-barber hover:bg-barber/10 transition-colors"
-                            aria-label="Close menu"
+                            className={chip}
+                            aria-label={t("common.close")}
                         >
                             <X className="h-5 w-5" />
                         </button>
                     </div>
+                    <div className="shelf shrink-0" aria-hidden />
 
-                    {/* Nav links */}
-                    <nav className="flex-1 overflow-y-auto flex flex-col items-center justify-center gap-4 py-8 px-6">
-                        {navLinks.map(link => (
+                    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-5 py-8">
+                        {navLinks.map((link, i) => (
                             <Link
-                                key={link.name}
+                                key={link.path}
                                 to={link.path}
                                 onClick={() => setIsMenuOpen(false)}
-                                className={`text-lg font-medium transition-colors w-full text-center py-3 rounded-lg ${
-                                    link.isButton
-                                        ? "bg-barber text-white hover:bg-barber-muted"
-                                        : location.pathname === link.path
-                                            ? "text-barber bg-barber/5"
-                                            : "text-foreground hover:text-barber hover:bg-barber/5"
-                                }`}
+                                style={{ animationDelay: `${i * 40}ms` }}
+                                className={cn(
+                                    "lockup plate-enter border-b border-wall/25 py-4 text-[2.25rem] text-wall",
+                                    location.pathname === link.path && "text-wall"
+                                )}
                             >
                                 {link.name}
+                                {location.pathname === link.path && (
+                                    <span className="ml-3 inline-block h-2 w-2 bg-ink2 align-middle" aria-hidden />
+                                )}
                             </Link>
                         ))}
 
-                        <div className="w-full h-px bg-border my-2" />
+                        <Link
+                            to="/booking"
+                            onClick={() => setIsMenuOpen(false)}
+                            className="label-caps plate plate--wall mt-6 flex items-center justify-between px-5 py-4 text-base"
+                        >
+                            {t("nav.bookAppointment")}
+                            <span className="net-line text-micro text-muted-foreground">24/7</span>
+                        </Link>
 
-                        {isAuthenticated ? (
-                            <>
-                                <Link
-                                    to={getProfileUrl()}
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="text-lg text-foreground hover:text-barber transition-colors w-full text-center py-3 rounded-lg hover:bg-barber/5"
-                                >
-                                    {t("nav.profile")}
-                                </Link>
-                                {user?.role === "admin" ? (
-                                    adminSubMenu.map(sub => (
-                                        <Link
-                                            key={sub.path}
-                                            to={sub.path}
-                                            onClick={() => setIsMenuOpen(false)}
-                                            className="text-base text-muted-foreground hover:text-barber transition-colors w-full text-center py-2"
-                                        >
-                                            {sub.name}
-                                        </Link>
-                                    ))
-                                ) : (
+                        <div className="mt-6 flex flex-col gap-1">
+                            {isAuthenticated ? (
+                                <>
+                                    <Link
+                                        to={getProfileUrl()}
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="label-caps py-3 text-sm text-wall/85"
+                                    >
+                                        {t("nav.profile")}
+                                    </Link>
                                     <Link
                                         to={getDashboardUrl()}
                                         onClick={() => setIsMenuOpen(false)}
-                                        className="text-lg text-foreground hover:text-barber transition-colors w-full text-center py-3 rounded-lg hover:bg-barber/5"
+                                        className="label-caps py-3 text-sm text-wall/85"
                                     >
                                         {t("nav.dashboard")}
                                     </Link>
-                                )}
-                                <button
-                                    onClick={() => { logout(); setIsMenuOpen(false); }}
-                                    className="text-lg text-destructive w-full text-center py-3"
-                                >
-                                    {t("nav.logout")}
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <Link
-                                    to="/login"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="text-lg text-foreground hover:text-barber transition-colors w-full text-center py-3 rounded-lg hover:bg-barber/5"
-                                >
-                                    {t("nav.login")}
-                                </Link>
-                                <Link
-                                    to="/register"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="text-lg bg-barber text-white hover:bg-barber-muted transition-colors w-full text-center py-3 rounded-lg"
-                                >
-                                    {t("nav.register")}
-                                </Link>
-                            </>
-                        )}
+                                    <button
+                                        onClick={() => { logout(); setIsMenuOpen(false); }}
+                                        className="label-caps py-3 text-left text-sm text-wall/85"
+                                    >
+                                        {t("nav.logout")}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link
+                                        to="/login"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="label-caps py-3 text-sm text-wall/85"
+                                    >
+                                        {t("nav.login")}
+                                    </Link>
+                                    <Link
+                                        to="/register"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="label-caps py-3 text-sm text-wall/85"
+                                    >
+                                        {t("nav.register")}
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </nav>
                 </div>
             )}

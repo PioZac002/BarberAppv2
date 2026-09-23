@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const ResizableHandle = ({ className, ...props }: { className?: string }) => (
     <ResizablePrimitive.PanelResizeHandle
-        className={cn("w-2 bg-gray-200", className)}
+        className={cn("w-2 bg-secondary", className)}
         {...props}
     />
 );

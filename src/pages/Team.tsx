@@ -22,6 +22,10 @@ import {
     ChevronRight,
 } from "lucide-react";
 import Layout from "@/components/Layout";
+import { JarLoader, EmptyShelf } from "@/components/szlif/Loading";
+import { Portrait, DemoNotice, Initials } from "@/components/szlif/Bits";
+import { catalogName } from "@/lib/catalog-names";
+import { mediaUrl } from "@/lib/media-url";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -45,7 +49,7 @@ interface BarberDetails extends BarberSummary {
 }
 
 const Team = () => {
-    const { t } = useLanguage();
+    const { t, lang } = useLanguage();
     const [teamMembers, setTeamMembers]       = useState<BarberSummary[]>([]);
     const [isLoading, setIsLoading]           = useState(true);
     const [searchTerm, setSearchTerm]         = useState("");
@@ -64,7 +68,7 @@ const Team = () => {
                 const res = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/public/team/barbers`
                 );
-                if (!res.ok) throw new Error("Failed to fetch team");
+                if (!res.ok) throw new Error(t("errors.loadFailed"));
                 setTeamMembers(await res.json());
             } catch {
                 toast.error(t("team.loading"));
@@ -84,7 +88,7 @@ const Team = () => {
                 const res = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/public/team/barbers/${selectedMember.id}/details`
                 );
-                if (!res.ok) throw new Error("Failed to fetch details");
+                if (!res.ok) throw new Error(t("errors.loadFailed"));
                 setDetailedProfile(await res.json());
             } catch {
                 toast.error(`${t("team.loading")} (${selectedMember.name})`);
@@ -96,8 +100,10 @@ const Team = () => {
     }, [selectedMember]);
 
     const normalizeSpec  = (s: string) => s?.trim().toLowerCase() || "";
+    // specialties are stored in English; the chip shows the reader's language
     const capitalizeSpec = (s: string) => {
-        const trimmed = s.trim();
+        const named = catalogName(s, lang);
+        const trimmed = (named || s).trim();
         return trimmed ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1) : trimmed;
     };
 
@@ -134,7 +140,7 @@ const Team = () => {
                         key={i}
                         className={`h-4 w-4 ${
                             i < full || (i === full && almostFull)
-                                ? "text-yellow-400 fill-yellow-400"
+                                ? "text-primary fill-primary"
                                 : "text-muted-foreground/30"
                         }`}
                     />
@@ -153,31 +159,23 @@ const Team = () => {
 
     return (
         <Layout>
-            {/* ── Hero ── */}
-            <section className="relative py-24 md:py-36">
-                <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                    style={{
-                        backgroundImage:
-                            "linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.72)), url('https://images.unsplash.com/photo-1599491143868-40d9afbd6c0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80')",
-                    }}
-                />
-                <div className="container mx-auto px-4 relative z-10 text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-fade-in">
+            <section className="tile-wall">
+                <div className="mx-auto w-full max-w-[1440px] px-5 pb-12 pt-16 md:px-8 md:pb-16 md:pt-20">
+                    <h1 className="lockup text-wall text-[clamp(2.75rem,10vw,7rem)]">
                         {t("team.heroTitle")}
                     </h1>
-                    <p
-                        className="text-xl text-gray-300 max-w-3xl mx-auto animate-fade-in"
-                        style={{ animationDelay: "0.2s" }}
-                    >
+                    <p className="mt-6 max-w-2xl text-[0.9375rem] leading-relaxed text-wall/85">
                         {t("team.heroSubtitle")}
                     </p>
                 </div>
+                <div className="shelf" aria-hidden />
             </section>
 
             {/* ── Team grid ── */}
             <section className="py-16 bg-background">
                 <div className="container mx-auto px-4">
+                    <DemoNotice className="mb-8" />
+
                     {/* Filters */}
                     <div className="mb-10 flex flex-col md:flex-row gap-4 justify-between items-center">
                         <div className="relative w-full md:max-w-xs">
@@ -185,7 +183,7 @@ const Team = () => {
                             <input
                                 type="text"
                                 placeholder={t("team.searchPlaceholder")}
-                                className="pl-10 pr-4 py-2.5 w-full border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent transition-colors"
+                                className="h-11 w-full rounded-[2px] border border-foreground/45 bg-background pl-10 pr-4 text-sm text-foreground transition-colors duration-200 placeholder:text-muted-foreground hover:border-foreground/70 focus:border-primary focus:outline-2 focus:outline-offset-0 focus:outline-primary"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
@@ -198,8 +196,8 @@ const Team = () => {
                                     variant={selectedSpecialization === spec.id ? "default" : "outline"}
                                     className={
                                         selectedSpecialization === spec.id
-                                            ? "bg-barber hover:bg-barber-muted text-white"
-                                            : "border-border text-foreground hover:bg-muted"
+                                            ? ""
+                                            : ""
                                     }
                                     size="sm"
                                 >
@@ -210,51 +208,55 @@ const Team = () => {
                     </div>
 
                     {isLoading ? (
-                        <div className="text-center py-16">
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber mx-auto" />
-                            <p className="mt-4 text-muted-foreground">{t("team.loading")}</p>
-                        </div>
+                        <JarLoader label={t("team.loading")} />
                     ) : filteredMembers.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                             {filteredMembers.map((member, i) => (
                                 <div
                                     key={member.id}
-                                    className="bg-card rounded-xl overflow-hidden border border-border hover:border-barber/40 hover:shadow-xl transition-all duration-300 cursor-pointer group animate-fade-in"
-                                    style={{ animationDelay: `${0.06 * i}s` }}
+                                    className="plate plate-interactive group cursor-pointer overflow-hidden"
                                     onClick={() => setSelectedMember(member)}
                                 >
-                                    <div className="h-64 overflow-hidden bg-muted flex items-center justify-center">
-                                        {member.image ? (
-                                            <img
-                                                src={member.image}
-                                                alt={member.name}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            />
-                                        ) : (
-                                            <UserIcon className="h-24 w-24 text-muted-foreground/40" />
-                                        )}
+                                    {/* the portrait is mounted inside the label's rule,
+                                        the way a photograph is pasted onto a card */}
+                                    <div className="p-1.5">
+                                        <Portrait
+                                            src={mediaUrl(member.image)}
+                                            alt={member.name}
+                                            className="h-60 w-full [&>img]:transition-transform [&>img]:duration-500 group-hover:[&>img]:scale-[1.04]"
+                                            fallback={
+                                                <Initials
+                                                    name={member.name}
+                                                    className="h-24 w-24 border-2 text-3xl"
+                                                />
+                                            }
+                                        />
                                     </div>
-                                    <div className="p-5">
-                                        <h3 className="text-xl font-semibold mb-1 text-foreground group-hover:text-barber transition-colors">
-                                            {member.name}
-                                        </h3>
-                                        <p className="text-barber text-sm mb-3">{member.role}</p>
-                                        <div className="flex items-center gap-3 mb-3 text-sm">
-                                            {renderStars(member.rating)}
-                                            <span className="text-muted-foreground">
-                                                ({member.rating.toFixed(1)})
+                                    <div className="px-4 pb-4 pt-3">
+                                        <div className="flex items-baseline justify-between gap-3">
+                                            <h3 className="label-caps text-lg leading-tight">{member.name}</h3>
+                                            <span className="directions shrink-0">
+                                                {t("plate.station")} {String(i + 1).padStart(2, "0")}
                                             </span>
-                                            <span className="text-muted-foreground">
+                                        </div>
+                                        <p className="directions mt-1.5 text-primary">{member.role}</p>
+                                        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+                                            <span className="flex items-center gap-1.5">
+                                                {renderStars(member.rating)}
+                                                <span className="net-line text-muted-foreground">
+                                                    {member.rating.toFixed(1)}
+                                                </span>
+                                            </span>
+                                            <span className="net-line text-muted-foreground">
                                                 {member.experience} {t("team.experience")}
                                             </span>
                                         </div>
                                         {(member.specializations?.length ?? 0) > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                            <div className="mt-4 flex flex-wrap gap-1.5">
                                                 {member.specializations.slice(0, 3).map(spec => (
                                                     <Badge
                                                         key={normalizeSpec(spec)}
-                                                        variant="secondary"
-                                                        className="px-2.5 py-0.5 text-xs"
+                                                        variant="outline"
                                                     >
                                                         {capitalizeSpec(spec)}
                                                     </Badge>
@@ -263,7 +265,7 @@ const Team = () => {
                                         )}
                                         <Button
                                             variant="outline"
-                                            className="w-full border-barber text-barber hover:bg-barber hover:text-white transition-colors"
+                                            className="mt-5 w-full"
                                             onClick={e => {
                                                 e.stopPropagation();
                                                 setSelectedMember(member);
@@ -276,11 +278,7 @@ const Team = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-16">
-                            <UserIcon className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                            <p className="text-foreground text-lg font-medium">{t("team.noMembers")}</p>
-                            <p className="text-muted-foreground mt-1">{t("team.noMembersHint")}</p>
-                        </div>
+                        <EmptyShelf title={t("team.noMembers")} hint={t("team.noMembersHint")} />
                     )}
                 </div>
             </section>
@@ -291,18 +289,23 @@ const Team = () => {
                 onOpenChange={open => !open && setSelectedMember(null)}
             >
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-                    {detailedProfile && (
-                        <DialogHeader className="sr-only">
-                            <DialogTitle>{detailedProfile.name}</DialogTitle>
-                            <DialogDescription>
-                                {detailedProfile.role} – {detailedProfile.name}
-                            </DialogDescription>
-                        </DialogHeader>
-                    )}
+                    {/* The dialog needs a name from the moment it opens, not
+                        from the moment its data arrives, or a screen reader
+                        announces an untitled dialog for the whole load. */}
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>
+                            {detailedProfile?.name ?? selectedMember?.name ?? t("team.title")}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {detailedProfile
+                                ? `${detailedProfile.role} – ${detailedProfile.name}`
+                                : t("common.loading")}
+                        </DialogDescription>
+                    </DialogHeader>
 
                     {isModalLoading && !detailedProfile ? (
                         <div className="h-96 flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-barber" />
+                            <JarLoader />
                         </div>
                     ) : detailedProfile ? (
                         <>
@@ -312,12 +315,12 @@ const Team = () => {
                                     <div className="flex-shrink-0">
                                         {detailedProfile.image ? (
                                             <img
-                                                src={detailedProfile.image}
+                                                src={mediaUrl(detailedProfile.image)}
                                                 alt={detailedProfile.name}
-                                                className="w-24 h-24 rounded-full object-cover border-4 border-barber shadow-md"
+                                                className="h-24 w-24 rounded-[2px] border border-foreground/40 object-cover shadow-plate"
                                             />
                                         ) : (
-                                            <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center border-4 border-barber shadow-md">
+                                            <div className="flex h-24 w-24 items-center justify-center rounded-[2px] border border-foreground/40 bg-secondary shadow-plate">
                                                 <UserIcon className="w-12 h-12 text-muted-foreground" />
                                             </div>
                                         )}
@@ -355,7 +358,7 @@ const Team = () => {
                                                         <Badge
                                                             key={normalizeSpec(spec)}
                                                             variant="secondary"
-                                                            className="bg-barber/10 text-barber dark:bg-barber/20 text-sm"
+                                                            className="bg-primary/10 text-primary dark:bg-primary/20 text-sm"
                                                         >
                                                             {capitalizeSpec(spec)}
                                                         </Badge>
@@ -369,13 +372,13 @@ const Team = () => {
                                         {(detailedProfile.certifications?.length ?? 0) > 0 && (
                                             <div>
                                                 <h3 className="text-lg font-semibold mb-3 text-foreground flex items-center">
-                                                    <Award className="h-5 w-5 mr-2 text-barber" />
+                                                    <Award className="h-5 w-5 mr-2 text-primary" />
                                                     {t("team.certifications")}
                                                 </h3>
                                                 <ul className="space-y-1.5 text-sm text-muted-foreground">
                                                     {detailedProfile.certifications.map((cert, i) => (
                                                         <li key={i} className="flex items-center">
-                                                            <CheckCircle className="h-4 w-4 mr-2 text-green-500 flex-shrink-0" />
+                                                            <CheckCircle className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                                                             {cert}
                                                         </li>
                                                     ))}
@@ -388,10 +391,10 @@ const Team = () => {
                                             </h3>
                                             {detailedProfile.email && (
                                                 <p className="flex items-center mb-2 text-sm">
-                                                    <Mail className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
+                                                    <Mail className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                                                     <a
                                                         href={`mailto:${detailedProfile.email}`}
-                                                        className="text-barber hover:underline truncate"
+                                                        className="text-primary hover:underline truncate"
                                                     >
                                                         {detailedProfile.email}
                                                     </a>
@@ -399,10 +402,10 @@ const Team = () => {
                                             )}
                                             {detailedProfile.phone && (
                                                 <p className="flex items-center text-sm">
-                                                    <Phone className="h-4 w-4 mr-2 text-barber flex-shrink-0" />
+                                                    <Phone className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                                                     <a
                                                         href={`tel:${detailedProfile.phone}`}
-                                                        className="text-barber hover:underline"
+                                                        className="text-primary hover:underline"
                                                     >
                                                         {detailedProfile.phone}
                                                     </a>
@@ -423,7 +426,7 @@ const Team = () => {
                                             <button
                                                 key={i}
                                                 type="button"
-                                                className="aspect-square rounded-lg overflow-hidden bg-muted flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-barber"
+                                                className="photo-frame aspect-square focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                                 onClick={() => openPortfolio(detailedProfile.portfolioImages, i)}
                                             >
                                                 {img ? (
@@ -444,7 +447,7 @@ const Team = () => {
                             <div className="p-4 border-t border-border bg-card/80 backdrop-blur-sm">
                                 <Button
                                     asChild
-                                    className="w-full bg-barber hover:bg-barber-muted text-white text-lg py-6 btn-hover"
+                                    className="w-full"
                                 >
                                     <Link to={`/booking?barberId=${detailedProfile.id}`}>
                                         <CalendarIcon className="h-5 w-5 mr-2" />
@@ -466,7 +469,7 @@ const Team = () => {
                 <DialogContent className="max-w-3xl">
                     {portfolioImages.length > 0 ? (
                         <div className="flex flex-col items-center">
-                            <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-black/80 rounded-lg overflow-hidden">
+                            <div className="relative w-full max-h-[70vh] flex items-center justify-center bg-ink/85 rounded-[2px] overflow-hidden">
                                 <button
                                     type="button"
                                     onClick={() =>
@@ -474,7 +477,7 @@ const Team = () => {
                                             p === 0 ? portfolioImages.length - 1 : p - 1
                                         )
                                     }
-                                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-barber text-white rounded-full p-2 transition-colors"
+                                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-ink/60 hover:bg-primary text-wall rounded-[2px] p-2 transition-colors"
                                 >
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
@@ -490,7 +493,7 @@ const Team = () => {
                                             p === portfolioImages.length - 1 ? 0 : p + 1
                                         )
                                     }
-                                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-barber text-white rounded-full p-2 transition-colors"
+                                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-ink/60 hover:bg-primary text-wall rounded-[2px] p-2 transition-colors"
                                 >
                                     <ChevronRight className="w-6 h-6" />
                                 </button>

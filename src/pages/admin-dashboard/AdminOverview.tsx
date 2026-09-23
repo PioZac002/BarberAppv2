@@ -1,6 +1,5 @@
 // src/pages/admin-dashboard/AdminOverview.tsx
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
 import {
     Card,
     CardContent,
@@ -8,28 +7,21 @@ import {
     CardTitle,
     CardDescription
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
     Users,
     Calendar,
     Scissors,
     DollarSign,
     Bell,
-    ArrowRight,
     Info,
-    Clock,
-    Loader2
+    Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-    formatDistanceToNow,
-    isValid as isValidDate,
-} from "date-fns";
-import { pl, enUS } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { NotificationDigest } from "@/components/szlif/NotificationDigest";
 import {
-    BarChart,
     Bar,
     XAxis,
     YAxis,
@@ -44,6 +36,7 @@ import {
     ChartTooltip,
     ChartTooltipContent
 } from "@/components/ui/chart";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface StatsData {
     users: number;
@@ -74,8 +67,7 @@ interface AdminNotification {
 
 const AdminOverview = () => {
     const { token, loading: authLoading } = useAuth();
-    const { t, lang } = useLanguage();
-    const dateLocale = lang === 'pl' ? pl : enUS;
+    const { t } = useLanguage();
     const [stats, setStats] = useState<StatsData | null>(null);
     const [todaysHourlyData, setTodaysHourlyData] = useState<HourlyReportDataItem[]>([]);
     const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
@@ -164,22 +156,6 @@ const AdminOverview = () => {
         fetchDashboardData();
     }, [token, authLoading]);
 
-    const getNotificationIcon = (type: string) => {
-        switch (type.toLowerCase()) {
-            case "new_appointment_booked":
-            case "appointment_status_changed":
-            case "appointment_confirmed_by_admin":
-            case "appointment_confirmed_log":
-            case "appointment_confirmed_by_admin_staff":
-            case "appointment_status_changed_by_barber":
-                return <Calendar className="h-5 w-5 text-blue-500" />;
-            case "new_user_registered":
-                return <Users className="h-5 w-5 text-green-500" />;
-            default:
-                return <Bell className="h-5 w-5 text-muted-foreground" />;
-        }
-    };
-
     const todaysChartConfig = useMemo(
         () => ({
             appointments: {
@@ -206,85 +182,34 @@ const AdminOverview = () => {
     if (pageLoading) {
         return (
             <div className="flex items-center justify-center h-96">
-                <Loader2 className="h-16 w-16 animate-spin text-barber" />
+                <JarLoader />
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    {t('adminPanel.overview.users')}
-                                </p>
-                                <h4 className="text-3xl font-bold text-foreground mt-1">
-                                    {stats?.users ?? 0}
-                                </h4>
-                            </div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
-                                <Users className="h-6 w-6 text-barber" />
-                            </div>
+            {/* The shop's net contents: one printed panel, four quantities,
+                divided by rules rather than split into four bubble cards. */}
+            <div className="plate grid grid-cols-2 divide-x divide-y divide-border lg:grid-cols-4 lg:divide-y-0">
+                {[
+                    { label: t('adminPanel.overview.users'), value: stats?.users ?? 0, Icon: Users },
+                    { label: t('adminPanel.overview.activeAppointments'), value: stats?.activeAppointments ?? 0, Icon: Calendar },
+                    { label: t('adminPanel.overview.allServices'), value: stats?.services ?? 0, Icon: Scissors },
+                    {
+                        label: t('adminPanel.overview.monthlyRevenue'),
+                        value: stats?.revenue ? `${stats.revenue.toFixed(2)} PLN` : "0.00 PLN",
+                        Icon: DollarSign,
+                    },
+                ].map(({ label, value, Icon }) => (
+                    <div key={label} className="flex min-w-0 flex-col justify-between gap-5 p-5">
+                        <div className="flex items-start justify-between gap-3">
+                            <p className="directions">{label}</p>
+                            <Icon className="h-4 w-4 shrink-0 text-muted-foreground/70" />
                         </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    {t('adminPanel.overview.activeAppointments')}
-                                </p>
-                                <h4 className="text-3xl font-bold text-foreground mt-1">
-                                    {stats?.activeAppointments ?? 0}
-                                </h4>
-                            </div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
-                                <Calendar className="h-6 w-6 text-barber" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    {t('adminPanel.overview.allServices')}
-                                </p>
-                                <h4 className="text-3xl font-bold text-foreground mt-1">
-                                    {stats?.services ?? 0}
-                                </h4>
-                            </div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
-                                <Scissors className="h-6 w-6 text-barber" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    {t('adminPanel.overview.monthlyRevenue')}
-                                </p>
-                                <h4 className="text-3xl font-bold text-foreground mt-1">
-                                    {stats?.revenue
-                                        ? `${stats.revenue.toFixed(2)} PLN`
-                                        : "0.00 PLN"}
-                                </h4>
-                            </div>
-                            <div className="h-12 w-12 bg-barber/10 rounded-full flex items-center justify-center">
-                                <DollarSign className="h-6 w-6 text-barber" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        <p className="net-line truncate text-2xl font-semibold lg:text-3xl">{value}</p>
+                    </div>
+                ))}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -292,7 +217,7 @@ const AdminOverview = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <Clock className="h-5 w-5 mr-2 text-barber" />
+                            <Clock className="h-5 w-5 mr-2 text-primary" />
                             {t('adminPanel.overview.todayCompleted')}
                         </CardTitle>
                         <CardDescription>
@@ -302,7 +227,7 @@ const AdminOverview = () => {
                     <CardContent>
                         {loadingTodaysData && todaysHourlyData.length === 0 ? (
                             <div className="h-80 flex items-center justify-center">
-                                <Loader2 className="h-10 w-10 text-barber animate-spin" />
+                                <JarLoader />
                             </div>
                         ) : todaysHourlyData.length > 0 ? (
                             <ChartContainer
@@ -407,7 +332,7 @@ const AdminOverview = () => {
                                         <Legend
                                             verticalAlign="top"
                                             height={32}
-                                            iconType="circle"
+                                            iconType="square"
                                         />
                                         <Bar
                                             yAxisId="left"
@@ -416,7 +341,7 @@ const AdminOverview = () => {
                                                 todaysChartConfig.appointments
                                                     .color
                                             }
-                                            radius={[4, 4, 0, 0]}
+                                            radius={[0, 0, 0, 0]}
                                             name={t('adminPanel.overview.visitsByCount')}
                                             barSize={18}
                                         />
@@ -448,7 +373,7 @@ const AdminOverview = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <Bell className="h-5 w-5 mr-2 text-barber" />
+                            <Bell className="h-5 w-5 mr-2 text-primary" />
                             {t('adminPanel.overview.notifications')}
                         </CardTitle>
                         <CardDescription>
@@ -456,107 +381,7 @@ const AdminOverview = () => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {loadingNotifications &&
-                        adminNotifications.length === 0 ? (
-                            <div className="flex items-center justify-center h-40">
-                                <Loader2 className="h-8 w-8 text-barber animate-spin" />
-                            </div>
-                        ) : adminNotifications.length > 0 ? (
-                            <div className="space-y-4 max-h-[280px] overflow-y-auto pr-2">
-                                {adminNotifications.map(notification => (
-                                    <div
-                                        key={notification.id}
-                                        className={`p-3 rounded-md border ${
-                                            notification.is_read
-                                                ? "bg-muted/50 border-border"
-                                                : "bg-barber/10 border-barber/30"
-                                        }`}
-                                    >
-                                        <div className="flex items-start space-x-3">
-                                            <div
-                                                className={`flex-shrink-0 p-2 rounded-full ${
-                                                    notification.is_read
-                                                        ? "bg-muted"
-                                                        : "bg-card shadow-sm"
-                                                }`}
-                                            >
-                                                {getNotificationIcon(
-                                                    notification.type
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between">
-                                                    <h4
-                                                        className={`text-sm font-medium ${
-                                                            notification.is_read
-                                                                ? "text-foreground"
-                                                                : "text-foreground"
-                                                        } truncate`}
-                                                    >
-                                                        {notification.title}
-                                                    </h4>
-                                                    {!notification.is_read && (
-                                                        <div className="w-2 h-2 bg-barber rounded-full flex-shrink-0 animate-pulse ml-2"></div>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                                    {notification.message}
-                                                </p>
-                                                <div className="text-xs text-muted-foreground mt-1 flex justify-between items-center">
-                                                    <span>
-                                                        {isValidDate(
-                                                            new Date(
-                                                                notification.created_at
-                                                            )
-                                                        )
-                                                            ? formatDistanceToNow(
-                                                                new Date(
-                                                                    notification.created_at
-                                                                ),
-                                                                {
-                                                                    addSuffix:
-                                                                        true,
-                                                                    locale: dateLocale,
-                                                                }
-                                                            )
-                                                            : t('adminPanel.notifications.invalidDate')}
-                                                    </span>
-                                                    {notification.link && (
-                                                        <Link
-                                                            to={
-                                                                notification.link
-                                                            }
-                                                            className="text-barber hover:underline text-xs"
-                                                        >
-                                                            {t('adminPanel.notifications.show')}
-                                                        </Link>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {adminNotifications.length >= 5 && (
-                                    <Link to="/admin-dashboard/notifications" className="block mt-4">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full"
-                                        >
-                                            {t('adminPanel.notifications.show')}{" "}
-                                            <ArrowRight className="h-4 w-4 ml-2" />
-                                        </Button>
-                                    </Link>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="text-center py-10">
-                                <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                                <p className="text-sm text-muted-foreground">
-                                    {t('adminPanel.overview.noNewNotifications')}
-                                </p>
-                            </div>
-                        )}
+                        <NotificationDigest allHref="/admin-dashboard/notifications" />
                     </CardContent>
                 </Card>
             </div>

@@ -12,6 +12,7 @@ import BarberAppointmentsPage from "./BarberAppointments";
 import BarberPortfolioPage from "./BarberPortfolio";
 import BarberNotificationsPage from "./BarberNotifications";
 import BarberProfilePage from "./BarberProfile";
+import { JarLoader } from "@/components/szlif/Loading";
 
 const BarberDashboard = () => {
     const { user: authUser, loading: authContextLoading } = useAuth();
@@ -23,7 +24,7 @@ const BarberDashboard = () => {
         return (
             <DashboardLayout title={t('barberPanel.loading')}>
                 <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                    <JarLoader />
                 </div>
             </DashboardLayout>
         );
@@ -32,8 +33,8 @@ const BarberDashboard = () => {
         return (
             <DashboardLayout title={t('barberPanel.authError')}>
                 <div className="p-6 text-center">
-                    <p className="text-red-500">{t('barberPanel.authError')}</p>
-                    <Button asChild className="mt-4 bg-barber hover:bg-barber-muted"><Link to="/login">{t('barberPanel.goToLogin')}</Link></Button>
+                    <p className="text-destructive">{t('barberPanel.authError')}</p>
+                    <Button asChild className="mt-4 bg-primary hover:bg-primary/90"><Link to="/login">{t('barberPanel.goToLogin')}</Link></Button>
                 </div>
             </DashboardLayout>
         );

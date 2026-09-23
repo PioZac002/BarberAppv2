@@ -2,68 +2,141 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   SZLIF — back bar
+   The room is glazed in Barbicide blue; what you read sits on it
+   as printed label stock. Light is the shop under work light,
+   dark is the same room after close, lit by the steriliser.
+   Two inks, two typefaces, one motion material: the fill line.
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer base {
-  /* ── Light mode — Warm Barbershop Gold ── */
   :root {
-    --background: 40 33% 97%;          /* #FAF9F7 warm off-white */
-    --foreground: 0 0% 13%;            /* #202020 Carbon Black */
-    --card: 0 0% 100%;                 /* white */
-    --card-foreground: 0 0% 13%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 13%;
-    --primary: 47 100% 39%;            /* #c8a000 rich amber gold */
-    --primary-foreground: 0 0% 100%;   /* white */
-    --secondary: 40 20% 93%;           /* warm cream */
-    --secondary-foreground: 0 0% 13%;
-    --muted: 40 20% 93%;
-    --muted-foreground: 0 0% 42%;
-    --accent: 47 60% 91%;              /* light golden tint */
-    --accent-foreground: 0 0% 13%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 84%;               /* #d6d6d6 Dust Grey */
-    --input: 0 0% 89%;
-    --ring: 47 100% 39%;               /* amber gold focus ring */
-    --radius: 0.5rem;
-    --sidebar-background: 40 20% 93%;
-    --sidebar-foreground: 0 0% 13%;
-    --sidebar-primary: 47 100% 39%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 40 20% 87%;
-    --sidebar-accent-foreground: 0 0% 13%;
-    --sidebar-border: 0 0% 82%;
-    --sidebar-ring: 47 100% 39%;
+    /* ── materials ── */
+    --glaze:  234 75% 45%;   /* Barbicide blue — the drenched field */
+    --tile:   72 13% 92%;    /* glazed white wall */
+    --grout:  77 10% 82%;    /* the line between tiles */
+    --label:  51 33% 96%;    /* label stock */
+    --chrome: 210 8% 71%;    /* metal edge, shelf, cut line */
+    --ink:    225 17% 9%;    /* first ink */
+    --ink2:   3 74% 47%;     /* second ink — stamps, alerts, the mark */
+    --shadow: 225 40% 12%;
+    /* the wall is glazed in both hours, so what sits on it keeps
+       fixed values rather than inverting with the theme */
+    --wall-ink:  51 33% 96%;
+    --wall-deep: 234 78% 15%;
+
+    /* ── app tokens ── */
+    --background: var(--tile);
+    --foreground: var(--ink);
+    --card: var(--label);
+    --card-foreground: var(--ink);
+    --popover: var(--label);
+    --popover-foreground: var(--ink);
+    --primary: var(--glaze);
+    --primary-foreground: 51 33% 96%;
+    --secondary: 74 14% 88%;
+    --secondary-foreground: var(--ink);
+    --muted: 74 14% 90%;
+    --muted-foreground: 214 12% 37%;
+    --accent: 231 57% 93%;
+    --accent-foreground: 234 75% 34%;
+    --destructive: var(--ink2);
+    --destructive-foreground: 51 33% 96%;
+    --border: var(--grout);
+    --input: 77 9% 86%;
+    --ring: var(--glaze);
+    --radius: 2px;
+
+    /* ── chart inks: the bottles on the back bar, in print order ──
+       glaze, second ink, chrome, their tints, and the two other
+       bottles that are actually on a barber's shelf: steel-cyan
+       antiseptic and Pinaud lilac. */
+    --series-1: 234 75% 45%;
+    --series-2: 3 74% 47%;
+    --series-3: 210 12% 52%;
+    --series-4: 234 62% 64%;
+    --series-5: 3 56% 66%;
+    --series-6: 225 34% 26%;
+    --series-7: 196 48% 42%;
+    --series-8: 262 36% 54%;
+    --chart-1: var(--series-1);
+    --chart-2: var(--series-2);
+    --chart-3: var(--series-3);
+    --chart-4: var(--series-4);
+    --chart-5: var(--series-5);
+    --chart-6: var(--series-6);
+    --chart-7: var(--series-7);
+    --chart-8: var(--series-8);
+
+    /* the navigation rail is always the glaze, in both hours */
+    --sidebar-background: 234 75% 45%;
+    --sidebar-foreground: 72 16% 94%;
+    --sidebar-primary: 51 33% 96%;
+    --sidebar-primary-foreground: 234 75% 45%;
+    --sidebar-accent: 234 68% 53%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 234 55% 57%;
+    --sidebar-ring: 51 33% 96%;
   }
 
-  /* ── Dark mode — Carbon Black & Bright Gold ── */
   .dark {
-    --background: 0 0% 13%;            /* #202020 Carbon Black */
-    --foreground: 0 0% 95%;            /* near-white */
-    --card: 120 2% 20%;                /* #333533 Graphite */
-    --card-foreground: 0 0% 95%;
-    --popover: 120 2% 20%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 49 100% 50%;            /* #ffd100 Bright Gold — pops on dark */
-    --primary-foreground: 0 0% 13%;    /* dark text on bright gold */
-    --secondary: 0 0% 22%;
-    --secondary-foreground: 0 0% 85%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 76%;      /* Dust Grey-ish */
-    --accent: 49 20% 22%;              /* subtle warm dark */
-    --accent-foreground: 0 0% 95%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 95%;
-    --border: 0 0% 26%;
-    --input: 0 0% 24%;
-    --ring: 49 100% 50%;               /* Bright Gold focus ring */
-    --sidebar-background: 0 0% 10%;
-    --sidebar-foreground: 0 0% 88%;
-    --sidebar-primary: 49 100% 50%;
-    --sidebar-primary-foreground: 0 0% 13%;
-    --sidebar-accent: 0 0% 17%;
-    --sidebar-accent-foreground: 0 0% 88%;
-    --sidebar-border: 0 0% 22%;
-    --sidebar-ring: 49 100% 50%;
+    --glaze:  231 100% 62%;  /* after close the blue emits instead of reflecting */
+    --tile:   231 40% 11%;
+    --grout:  231 35% 18%;
+    --label:  231 44% 14%;
+    --chrome: 224 13% 50%;
+    --ink:    77 15% 91%;
+    --ink2:   5 100% 64%;
+    --shadow: 231 60% 2%;
+    --wall-ink:  77 15% 94%;
+    --wall-deep: 231 60% 9%;
+
+    --background: 231 50% 8%;
+    --foreground: var(--ink);
+    --card: var(--label);
+    --card-foreground: var(--ink);
+    --popover: var(--label);
+    --popover-foreground: var(--ink);
+    --primary: var(--glaze);
+    --primary-foreground: 77 15% 96%;
+    --secondary: 231 38% 16%;
+    --secondary-foreground: var(--ink);
+    --muted: 231 38% 15%;
+    --muted-foreground: 222 14% 64%;
+    --accent: 230 44% 18%;
+    --accent-foreground: 231 100% 80%;
+    --destructive: var(--ink2);
+    --destructive-foreground: 231 50% 8%;
+    --border: 230 32% 24%;
+    --input: 229 33% 21%;
+    --ring: var(--glaze);
+
+    --series-1: 231 100% 66%;
+    --series-2: 5 100% 66%;
+    --series-3: 224 16% 62%;
+    --series-4: 231 80% 78%;
+    --series-5: 5 78% 76%;
+    --series-6: 225 40% 48%;
+    --series-7: 196 62% 55%;
+    --series-8: 262 58% 70%;
+    --chart-1: var(--series-1);
+    --chart-2: var(--series-2);
+    --chart-3: var(--series-3);
+    --chart-4: var(--series-4);
+    --chart-5: var(--series-5);
+    --chart-6: var(--series-6);
+    --chart-7: var(--series-7);
+    --chart-8: var(--series-8);
+
+    --sidebar-background: 233 58% 14%;
+    --sidebar-foreground: 77 15% 91%;
+    --sidebar-primary: 231 100% 62%;
+    --sidebar-primary-foreground: 231 50% 8%;
+    --sidebar-accent: 233 55% 22%;
+    --sidebar-accent-foreground: 77 15% 91%;
+    --sidebar-border: 233 40% 30%;
+    --sidebar-ring: 231 100% 62%;
   }
 }
 
@@ -74,81 +147,503 @@
 
   html {
     color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
   }
-
-  html.dark {
-    color-scheme: dark;
-  }
+  html.dark { color-scheme: dark; }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-synthesis-weight: none;
   }
 
-  .animate-enter {
-    @apply opacity-0;
-    animation: fadeIn 0.5s ease-out forwards;
+  /* ── the surfaces the browser draws for us still belong to the shop ── */
+  ::selection {
+    background-color: hsl(var(--glaze));
+    color: hsl(var(--primary-foreground));
+  }
+  :root { accent-color: hsl(var(--glaze)); caret-color: hsl(var(--glaze)); }
+
+  :where(*) {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--chrome)) transparent;
+  }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--chrome));
+    border: 3px solid hsl(var(--background));
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--glaze)); }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 1px;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+  a { text-underline-offset: 0.2em; text-decoration-thickness: from-font; }
+
+  /* every figure in this product is a measured quantity */
+  time, output, .tabular, table td, table th {
+    font-variant-numeric: tabular-nums;
   }
 
-  .btn-hover {
-    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
+  h1, h2, h3, h4 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+}
+
+@layer components {
+  /* ── THE MARK ─────────────────────────────────────────────────
+     The supplied artwork ships as an alpha mask, not as a white image, so
+     one file inks itself from currentColor in either theme and on either
+     ground. The blue halo it arrived with was removed rather than hidden.
+     ───────────────────────────────────────────────────────────── */
+  .brand-mark,
+  .brand-lockup {
+    display: block;
+    background-color: currentColor;
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+            mask-position: center;
+    -webkit-mask-size: contain;
+            mask-size: contain;
+  }
+  .brand-mark {
+    aspect-ratio: 334 / 364;
+    -webkit-mask-image: url('/brand/mark.png');
+            mask-image: url('/brand/mark.png');
+  }
+  .brand-lockup {
+    aspect-ratio: 987 / 698;
+    -webkit-mask-image: url('/brand/lockup.png');
+            mask-image: url('/brand/lockup.png');
   }
 
-  .page-container {
-    @apply container mx-auto px-4 py-8 md:py-12;
+  /* ── THE CUT ──────────────────────────────────────────────────
+     Before and after under one chrome cut line. It is the fill gesture
+     read horizontally: a field arriving at an exact mark, with the same
+     1px edge the jar and the level bars use.
+     ───────────────────────────────────────────────────────────── */
+  .cut {
+    position: relative;
+    overflow: hidden;
+    touch-action: pan-y;
+    cursor: ew-resize;
+  }
+  .cut__after {
+    position: absolute;
+    inset: 0;
+    clip-path: inset(0 calc(100% - var(--cut, 0%)) 0 0);
+  }
+  .cut--eased .cut__after,
+  .cut--eased .cut__line { transition: clip-path 600ms cubic-bezier(.16,1,.3,1), left 600ms cubic-bezier(.16,1,.3,1); }
+  .cut__line {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: var(--cut, 0%);
+    width: 3px;
+    margin-left: -1.5px;
+    background: linear-gradient(
+      to right,
+      hsl(var(--chrome) / 0.5) 0%,
+      hsl(0 0% 100% / 0.95) 45%,
+      hsl(var(--chrome)) 100%
+    );
+    box-shadow: 0 0 12px -2px hsl(0 0% 0% / 0.55);
+    pointer-events: none;
+  }
+  .cut__grip {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 2px solid hsl(var(--chrome));
+    border-radius: 2px;
+    background: hsl(var(--wall-ink));
+    color: hsl(var(--wall-deep));
+    box-shadow: theme('boxShadow.plate');
   }
 
-  .section {
-    @apply my-12 animate-fade-in opacity-0;
+  /* ── THE WALL ─────────────────────────────────────────────────
+     A real running-bond tile grid: the grout is the layout grid,
+     not a texture. Every line here has a job.
+     ───────────────────────────────────────────────────────────── */
+  .tile-wall {
+    background-color: hsl(var(--glaze));
+    background-image:
+      /* the glaze catches the work light from the upper left */
+      linear-gradient(148deg, hsl(0 0% 100% / 0.14) 0%, hsl(0 0% 100% / 0.03) 38%, transparent 68%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='224' height='112'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.22' stroke-width='1'%3E%3Cpath d='M0 .5H224M0 56.5H224'/%3E%3Cpath d='M.5 0V56M112.5 0V56'/%3E%3Cpath d='M56.5 56V112M168.5 56V112'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: auto, 224px 112px;
+  }
+  .dark .tile-wall {
+    background-color: hsl(233 64% 24%);
+    background-image:
+      linear-gradient(148deg, hsl(231 100% 70% / 0.26) 0%, hsl(231 100% 66% / 0.08) 42%, transparent 72%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='224' height='112'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.30' stroke-width='1'%3E%3Cpath d='M0 .5H224M0 56.5H224'/%3E%3Cpath d='M.5 0V56M112.5 0V56'/%3E%3Cpath d='M56.5 56V112M168.5 56V112'/%3E%3C/g%3E%3C/svg%3E");
   }
 
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg;
-  }
+  /* half-scale tiling for dense or small areas */
+  .tile-wall--fine { background-size: auto, 112px 56px; }
 
-  /* ── Gold accent line on section headings ── */
-  .heading-accent {
-    @apply relative inline-block;
+  /* Small print printed on the wall is still printed on the wall: the muted
+     ink of the app ground would sit dark on the glaze. A plate hung on the
+     wall overrides this again, further down. */
+  .tile-wall .directions { color: hsl(var(--wall-ink) / 0.72); }
+  .tile-wall .net-line   { color: hsl(var(--wall-ink)); }
+  /* a frame mounted on the wall takes a chrome edge, not the app's ink */
+  .tile-wall .photo-frame,
+  .dark .tile-wall .photo-frame { border-color: hsl(var(--wall-ink) / 0.5); }
+
+  /* ── THE LABEL ────────────────────────────────────────────────
+     Printed stock with a double-rule frame. The inner rule is
+     hairline, the outer carries the weight — that is what makes
+     it read as printed rather than as a UI card.
+     ───────────────────────────────────────────────────────────── */
+  .plate {
+    position: relative;
+    background-color: hsl(var(--label));
+    color: hsl(var(--ink));
+    border: 1px solid hsl(var(--ink) / 0.72);
+    border-radius: var(--radius);
+    box-shadow: theme('boxShadow.plate');
   }
-  .heading-accent::after {
+  .plate::before {
     content: '';
-    @apply absolute -bottom-2 left-0 w-12 h-0.5 bg-barber;
+    position: absolute;
+    inset: 3px;
+    border: 1px solid hsl(var(--ink) / 0.28);
+    border-radius: 1px;
+    pointer-events: none;
   }
+  .dark .plate { border-color: hsl(var(--chrome) / 0.55); }
+  .dark .plate::before { border-color: hsl(var(--chrome) / 0.22); }
+
+  /* A plate hanging on the glazed wall is printed paper in both hours:
+     paper does not go dark when the shop closes, so these keep the fixed
+     wall roles instead of following the theme. */
+  .plate--wall,
+  .dark .plate--wall {
+    background-color: hsl(var(--wall-ink));
+    color: hsl(var(--wall-deep));
+    border-color: hsl(var(--wall-deep) / 0.75);
+  }
+  .plate--wall::before,
+  .dark .plate--wall::before { border-color: hsl(var(--wall-deep) / 0.3); }
+  .plate--wall .directions,
+  .dark .plate--wall .directions,
+  .plate--wall .text-muted-foreground,
+  .dark .plate--wall .text-muted-foreground { color: hsl(var(--wall-deep) / 0.62); }
+  .plate--wall .text-foreground,
+  .dark .plate--wall .text-foreground,
+  .plate--wall .net-line,
+  .dark .plate--wall .net-line { color: hsl(var(--wall-deep)); }
+
+  /* a plate with no frame: for dense panel surfaces where the
+     double rule would fight the table rules */
+  .plate--flat { box-shadow: none; }
+  .plate--flat::before { display: none; }
+
+  /* A frame inside a frame is one frame too many. A plate filed inside
+     another plate keeps its stock and its outline but gives up the double
+     rule and the cast shadow, so only one object reads as lifted. */
+  .plate .plate { box-shadow: none; }
+  .plate .plate::before { display: none; }
+
+  .plate-interactive {
+    transition: box-shadow .28s cubic-bezier(.16,1,.3,1), transform .28s cubic-bezier(.16,1,.3,1);
+  }
+  .plate-interactive:hover {
+    box-shadow: theme('boxShadow.plate-lift');
+    transform: translateY(-2px);
+  }
+
+  /* ── LETTERING ────────────────────────────────────────────────
+     Hierarchy comes from weight, width and case. Two faces, and
+     no third face is ever added to solve a hierarchy problem.
+     ───────────────────────────────────────────────────────────── */
+  .lockup {            /* the painted wall name, the biggest thing in the room */
+    font-stretch: 125%;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    /* Polish sets ogonki below the baseline (Ą, Ę) and Ż above the cap line.
+       The line box is tight by design, so the descender room is added back
+       as padding rather than as leading between the lines. */
+    line-height: 0.86;
+    padding-bottom: 0.1em;
+  }
+  .label-caps {        /* the product name on a tin */
+    font-stretch: 78%;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 1.12;   /* clears Ą, Ę, Ż in Polish without loosening the set */
+  }
+  .directions {        /* the small print block: "sposób użycia" */
+    @apply font-mono text-micro uppercase;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+  }
+  .net-line {          /* net content: duration, price, quantity */
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  /* a rule that means "this is where the printed block ends" */
+  .rule-double {
+    border-top: 3px solid hsl(var(--ink) / 0.8);
+    box-shadow: 0 2px 0 -1px hsl(var(--ink) / 0.8);
+  }
+  .dark .rule-double {
+    border-top-color: hsl(var(--chrome) / 0.7);
+    box-shadow: 0 2px 0 -1px hsl(var(--chrome) / 0.7);
+  }
+
+  /* ── THE SHELF ────────────────────────────────────────────────
+     Chrome, with a real cast shadow. Objects stand on it.
+     ───────────────────────────────────────────────────────────── */
+  .shelf {
+    height: 3px;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--chrome) / 0.55) 0%,
+      hsl(0 0% 100% / 0.9) 35%,
+      hsl(var(--chrome)) 60%,
+      hsl(var(--chrome) / 0.5) 100%
+    );
+    box-shadow: theme('boxShadow.shelf');
+  }
+  .dark .shelf {
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--chrome) / 0.35) 0%,
+      hsl(var(--chrome) / 0.95) 40%,
+      hsl(var(--chrome) / 0.45) 70%,
+      transparent 100%
+    );
+  }
+
+  /* ── THE STAMP ────────────────────────────────────────────────
+     Every record state is a stamp in the second ink. Line style
+     carries the state as well as colour, so it survives both
+     themes and colour-blind reading.
+     ───────────────────────────────────────────────────────────── */
+  .stamp {
+    @apply font-mono text-micro uppercase inline-flex items-center gap-1.5;
+    font-weight: 600;
+    padding: 0.18rem 0.45rem;
+    border: 1.5px solid currentColor;
+    border-radius: 1px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .stamp--pending   { border-style: dashed; color: hsl(var(--muted-foreground)); }
+  .stamp--confirmed { border-style: solid;  color: hsl(var(--glaze)); }
+  .dark .stamp--confirmed { color: hsl(231 100% 76%); }
+  .stamp--done      { border-style: double; border-width: 3px; color: hsl(var(--ink) / 0.72); }
+  .dark .stamp--done { color: hsl(var(--ink) / 0.78); }
+  /* alert is the second ink standing; void is the second ink struck. A role
+     or a warning must never read as a record that was cancelled. */
+  .stamp--alert     { border-style: solid;  color: hsl(var(--ink2)); }
+  .stamp--void      { border-style: solid;  color: hsl(var(--ink2)); text-decoration: line-through; }
+  .stamp--absent    { border-style: dotted; border-width: 2px; color: hsl(var(--ink2)); }
+
+  /* ── THE FILL LINE ────────────────────────────────────────────
+     The one authored motion in the product. Occupancy, progress,
+     selection, pressed state and the cold start are all the same
+     gesture: liquid rising to an exact line with a 1px meniscus.
+     ───────────────────────────────────────────────────────────── */
+  .fill { position: relative; overflow: hidden; }
+  .fill__liquid {
+    position: absolute;
+    inset: 0;
+    background: hsl(var(--glaze));
+    clip-path: inset(calc(100% - var(--level, 0%)) 0 0 0);
+    transition: clip-path 900ms cubic-bezier(.16, 1, .3, 1);
+  }
+  .fill__meniscus {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: var(--level, 0%);
+    height: 1px;
+    background: hsl(var(--tile) / 0.9);
+    transition: bottom 900ms cubic-bezier(.16, 1, .3, 1);
+  }
+  .dark .fill__meniscus { background: hsl(231 100% 84% / 0.9); }
+
+  /* ── THE JAR ──────────────────────────────────────────────────
+     Used for the cold start: the steriliser jar filling to its
+     line while Render wakes the backend.
+     ───────────────────────────────────────────────────────────── */
+  .jar {
+    position: relative;
+    /* room at the top for the lid, so the vessel reads as the jar the mark
+       draws rather than as a plain glass panel */
+    margin-top: 0.55em;
+    border: 2px solid hsl(var(--chrome));
+    border-radius: 2px 2px 3px 3px;
+    background: hsl(var(--glaze) / 0.08);
+    box-shadow: theme('boxShadow.jar');
+    overflow: hidden;
+  }
+  /* the same jar, inverted for the wall */
+  .jar--wall,
+  .dark .jar--wall {
+    border-color: hsl(var(--wall-ink) / 0.9);
+    background: hsl(var(--wall-ink) / 0.08);
+  }
+  .jar--wall .fill__liquid,
+  .dark .jar--wall .fill__liquid { background: hsl(var(--wall-ink)); }
+  .jar--wall .fill__meniscus,
+  .dark .jar--wall .fill__meniscus { background: hsl(var(--ink2)); height: 2px; }
+
+  .jar::before {         /* the lid, seated proud of the glass */
+    content: '';
+    position: absolute;
+    left: -8%;
+    right: -8%;
+    top: calc(-0.55em - 2px);
+    height: 0.5em;
+    background: hsl(var(--chrome));
+    border-radius: 2px;
+  }
+  .jar--wall::before,
+  .dark .jar--wall::before { background: hsl(var(--wall-ink)); }
+
+  .jar::after {          /* the glass catches one highlight, on the left */
+    content: '';
+    position: absolute;
+    top: 6%; bottom: 6%; left: 12%;
+    width: 2px;
+    background: hsl(0 0% 100% / 0.45);
+    border-radius: 2px;
+  }
+
+  /* ── PHOTOGRAPHY ──────────────────────────────────────────────
+     Portfolio and profile images arrive from users at any quality
+     and any ratio. They get a fixed frame and a chrome edge so the
+     wall stays straight whatever lands in it.
+     ───────────────────────────────────────────────────────────── */
+  .photo-frame {
+    position: relative;
+    overflow: hidden;
+    background-color: hsl(var(--secondary));
+    border: 1px solid hsl(var(--ink) / 0.6);
+    border-radius: var(--radius);
+  }
+  .dark .photo-frame { border-color: hsl(var(--chrome) / 0.5); }
+  .photo-frame > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* ── PAGE FURNITURE ── */
+  .page-container { @apply container mx-auto py-10 md:py-14; }
+
+  .section-head {
+    @apply label-caps text-2xl md:text-3xl;
+  }
+
+  /* Entrances live in CSS, never in script: the same stylesheet that hides
+     the element is the one that reveals it, so a failed script can never
+     strand content at opacity zero. */
+  .plate-enter { animation: plate-in .5s cubic-bezier(.16,1,.3,1) both; }
+
+  /* The page's one authored moment, and the only entrance in the product:
+     the name fills exactly as the jar does, liquid rising to its line.
+     Everything else that moves is the same fill read in another vessel. */
+  .wall-reveal { animation: wall-reveal .95s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes wall-reveal {
+    from { clip-path: inset(100% 0 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+  }
+
 }
 
-/* ── MUI DateCalendar dark mode overrides ── */
-.dark .MuiDateCalendar-root {
-  background-color: transparent;
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .stretch-condensed { font-stretch: 78%; }
+  .stretch-normal { font-stretch: 100%; }
+  .stretch-expanded { font-stretch: 125%; }
 }
-.dark .MuiDateCalendar-root .MuiTypography-root,
-.dark .MuiDateCalendar-root .MuiPickersCalendarHeader-label,
-.dark .MuiDateCalendar-root .MuiDayCalendar-weekDayLabel,
-.dark .MuiDateCalendar-root .MuiPickersDay-root:not(.Mui-selected):not(.Mui-disabled) {
-  color: #ffffff;
+
+/* ── MUI DateCalendar: dressed as a printed booking sheet ── */
+.MuiDateCalendar-root {
+  width: 100% !important;
+  background-color: transparent;
+  font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif !important;
+}
+.MuiDateCalendar-root .MuiPickersCalendarHeader-label,
+.MuiDateCalendar-root .MuiTypography-root {
+  font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif !important;
+  color: hsl(var(--foreground));
+}
+.MuiDateCalendar-root .MuiPickersCalendarHeader-label {
+  font-weight: 800;
+  font-stretch: 78%;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.MuiDateCalendar-root .MuiDayCalendar-weekDayLabel {
+  font-family: 'Spline Sans Mono', ui-monospace, monospace !important;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+.MuiDateCalendar-root .MuiPickersDay-root {
+  font-family: 'Spline Sans Mono', ui-monospace, monospace !important;
+  font-variant-numeric: tabular-nums;
+  border-radius: 1px;
+  color: hsl(var(--foreground));
+}
+.MuiDateCalendar-root .MuiPickersDay-root:not(.Mui-selected):not(.Mui-disabled):hover {
+  background-color: hsl(var(--accent));
+}
+.MuiDateCalendar-root .MuiPickersDay-root.MuiPickersDay-today:not(.Mui-selected) {
+  border: 1.5px solid hsl(var(--glaze));
+  color: hsl(var(--glaze));
 }
 .dark .MuiDateCalendar-root .MuiPickersDay-root.MuiPickersDay-today:not(.Mui-selected) {
-  border-color: #ffd100;
-  color: #ffd100;
+  color: hsl(231 100% 78%);
 }
-.dark .MuiDateCalendar-root .MuiPickersDay-root.Mui-selected {
-  background-color: #c8a000 !important;
-  color: #ffffff !important;
+.MuiDateCalendar-root .MuiPickersDay-root.Mui-selected,
+.MuiDateCalendar-root .MuiPickersDay-root.Mui-selected:hover,
+.MuiDateCalendar-root .MuiPickersDay-root.Mui-selected:focus {
+  background-color: hsl(var(--glaze)) !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
-.dark .MuiDateCalendar-root .MuiPickersArrowSwitcher-button,
-.dark .MuiDateCalendar-root .MuiPickersCalendarHeader-switchViewButton {
-  color: #ffffff;
+.MuiDateCalendar-root .MuiPickersDay-root.Mui-disabled {
+  color: hsl(var(--muted-foreground) / 0.45);
+  text-decoration: line-through;
 }
-.dark .MuiDateCalendar-root .MuiPickersDay-root:hover:not(.Mui-selected):not(.Mui-disabled) {
-  background-color: rgba(200, 160, 0, 0.2);
+.MuiDateCalendar-root .MuiPickersArrowSwitcher-button,
+.MuiDateCalendar-root .MuiPickersCalendarHeader-switchViewButton {
+  color: hsl(var(--foreground));
 }
-.dark .MuiDateCalendar-root .MuiPickersDay-root.Mui-disabled {
-  color: rgba(255, 255, 255, 0.3);
+.MuiDateCalendar-root .MuiPickersArrowSwitcher-button.Mui-disabled {
+  color: hsl(var(--muted-foreground) / 0.4);
 }
-.dark .MuiDateCalendar-root .MuiPickersSlideTransition-root {
-  color: #ffffff;
+.MuiDateCalendar-root .MuiYearCalendar-root .MuiPickersYear-yearButton {
+  font-family: 'Spline Sans Mono', ui-monospace, monospace !important;
+  border-radius: 1px;
+  color: hsl(var(--foreground));
+}
+.MuiDateCalendar-root .MuiPickersYear-yearButton.Mui-selected {
+  background-color: hsl(var(--glaze)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

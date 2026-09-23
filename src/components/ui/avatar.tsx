@@ -3,6 +3,8 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn } from "@/lib/utils"
 
+/** Portraits arrive from users at any quality; they all get the same
+ *  square chrome frame so the wall stays straight. */
 const Avatar = React.forwardRef<
     React.ElementRef<typeof AvatarPrimitive.Root>,
     React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
@@ -10,7 +12,7 @@ const Avatar = React.forwardRef<
     <AvatarPrimitive.Root
         ref={ref}
         className={cn(
-            "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+            "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-[2px] border border-foreground/40 bg-secondary",
             className
         )}
         {...props}
@@ -24,7 +26,7 @@ const AvatarImage = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <AvatarPrimitive.Image
         ref={ref}
-        className={cn("aspect-square h-full w-full", className)}
+        className={cn("aspect-square h-full w-full object-cover", className)}
         {...props}
     />
 ))
@@ -37,7 +39,7 @@ const AvatarFallback = React.forwardRef<
     <AvatarPrimitive.Fallback
         ref={ref}
         className={cn(
-            "flex h-full w-full items-center justify-center rounded-full bg-muted",
+            "label-caps flex h-full w-full items-center justify-center bg-secondary text-[0.6875rem] text-muted-foreground",
             className
         )}
         {...props}

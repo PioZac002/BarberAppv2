@@ -31,9 +31,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { isValid, format } from "date-fns";
-import { pl, enUS } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface Review {
     id: number;
@@ -55,8 +56,8 @@ interface AppointmentToReview {
 const UserReviews = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["client"] });
-    const { t, lang } = useLanguage();
-    const dateLocale = lang === "pl" ? pl : enUS;
+    const { t } = useLanguage();
+    const dateLocale = useDateLocale();
 
     const [reviews, setReviews] = useState<Review[]>([]);
     const [appointmentsToReview, setAppointmentsToReview] = useState<AppointmentToReview[]>([]);
@@ -134,9 +135,9 @@ const UserReviews = () => {
                             key={i}
                             className={`h-6 w-6 sm:h-7 sm:w-7 ${
                                 i < currentRating
-                                    ? "text-yellow-400 fill-yellow-400"
-                                    : "text-gray-300"
-                            } ${interactive ? "cursor-pointer hover:text-yellow-300" : ""}`}
+                                    ? "text-primary fill-primary"
+                                    : "text-muted-foreground"
+                            } ${interactive ? "cursor-pointer hover:text-muted-foreground" : ""}`}
                             onClick={interactive && onRate ? () => onRate(i + 1) : undefined}
                         />
                     ))}
@@ -217,7 +218,7 @@ const UserReviews = () => {
     if (authContextLoading || isLoading) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -225,8 +226,8 @@ const UserReviews = () => {
     if (!authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">{t("userPanel.authErrorDesc")}</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                <p className="text-destructive">{t("userPanel.authErrorDesc")}</p>
+                <Button asChild className="mt-4 bg-primary hover:bg-primary/90">
                     <Link to="/login">{t("userPanel.goToLogin")}</Link>
                 </Button>
             </div>
@@ -247,7 +248,7 @@ const UserReviews = () => {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
                         <div>
-                            <div className="text-2xl sm:text-3xl font-bold text-barber">
+                            <div className="text-2xl sm:text-3xl font-bold text-primary">
                                 {reviews.length}
                             </div>
                             <p className="text-xs sm:text-sm text-muted-foreground">
@@ -256,7 +257,7 @@ const UserReviews = () => {
                         </div>
                         <div>
                             <div className="flex items-baseline space-x-1">
-                                <div className="text-2xl sm:text-3xl font-bold text-barber">
+                                <div className="text-2xl sm:text-3xl font-bold text-primary">
                                     {averageRating.toFixed(1)}
                                 </div>
                                 <span className="text-sm text-muted-foreground">
@@ -275,11 +276,11 @@ const UserReviews = () => {
 
                 <Card className="flex flex-col justify-center items-center">
                     <CardContent className="pt-6 text-center">
-                        <MessageSquare className="h-10 w-10 text-barber mx-auto mb-2" />
+                        <MessageSquare className="h-10 w-10 text-primary mx-auto mb-2" />
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button
-                                    className="bg-barber hover:bg-barber-muted"
+                                    className="bg-primary hover:bg-primary/90"
                                     disabled={appointmentsToReview.length === 0 && !isLoading}
                                     onClick={() => {
                                         if (!newReviewData.appointment_id && appointmentsToReview.length > 0) {
@@ -372,7 +373,7 @@ const UserReviews = () => {
                                         </Button>
                                     </DialogClose>
                                     <Button
-                                        className="bg-barber hover:bg-barber-muted"
+                                        className="bg-primary hover:bg-primary/90"
                                         onClick={handleSubmitReview}
                                         disabled={
                                             !newReviewData.appointment_id ||
@@ -401,7 +402,7 @@ const UserReviews = () => {
                 <div className="space-y-4">
                     {reviews.length > 0 ? (
                         reviews.map(review => (
-                            <Card key={review.id} className="shadow-sm">
+                            <Card key={review.id} className="shadow-plate">
                                 <CardContent className="pt-5 pb-5 px-5">
                                     <div className="flex items-start justify-between mb-2">
                                         <div>
@@ -409,7 +410,7 @@ const UserReviews = () => {
                                                 <div className="flex mr-2">
                                                     {renderStars(review.rating)}
                                                 </div>
-                                                <h3 className="font-semibold text-barber text-md leading-tight">
+                                                <h3 className="font-semibold text-primary text-md leading-tight">
                                                     {review.service}
                                                 </h3>
                                             </div>

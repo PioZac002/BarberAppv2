@@ -26,9 +26,6 @@ const {
     getBarberProfile,
     updateBarberProfile,
     getBarberSchedule,
-    getBarberNotifications,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
     getBarberStats,
     getBarberAppointments,
     updateAppointmentStatus,
@@ -381,80 +378,9 @@ describe("getBarberSchedule", () => {
 
 /* ================== POWIADOMIENIA ================== */
 
-describe("getBarberNotifications", () => {
-    it("zwraca 404, gdy barber nie istnieje", async () => {
-        pool.query.mockResolvedValueOnce({ rows: [] });
 
-        const req = getMockReq({ user: { id: 1 } });
-        const { res } = getMockRes();
 
-        await getBarberNotifications(req, res);
 
-        expect(res.status).toHaveBeenCalledWith(404);
-    });
-
-    it("zwraca listę powiadomień z sformatowaną datą", async () => {
-        pool.query
-            .mockResolvedValueOnce({ rows: [{ id: 10 }] }) // barber
-            .mockResolvedValueOnce({
-                rows: [
-                    {
-                        id: 1,
-                        barber_id: 10,
-                        created_at: "2025-12-10T10:00:00.000Z",
-                        message: "msg",
-                    },
-                ],
-            });
-
-        const req = getMockReq({ user: { id: 1 } });
-        const { res } = getMockRes();
-
-        await getBarberNotifications(req, res);
-
-        const payload = res.json.mock.calls[0][0];
-        expect(payload[0]).toHaveProperty("created_at_formatted");
-    });
-});
-
-describe("markNotificationAsRead", () => {
-    it("zwraca 404 gdy barber nie istnieje", async () => {
-        pool.query.mockResolvedValueOnce({ rows: [] });
-
-        const req = getMockReq({ user: { id: 1 }, params: { id: "5" } });
-        const { res } = getMockRes();
-
-        await markNotificationAsRead(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-    });
-});
-
-describe("markAllNotificationsAsRead", () => {
-    it("zwraca 404 gdy barber nie istnieje", async () => {
-        pool.query.mockResolvedValueOnce({ rows: [] });
-
-        const req = getMockReq({ user: { id: 1 } });
-        const { res } = getMockRes();
-
-        await markAllNotificationsAsRead(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-    });
-});
-
-describe("deleteNotification", () => {
-    it("zwraca 404 gdy barber nie istnieje", async () => {
-        pool.query.mockResolvedValueOnce({ rows: [] });
-
-        const req = getMockReq({ user: { id: 1 }, params: { id: "5" } });
-        const { res } = getMockRes();
-
-        await deleteNotification(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-    });
-});
 
 /* ================== STATYSTYKI I WIZYTY ================== */
 

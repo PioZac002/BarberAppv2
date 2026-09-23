@@ -14,11 +14,12 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
       },
       manifest: {
-        name: 'BarberShop App',
-        short_name: 'BarberShop',
-        description: 'Your premium barber services at your fingertips.',
-        theme_color: '#c8a000',
-        background_color: '#ffffff',
+        name: 'Szlif — zakład fryzjerski męski',
+        short_name: 'Szlif',
+        description: 'Rezerwacja online, grafik barbera i panel salonu w jednym miejscu.',
+        lang: 'pl',
+        theme_color: '#1D2FC9',
+        background_color: '#1D2FC9',
         display: 'standalone',
         scope: '/',
         start_url: '/',

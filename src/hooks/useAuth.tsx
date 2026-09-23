@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { AuthContextType, User } from '../../types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,6 +16,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
+    // AuthProvider is mounted inside LanguageProvider in App.tsx, so its
+    // toasts can speak the language the user picked
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -81,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setToken(apiToken);
             setUser(userData);
             setIsAuthenticated(true);
-            toast.success('Zalogowano pomyślnie!');
+            toast.success(t('auth2.loggedIn'));
 
             const from = (location.state as any)?.from?.pathname || (
                 userData.role === 'admin' ? '/admin-dashboard' :
@@ -91,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             navigate(from, { replace: true });
 
         } catch (error: any) {
-            toast.error(error.message || 'Logowanie nie powiodło się. Spróbuj ponownie.');
+            toast.error(error.message || t('auth.loginFailed'));
             throw error;
         }
     };
@@ -109,10 +113,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 throw new Error(errorData.error || 'Rejestracja nie powiodła się');
             }
             await response.json();
-            toast.success('Rejestracja zakończona sukcesem! Możesz się teraz zalogować.');
+            toast.success(t('auth2.registered'));
             navigate('/login');
         } catch (error: any) {
-            toast.error(error.message || 'Rejestracja nie powiodła się. Spróbuj ponownie.');
+            toast.error(error.message || t('auth.registerFailed'));
             throw error;
         }
     };
@@ -123,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         setIsAuthenticated(false);
         navigate('/login');
-        toast.info("Wylogowano pomyślnie.");
+        toast.info(t('auth2.loggedOut'));
     };
 
     return (

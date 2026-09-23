@@ -1,13 +1,10 @@
 const express = require('express');
+const notifications = require('../controllers/notificationsController');
 const router = express.Router();
 const { verifyToken, requireClient, blockDemoProfileChange } = require('../middleware/authMiddleware');
 const {
     getUserAppointments,
     cancelUserAppointment,
-    getUserNotifications,
-    markUserNotificationAsRead,
-    markAllUserNotificationsAsRead,
-    deleteUserNotification,
     getUserProfile,
     updateUserProfile,
     getNextUpcomingAppointment,
@@ -27,10 +24,13 @@ router.get('/appointments/next-upcoming', getNextUpcomingAppointment);
 router.get('/appointments/completed-unreviewed', getCompletedUnreviewedAppointments); // Nowa trasa
 
 // Trasy Powiadomień Klienta
-router.get('/notifications', getUserNotifications);
-router.put('/notifications/read-all', markAllUserNotificationsAsRead);
-router.put('/notifications/:notificationId/read', markUserNotificationAsRead);
-router.delete('/notifications/:notificationId', deleteUserNotification);
+// Notifications are the same four operations for every role; the recipient is
+// whoever is holding the token, so one controller serves all three panels.
+router.get('/notifications', notifications.list);
+router.get('/notifications/unread-count', notifications.unreadCount);
+router.put('/notifications/read-all', notifications.markAllRead);
+router.put('/notifications/:id/read', notifications.markRead);
+router.delete('/notifications/:id', notifications.remove);
 
 // Trasy Profilu Klienta
 router.get('/profile', getUserProfile);

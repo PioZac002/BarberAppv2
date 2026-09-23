@@ -34,7 +34,9 @@ exports.getAllBarberSummaries = async (req, res) => {
             rating: parseFloat(barber.rating) || 0,
             experience: parseInt(barber.experience, 10) || 0,
             specializations: barber.specialties || [], // Powinno być już tablicą z TEXT[]
-            image: barber.image || 'https://via.placeholder.com/300/CCCCCC/808080?Text=No+Image', // Placeholder
+            // no photo on file is null, not a link to a third-party placeholder
+            // service that may or may not answer; the client draws its own fallback
+            image: barber.image || null,
         }));
 
         res.json(barbers);
@@ -142,7 +144,7 @@ exports.getBarberDetailsById = async (req, res) => {
             bio: barberData.bio,
             certifications: barberData.certifications || [],
             portfolioImages: portfolioImages,
-            image: barberData.image || 'https://via.placeholder.com/400/CCCCCC/808080?Text=No+Profile+Image',
+            image: barberData.image || null,
         };
 
         res.json(responseData);

@@ -9,6 +9,7 @@ import { User, Mail, Phone, Save, Edit, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface ProfileData {
     firstName: string;
@@ -152,7 +153,7 @@ const UserProfile = () => {
     if (authContextLoading || isDataLoading) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -160,8 +161,8 @@ const UserProfile = () => {
     if (!authContextLoading && !authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">{t("userPanel.authErrorDesc")}</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                <p className="text-destructive">{t("userPanel.authErrorDesc")}</p>
+                <Button asChild className="mt-4 bg-primary hover:bg-primary/90">
                     <Link to="/login">{t("userPanel.goToLogin")}</Link>
                 </Button>
             </div>
@@ -176,7 +177,7 @@ const UserProfile = () => {
                     {!isEditing ? (
                         <Button
                             onClick={() => setIsEditing(true)}
-                            className="bg-barber hover:bg-barber-muted"
+                            className="bg-primary hover:bg-primary/90"
                         >
                             <Edit className="h-4 w-4 mr-1.5" />
                             {t("userPanel.profile.editProfile")}
@@ -185,7 +186,7 @@ const UserProfile = () => {
                         <div className="flex space-x-2">
                             <Button
                                 onClick={handleSave}
-                                className="bg-barber hover:bg-barber-muted"
+                                className="bg-primary hover:bg-primary/90"
                             >
                                 <Save className="h-4 w-4 mr-1.5" />
                                 {t("userPanel.profile.save")}

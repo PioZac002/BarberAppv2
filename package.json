@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:backend": "npm --prefix backend install --no-audit --no-fund && vitest run backend",
+    "pretest": "node scripts/ensure-backend-deps.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

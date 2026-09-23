@@ -1,6 +1,8 @@
 // src/pages/admin-dashboard/AdminReports.tsx
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { SERIES, INK } from "@/lib/chart-ink";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import {
     ChartContainer,
-    ChartTooltip,
     ChartTooltipContent
 } from "@/components/ui/chart";
 import {
@@ -27,9 +28,9 @@ import {
     ComposedChart,
     Line,
 } from "recharts";
-import { CalendarDays, FileText, TrendingUp, Users as UsersIcon, Clock, Loader2 } from "lucide-react";
+import { CalendarDays, FileText, Users as Loader2 } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
-import { format, isValid as isValidDate, differenceInCalendarDays, parseISO } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import MuiCalendar from "@/components/ui/mui-calendar";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ import dayjs, { Dayjs } from "dayjs";
 
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { JarLoader } from "@/components/szlif/Loading";
 
 type TimeRangePreset = "1day" | "7days" | "1month" | "custom";
 type ChartType = "line" | "bar" | "pie";
@@ -63,6 +65,7 @@ interface CustomDateRangeState {
 
 const AdminReports = () => {
     const { token, loading: authLoading } = useAuth();
+    const { t } = useLanguage();
     const [timeRangePreset, setTimeRangePreset] = useState<TimeRangePreset>("7days");
     const [customDateRange, setCustomDateRange] = useState<CustomDateRangeState>({
         from: null,
@@ -184,19 +187,10 @@ const AdminReports = () => {
     }, [timeRangePreset, customDateRange, token, authLoading]);
 
     const chartConfig = useMemo(() => {
-        const barberColors = [
-            "#8b5a2b",
-            "#a0692e",
-            "#d4a574",
-            "#C08B5C",
-            "#A97142",
-            "#E0B68A",
-            "#7E4F23",
-            "#C8925A",
-        ];
+        const barberColors = [...SERIES];
         const config: any = {
-            appointments: { label: "Wizyty", color: "hsl(var(--chart-1))" },
-            revenue: { label: "Przychód (PLN)", color: "hsl(var(--chart-2))" },
+            appointments: { label: t("reports.visits"), color: "hsl(var(--chart-1))" },
+            revenue: { label: t("reports.revenue"), color: "hsl(var(--chart-2))" },
         };
 
         const allBarberDisplayNames = new Set<string>();
@@ -265,7 +259,7 @@ const AdminReports = () => {
             aggregatedBarberData[barberName] = {
                 name: barberName,
                 value: 0,
-                color: chartConfig[keyForChart]?.color || "#CCCCCC",
+                color: chartConfig[keyForChart]?.color || INK.neutral,
             };
         });
 
@@ -392,15 +386,13 @@ const AdminReports = () => {
         if (isLoadingData) {
             return (
                 <div className="h-[300px] md:h-[400px] w-full flex items-center justify-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-barber" />
+                    <JarLoader />
                 </div>
             );
         }
         if (!reportData || reportData.length === 0) {
             return (
-                <div className="h-[300px] md:h-[400px] w-full flex items-center justify-center text-gray-500">
-                    Brak danych do wyświetlenia dla wybranego okresu.
-                </div>
+                <div className="h-[300px] md:h-[400px] w-full flex items-center justify-center text-muted-foreground">{t("reports.noData")}</div>
             );
         }
 
@@ -409,9 +401,7 @@ const AdminReports = () => {
         if (displayChartType === "pie") {
             if (pieData.length === 0) {
                 return (
-                    <div className="h-[300px] md:h-[400px] w-full flex items-center justify-center text-gray-500">
-                        Brak danych o wizytach barberów.
-                    </div>
+                    <div className="h-[300px] md:h-[400px] w-full flex items-center justify-center text-muted-foreground">{t("reports.noBarberData")}</div>
                 );
             }
             return (
@@ -573,13 +563,13 @@ const AdminReports = () => {
                             <Legend
                                 verticalAlign="top"
                                 height={32}
-                                iconType="circle"
+                                iconType="square"
                             />
                             <Bar
                                 yAxisId="left"
                                 dataKey="appointments"
                                 fill={chartConfig.appointments.color}
-                                radius={[4, 4, 0, 0]}
+                                radius={[0, 0, 0, 0]}
                                 barSize={16}
                                 name="Wizyty"
                             />
@@ -680,13 +670,13 @@ const AdminReports = () => {
                                 stackId="a"
                                 fill={
                                     chartConfig[barberKey]?.color ||
-                                    "#8884d8"
+                                    INK.primary
                                 }
                                 name={
                                     chartConfig[barberKey]?.label ||
                                     barberKey
                                 }
-                                radius={[3, 3, 0, 0]}
+                                radius={[0, 0, 0, 0]}
                             />
                         ))}
                     </BarChart>
@@ -703,7 +693,7 @@ const AdminReports = () => {
     if (authLoading || isLoadingData) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-barber" />
+                <JarLoader />
             </div>
         );
     }
@@ -725,12 +715,8 @@ const AdminReports = () => {
             <Card className="print:hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center text-xl">
-                        <FileText className="h-6 w-6 mr-2 text-barber" />
-                        Raporty Statystyk
-                    </CardTitle>
-                    <CardDescription>
-                        Analizuj dane dotyczące wizyt i przychodów.
-                    </CardDescription>
+                        <FileText className="h-6 w-6 mr-2 text-primary" />{t("reports.title")}</CardTitle>
+                    <CardDescription>{t("reports.subtitle")}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap sm:justify-between">
                     <div className="flex flex-col gap-3 sm:flex-row items-center sm:flex-wrap">
@@ -756,15 +742,9 @@ const AdminReports = () => {
                                 <SelectValue placeholder="Wybierz okres" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="1day">
-                                    Ostatnie 24h
-                                </SelectItem>
-                                <SelectItem value="7days">
-                                    Ostatnie 7 dni
-                                </SelectItem>
-                                <SelectItem value="1month">
-                                    Bieżący miesiąc
-                                </SelectItem>
+                                <SelectItem value="1day">{t("reports.range24h")}</SelectItem>
+                                <SelectItem value="7days">{t("reports.range7d")}</SelectItem>
+                                <SelectItem value="1month">{t("reports.rangeMonth")}</SelectItem>
                                 <SelectItem value="custom">
                                     Niestandardowy
                                 </SelectItem>
@@ -905,15 +885,9 @@ const AdminReports = () => {
                                     <SelectValue placeholder="Typ wykresu" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="bar">
-                                        Słupkowy (wizyty per barber)
-                                    </SelectItem>
-                                    <SelectItem value="line">
-                                        Trend (wizyty + przychód)
-                                    </SelectItem>
-                                    <SelectItem value="pie">
-                                        Kołowy (udział barberów)
-                                    </SelectItem>
+                                    <SelectItem value="bar">{t("reports.chartBar")}</SelectItem>
+                                    <SelectItem value="line">{t("reports.chartTrend")}</SelectItem>
+                                    <SelectItem value="pie">{t("reports.chartPie")}</SelectItem>
                                 </SelectContent>
                             </Select>
                         )}
@@ -927,9 +901,7 @@ const AdminReports = () => {
                         }
                         variant="outline"
                     >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Generuj PDF
-                    </Button>
+                        <FileText className="h-4 w-4 mr-2" />{t("reports.generatePdf")}</Button>
                 </CardContent>
             </Card>
 
@@ -942,10 +914,8 @@ const AdminReports = () => {
                     id="pdf-header-placeholder"
                     className="hidden print:block text-center py-4 mb-4 border-b"
                 >
-                    <h1 className="text-xl font-bold text-gray-800">
-                        Raport Przychodów i Ilości Wizyt
-                    </h1>
-                    <p className="text-sm text-gray-600">
+                    <h1 className="text-xl font-bold text-muted-foreground">{t("reports.reportHeading")}</h1>
+                    <p className="text-sm text-muted-foreground">
                         Zakres dat:{" "}
                         {timeRangePreset === "custom" &&
                         customDateRange.from &&
@@ -971,11 +941,9 @@ const AdminReports = () => {
                             : "grid grid-cols-2 lg:grid-cols-4 gap-4"
                     }
                 >
-                    <Card className="print:border print:shadow-sm">
+                    <Card className="print:border print:shadow-plate">
                         <CardHeader className="pb-1 pt-2 px-3">
-                            <CardTitle className="text-xs font-medium text-muted-foreground">
-                                Łączne wizyty
-                            </CardTitle>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">{t("reports.totalVisits")}</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 px-3 pb-2">
                             <div className="text-xl font-bold">
@@ -983,11 +951,9 @@ const AdminReports = () => {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="print:border print:shadow-sm">
+                    <Card className="print:border print:shadow-plate">
                         <CardHeader className="pb-1 pt-2 px-3">
-                            <CardTitle className="text-xs font-medium text-muted-foreground">
-                                Łączny przychód
-                            </CardTitle>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">{t("reports.totalRevenue")}</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 px-3 pb-2 flex items-baseline gap-1">
                             <div className="text-xl font-bold">
@@ -998,11 +964,9 @@ const AdminReports = () => {
                             </span>
                         </CardContent>
                     </Card>
-                    <Card className="print:border print:shadow-sm">
+                    <Card className="print:border print:shadow-plate">
                         <CardHeader className="pb-1 pt-2 px-3">
-                            <CardTitle className="text-xs font-medium text-muted-foreground">
-                                Średnio wizyt
-                            </CardTitle>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">{t("reports.avgVisits")}</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 px-3 pb-2">
                             <div className="text-xl font-bold">
@@ -1010,11 +974,9 @@ const AdminReports = () => {
                             </div>
                         </CardContent>
                     </Card>
-                    <Card className="print:border print:shadow-sm">
+                    <Card className="print:border print:shadow-plate">
                         <CardHeader className="pb-1 pt-2 px-3">
-                            <CardTitle className="text-xs font-medium text-muted-foreground">
-                                Średnio przychód
-                            </CardTitle>
+                            <CardTitle className="text-xs font-medium text-muted-foreground">{t("reports.avgRevenue")}</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 px-3 pb-2 flex items-baseline gap-1">
                             <div className="text-xl font-bold">
@@ -1096,13 +1058,13 @@ const AdminReports = () => {
                                                     fill={
                                                         chartConfig[barberKey]
                                                             ?.color ||
-                                                        "#8884d8"
+                                                        INK.primary
                                                     }
                                                     name={
                                                         chartConfig[barberKey]
                                                             ?.label || barberKey
                                                     }
-                                                    radius={[2, 2, 0, 0]}
+                                                    radius={[0, 0, 0, 0]}
                                                 />
                                             ))}
                                     </BarChart>
@@ -1120,7 +1082,7 @@ const AdminReports = () => {
                 {/* Tabela szczegółowa – tylko pozycje z przychodem > 0 */}
                 <Card className="mt-4 print:shadow-none print:border-none">
                     <CardHeader className="print:hidden">
-                        <CardTitle>Szczegółowe dane</CardTitle>
+                        <CardTitle>{t("reports.details")}</CardTitle>
                     </CardHeader>
                     <CardContent className="print:pt-4">
                         <div className="overflow-x-auto">
@@ -1136,9 +1098,7 @@ const AdminReports = () => {
                                         <TableHead className="text-right print:text-[8pt] print:p-0.5">
                                             Wizyty
                                         </TableHead>
-                                        <TableHead className="text-right print:text-[8pt] print:p-0.5">
-                                            Przychód (PLN)
-                                        </TableHead>
+                                        <TableHead className="text-right print:text-[8pt] print:p-0.5">{t("reports.revenue")}</TableHead>
                                         {pieData.map(p => (
                                             <TableHead
                                                 key={`header-${p.name}`}
@@ -1156,7 +1116,7 @@ const AdminReports = () => {
                                                 colSpan={
                                                     3 + pieData.length
                                                 }
-                                                className="text-center text-xs text-gray-500 py-4"
+                                                className="text-center text-xs text-muted-foreground py-4"
                                             >
                                                 Brak pozycji z
                                                 zarejestrowanym

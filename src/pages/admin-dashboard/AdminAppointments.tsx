@@ -33,7 +33,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
-import { pl, enUS } from "date-fns/locale";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -48,6 +47,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { JarLoader } from "@/components/szlif/Loading";
+import { Lot, Provenance } from "@/components/szlif/Bits";
 
 // --- Typy i schematy ---
 interface Appointment {
@@ -98,18 +100,20 @@ const formatDateLocalYMD = (date: Date) => {
 };
 
 // --- Status config ---
+// Line style carries the state as well as ink: dashed is waiting, solid is
+// booked, double is done, struck is void, dotted is a miss.
 const statusConfig: Record<string, { dot: string; badge: string; label?: string }> = {
-    pending:   { dot: "bg-yellow-500", badge: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700" },
-    confirmed: { dot: "bg-blue-500",   badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-300 dark:border-blue-700" },
-    completed: { dot: "bg-green-500",  badge: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-700" },
-    canceled:  { dot: "bg-red-500",    badge: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-700" },
-    "no-show": { dot: "bg-gray-400",   badge: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600" },
+    pending:   { dot: "bg-muted-foreground", badge: "stamp stamp--pending" },
+    confirmed: { dot: "bg-primary",          badge: "stamp stamp--confirmed" },
+    completed: { dot: "bg-foreground/70",    badge: "stamp stamp--done" },
+    canceled:  { dot: "bg-destructive",      badge: "stamp stamp--void" },
+    "no-show": { dot: "bg-destructive",      badge: "stamp stamp--absent" },
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
     const cfg = statusConfig[status] ?? statusConfig["pending"];
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
+        <span className={cfg.badge}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
             {status}
         </span>
@@ -118,8 +122,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 // --- Komponent główny ---
 const AdminAppointments = () => {
-    const { t, lang } = useLanguage();
-    const dateLocale = lang === 'pl' ? pl : enUS;
+    const { t } = useLanguage();
+    const dateLocale = useDateLocale();
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [clients, setClients] = useState<SelectOption[]>([]);
     const [barbers, setBarbers] = useState<SelectOption[]>([]);
@@ -163,14 +167,14 @@ const AdminAppointments = () => {
                 ]);
 
                 if (!clientsRes.ok || !barbersRes.ok || !servicesRes.ok) {
-                    throw new Error("Failed to fetch filter data");
+                    throw new Error(t("errors.loadFailed"));
                 }
 
                 setClients(await clientsRes.json());
                 setBarbers(await barbersRes.json());
                 setServices(await servicesRes.json());
             } catch (error) {
-                toast.error("Could not load filter options.");
+                toast.error(t("errors.loadFailed"));
                 console.error("Error fetching filter data:", error);
             }
         };
@@ -202,11 +206,11 @@ const AdminAppointments = () => {
                 `${import.meta.env.VITE_API_URL}/api/admin/appointments?${params.toString()}`,
                 { headers }
             );
-            if (!response.ok) throw new Error("Failed to fetch appointments");
+            if (!response.ok) throw new Error(t("errors.loadFailed"));
 
             setAppointments(await response.json());
         } catch (error) {
-            toast.error("Could not fetch appointments.");
+            toast.error(t("errors.loadFailed"));
             console.error("Error fetching appointments:", error);
         } finally {
             setIsFetching(false);
@@ -319,7 +323,7 @@ const AdminAppointments = () => {
                     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                 }
             );
-            if (!response.ok) throw new Error("Failed to delete appointment");
+            if (!response.ok) throw new Error(t("errors.deleteFailed"));
             toast.success(t('adminPanel.appointments.deleted'));
             setIsDeleteModalOpen(false);
             setAppointmentToDelete(null);
@@ -332,7 +336,7 @@ const AdminAppointments = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -353,7 +357,7 @@ const AdminAppointments = () => {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-4 p-4 border rounded-lg bg-muted/50">
+                <div className="mt-4 grid grid-cols-1 gap-4 rounded-[2px] border border-border bg-secondary/60 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <Select
                         value={filters.status}
                         onValueChange={(value) => handleFilterChange("status", value)}
@@ -456,7 +460,7 @@ const AdminAppointments = () => {
             <CardContent>
                 {isFetching ? (
                     <div className="flex items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                        <JarLoader />
                     </div>
                 ) : (
                     <>
@@ -486,8 +490,11 @@ const AdminAppointments = () => {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {appointment.client_first_name}{" "}
-                                                    {appointment.client_last_name}
+                                                    <span className="block">
+                                                        {appointment.client_first_name}{" "}
+                                                        {appointment.client_last_name}
+                                                    </span>
+                                                    <Lot value={appointment.id} className="mt-0.5 block" />
                                                 </TableCell>
                                                 <TableCell>
                                                     {appointment.barber_first_name}{" "}
@@ -541,10 +548,10 @@ const AdminAppointments = () => {
                                 appointments.map((appointment) => (
                                     <div
                                         key={appointment.id}
-                                        className="border rounded-lg p-4 space-y-3 shadow-sm"
+                                        className="plate space-y-3 p-4"
                                     >
-                                        <div className="flex justify-between items-start font-medium">
-                                            <span className="text-foreground">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <span className="label-caps text-[0.9375rem]">
                                                 {appointment.client_first_name}{" "}
                                                 {appointment.client_last_name}
                                             </span>
@@ -576,7 +583,16 @@ const AdminAppointments = () => {
                                                 {appointment.service_price.toFixed(2)} zł)
                                             </p>
                                         </div>
-                                        <div className="flex justify-end space-x-2 pt-3 border-t mt-3">
+                                        <Provenance
+                                            who={`${appointment.client_first_name} ${appointment.client_last_name}`}
+                                            when={
+                                                appointment.created_at
+                                                    ? format(parseISO(appointment.created_at), "d MMM yyyy", { locale: dateLocale })
+                                                    : null
+                                            }
+                                            rev={appointment.id}
+                                        />
+                                        <div className="mt-3 flex justify-end space-x-2 border-t pt-3">
                                             <Button
                                                 variant="outline"
                                                 size="sm"

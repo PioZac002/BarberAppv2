@@ -9,6 +9,7 @@ import { User, Mail, Phone, Save, Edit, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface ProfileData {
     firstName: string;
@@ -118,7 +119,7 @@ const AdminProfile = () => {
     if (authContextLoading || isDataLoading) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber" />
+                <JarLoader />
             </div>
         );
     }
@@ -126,8 +127,8 @@ const AdminProfile = () => {
     if (!authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">{t('adminPanel.profile.authError')}</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                <p className="text-destructive">{t('adminPanel.profile.authError')}</p>
+                <Button asChild className="mt-4 bg-primary hover:bg-primary/90">
                     <Link to="/login">Go to login</Link>
                 </Button>
             </div>
@@ -142,12 +143,12 @@ const AdminProfile = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>{t('adminPanel.profile.personalInfo')}</CardTitle>
                     {!isEditing ? (
-                        <Button onClick={() => setIsEditing(true)} className="bg-barber hover:bg-barber-muted">
+                        <Button onClick={() => setIsEditing(true)} className="bg-primary hover:bg-primary/90">
                             <Edit className="h-4 w-4 mr-1.5" /> {t('adminPanel.profile.editProfile')}
                         </Button>
                     ) : (
                         <div className="flex space-x-2">
-                            <Button onClick={handleSave} className="bg-barber hover:bg-barber-muted">
+                            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">
                                 <Save className="h-4 w-4 mr-1.5" /> {t('adminPanel.profile.save')}
                             </Button>
                             <Button variant="outline" onClick={handleCancel}>

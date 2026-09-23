@@ -48,6 +48,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface User {
     id: number;
@@ -93,7 +94,7 @@ const AdminUsers = () => {
                     },
                 }
             );
-            if (!response.ok) throw new Error("Failed to fetch users");
+            if (!response.ok) throw new Error(t("errors.loadFailed"));
             const data: User[] = await response.json();
 
             // Normalizacja roli: jeśli z API przyjdzie 'user', traktujemy to jako 'client'
@@ -178,7 +179,7 @@ const AdminUsers = () => {
                     },
                 }
             );
-            if (!response.ok) throw new Error("Failed to delete user");
+            if (!response.ok) throw new Error(t("errors.deleteFailed"));
             toast.success(t('adminPanel.users.deleted'));
             setIsDeleteModalOpen(false);
             setUserToDelete(null);
@@ -214,7 +215,7 @@ const AdminUsers = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -288,7 +289,7 @@ const AdminUsers = () => {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="text-red-500"
+                                            className="text-destructive"
                                             onClick={() => handleDeleteClick(user)}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -305,7 +306,7 @@ const AdminUsers = () => {
                     {filteredUsers.map((user) => (
                         <div
                             key={user.id}
-                            className="border rounded-lg p-4 space-y-3 shadow-sm"
+                            className="plate space-y-3 p-4"
                         >
                             <div className="flex justify-between items-start">
                                 <h3 className="font-semibold text-base">

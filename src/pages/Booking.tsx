@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isValid as isValidDateFn } from "date-fns";
-import { pl, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
+import { catalogName, catalogDescription } from "@/lib/catalog-names";
+import { mediaUrl } from "@/lib/media-url";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import dayjs from "dayjs";
 import "dayjs/locale/pl";
 import "dayjs/locale/en";
@@ -62,7 +64,7 @@ const Booking = () => {
     useRequireAuth({ allowedRoles: ["client"] });
     const { user, token } = useAuth();
     const { t, lang } = useLanguage();
-    const dateLocale = lang === "pl" ? pl : enUS;
+    const dateLocale = useDateLocale();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -232,7 +234,7 @@ const Booking = () => {
             setStep(step + 1);
             window.scrollTo(0, 0);
         } else {
-            toast.error(lang === "pl" ? "Uzupełnij wymagane pola na tym etapie." : "Please fill in all required fields for this step.");
+            toast.error(t("bookingPage.stepIncomplete"));
         }
     };
 
@@ -341,10 +343,10 @@ const Booking = () => {
                                     <Card
                                         key={service.id}
                                         className={cn(
-                                            "cursor-pointer transition-all hover:shadow-lg",
+                                            "cursor-pointer transition-all hover:shadow-plate-lift",
                                             formData.serviceId === service.id
-                                                ? "ring-2 ring-barber shadow-lg"
-                                                : "hover:border-gray-300"
+                                                ? "ring-2 ring-primary shadow-plate-lift"
+                                                : "hover:border-border"
                                         )}
                                         onClick={() =>
                                             setFormData(prev => ({
@@ -359,34 +361,32 @@ const Booking = () => {
                                         <CardContent className="p-4 flex items-start space-x-4">
                                             {service.image && (
                                                 <img
-                                                    src={service.image}
+                                                    src={mediaUrl(service.image)}
                                                     alt={service.name}
-                                                    className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+                                                    className="h-20 w-20 shrink-0 rounded-[2px] border border-foreground/30 object-cover"
                                                 />
                                             )}
                                             <div className="flex-1">
                                                 <div className="flex justify-between items-start">
-                                                    <h3 className="font-semibold text-foreground">
-                                                        {service.name}
+                                                    <h3 className="label-caps min-w-0 text-[0.9375rem]">
+                                                        {catalogName(service.name, lang)}
                                                     </h3>
-                                                    <p className="font-semibold text-barber">
-                                                        {service.price.toFixed(
-                                                            2
-                                                        )}{" "}
-                                                        PLN
+                                                    <p className="net-line ml-3 shrink-0 whitespace-nowrap font-semibold text-primary">
+                                                        {service.price.toFixed(2)}
+                                                        <span className="ml-1 text-micro text-muted-foreground">PLN</span>
                                                     </p>
                                                 </div>
-                                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                    {service.description}
+                                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                                    {catalogDescription(service.description, lang)}
                                                 </p>
-                                                <div className="mt-1.5 flex items-center text-xs text-gray-500">
-                                                    <Clock className="inline-block h-3.5 w-3.5 mr-1" />{" "}
+                                                <div className="net-line mt-2 flex items-center gap-1.5 text-micro text-muted-foreground">
+                                                    <Clock className="h-3.5 w-3.5" />
                                                     {service.duration} min
                                                 </div>
                                             </div>
                                             {formData.serviceId ===
                                                 service.id && (
-                                                    <CheckCircle className="h-5 w-5 text-barber flex-shrink-0 ml-2" />
+                                                    <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 ml-2" />
                                                 )}
                                         </CardContent>
                                     </Card>
@@ -394,7 +394,7 @@ const Booking = () => {
                             </div>
                         )}
                         {errors.serviceId && (
-                            <p className="text-red-500 text-sm mt-1">
+                            <p className="text-destructive text-sm mt-1">
                                 {errors.serviceId}
                             </p>
                         )}
@@ -414,10 +414,10 @@ const Booking = () => {
                                     <Card
                                         key={barber.id}
                                         className={cn(
-                                            "cursor-pointer transition-all hover:shadow-lg text-center",
+                                            "cursor-pointer transition-all hover:shadow-plate-lift text-center",
                                             formData.barberId === barber.id
-                                                ? "ring-2 ring-barber shadow-lg"
-                                                : "hover:border-gray-300"
+                                                ? "ring-2 ring-primary shadow-plate-lift"
+                                                : "hover:border-border"
                                         )}
                                         onClick={() =>
                                             setFormData(prev => ({
@@ -431,22 +431,22 @@ const Booking = () => {
                                         <CardContent className="p-4 flex flex-col items-center">
                                             {barber.image && (
                                                 <img
-                                                    src={barber.image}
+                                                    src={mediaUrl(barber.image)}
                                                     alt={barber.name}
-                                                    className="w-20 h-20 object-cover rounded-full mb-2"
+                                                    className="mb-3 h-20 w-20 rounded-[2px] border border-foreground/35 object-cover"
                                                 />
                                             )}
                                             <h3 className="font-semibold text-foreground">
                                                 {barber.name}
                                             </h3>
                                             {barber.role && (
-                                                <p className="text-xs text-barber">
+                                                <p className="text-xs text-primary">
                                                     {barber.role}
                                                 </p>
                                             )}
                                             {formData.barberId ===
                                                 barber.id && (
-                                                    <CheckCircle className="h-5 w-5 text-barber mt-2" />
+                                                    <CheckCircle className="h-5 w-5 text-primary mt-2" />
                                                 )}
                                         </CardContent>
                                     </Card>
@@ -454,7 +454,7 @@ const Booking = () => {
                             </div>
                         )}
                         {errors.barberId && (
-                            <p className="text-red-500 text-sm mt-1">
+                            <p className="text-destructive text-sm mt-1">
                                 {errors.barberId}
                             </p>
                         )}
@@ -475,7 +475,7 @@ const Booking = () => {
                                             "w-full justify-start text-left font-normal mt-1",
                                             !formData.date &&
                                             "text-muted-foreground",
-                                            errors.date && "border-red-500"
+                                            errors.date && "border-destructive"
                                         )}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -503,7 +503,7 @@ const Booking = () => {
                                 </PopoverContent>
                             </Popover>
                             {errors.date && (
-                                <p className="text-red-500 text-sm mt-1">
+                                <p className="text-destructive text-sm mt-1">
                                     {errors.date}
                                 </p>
                             )}
@@ -530,7 +530,7 @@ const Booking = () => {
                                             className={cn(
                                                 "w-full",
                                                 formData.timeSlot === time
-                                                    ? "bg-barber hover:bg-barber-muted"
+                                                    ? "bg-primary hover:bg-primary/90"
                                                     : ""
                                             )}
                                             onClick={() =>
@@ -549,11 +549,11 @@ const Booking = () => {
                                 <p className="text-sm text-muted-foreground mt-1">
                                     {formData.date && formData.serviceId && formData.barberId
                                         ? t("bookingPage.noSlots")
-                                        : lang === "pl" ? "Najpierw wybierz usługę, barbera i datę." : "First select a service, barber, and date."}
+                                        : t("bookingPage.pickFirst")}
                                 </p>
                             )}
                             {errors.timeSlot && (
-                                <p className="text-red-500 text-sm mt-1">
+                                <p className="text-destructive text-sm mt-1">
                                     {errors.timeSlot}
                                 </p>
                             )}
@@ -572,11 +572,11 @@ const Booking = () => {
                                     value={formData.firstName}
                                     onChange={handleChange}
                                     className={
-                                        errors.firstName ? "border-red-500" : ""
+                                        errors.firstName ? "border-destructive" : ""
                                     }
                                 />
                                 {errors.firstName && (
-                                    <p className="text-red-500 text-xs">
+                                    <p className="text-destructive text-xs">
                                         {errors.firstName}
                                     </p>
                                 )}
@@ -589,11 +589,11 @@ const Booking = () => {
                                     value={formData.lastName}
                                     onChange={handleChange}
                                     className={
-                                        errors.lastName ? "border-red-500" : ""
+                                        errors.lastName ? "border-destructive" : ""
                                     }
                                 />
                                 {errors.lastName && (
-                                    <p className="text-red-500 text-xs">
+                                    <p className="text-destructive text-xs">
                                         {errors.lastName}
                                     </p>
                                 )}
@@ -609,11 +609,11 @@ const Booking = () => {
                                     value={formData.email}
                                     onChange={handleChange}
                                     className={
-                                        errors.email ? "border-red-500" : ""
+                                        errors.email ? "border-destructive" : ""
                                     }
                                 />
                                 {errors.email && (
-                                    <p className="text-red-500 text-xs">
+                                    <p className="text-destructive text-xs">
                                         {errors.email}
                                     </p>
                                 )}
@@ -631,7 +631,7 @@ const Booking = () => {
                                 value={formData.notes}
                                 onChange={handleChange}
                                 placeholder={t("bookingPage.notesPlaceholder")}
-                                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-barber focus:border-transparent"
+                                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                             />
                         </div>
                         <div className="flex items-start space-x-2 pt-2">
@@ -658,7 +658,7 @@ const Booking = () => {
                                         : "You can cancel or reschedule your appointment up to 24 hours before it begins."}
                                 </p>
                                 {errors.termsAccepted && (
-                                    <p className="text-red-500 text-xs">
+                                    <p className="text-destructive text-xs">
                                         {errors.termsAccepted}
                                     </p>
                                 )}
@@ -678,86 +678,61 @@ const Booking = () => {
 
     return (
         <Layout>
-            <div className="min-h-screen bg-background py-8 sm:py-12">
-                <div className="container mx-auto px-4">
-                    <div className="max-w-4xl mx-auto mb-8">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-center text-foreground mb-2">
-                            {t("bookingPage.title")}
-                        </h1>
-                        <p className="text-center text-muted-foreground text-sm sm:text-base mb-6">
-                            {t("bookingPage.subtitle")}
-                        </p>
-                        <div className="relative pt-1">
-                            <div className="flex mb-2 items-center justify-between text-xs">
-                                <div>
+            <section className="tile-wall">
+                <div className="mx-auto w-full max-w-[1440px] px-5 pb-10 pt-14 md:px-8 md:pb-14 md:pt-18">
+                    <h1 className="lockup text-wall text-[clamp(2.5rem,8vw,5.5rem)]">
+                        {t("bookingPage.title")}
+                    </h1>
+                    <p className="mt-5 max-w-2xl text-[0.9375rem] leading-relaxed text-wall/85">
+                        {t("bookingPage.subtitle")}
+                    </p>
+                </div>
+                <div className="shelf" aria-hidden />
+            </section>
+
+            <div className="bg-background py-8 sm:py-12">
+                <div className="container">
+                    {/* four stops on one rule; the liquid stands at the current mark */}
+                    <div className="mx-auto mb-10 max-w-4xl">
+                        <ol className="grid grid-cols-4 gap-x-3">
+                            {[
+                                t("bookingPage.step1"),
+                                t("bookingPage.step2"),
+                                t("bookingPage.step3"),
+                                t("bookingPage.step5"),
+                            ].map((label, i) => (
+                                <li key={label} className="min-w-0">
                                     <span
-                                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 1
-                                                ? "bg-barber text-white"
-                                                : "bg-gray-200 text-gray-600"
+                                        className={`directions block truncate ${
+                                            step >= i + 1 ? "text-foreground" : ""
                                         }`}
+                                        aria-current={step === i + 1 ? "step" : undefined}
                                     >
-                                        {t("bookingPage.step1")}
+                                        {String(i + 1).padStart(2, "0")} · {label}
                                     </span>
-                                </div>
-                                <div
-                                    className={`flex-auto border-t-2 transition-all duration-500 ease-in-out mx-2 ${
-                                        step > 1 ? "border-barber" : "border-border"
-                                    }`}
-                                ></div>
-                                <div>
-                                    <span
-                                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 2 ? "bg-barber text-white" : "bg-muted text-muted-foreground"
-                                        }`}
-                                    >
-                                        {t("bookingPage.step2")}
-                                    </span>
-                                </div>
-                                <div
-                                    className={`flex-auto border-t-2 transition-all duration-500 ease-in-out mx-2 ${
-                                        step > 2 ? "border-barber" : "border-border"
-                                    }`}
-                                ></div>
-                                <div>
-                                    <span
-                                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 3 ? "bg-barber text-white" : "bg-muted text-muted-foreground"
-                                        }`}
-                                    >
-                                        {t("bookingPage.step3")}
-                                    </span>
-                                </div>
-                                <div
-                                    className={`flex-auto border-t-2 transition-all duration-500 ease-in-out mx-2 ${
-                                        step > 3 ? "border-barber" : "border-border"
-                                    }`}
-                                ></div>
-                                <div>
-                                    <span
-                                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                            step >= 4 ? "bg-barber text-white" : "bg-muted text-muted-foreground"
-                                        }`}
-                                    >
-                                        {t("bookingPage.step5")}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="overflow-hidden h-1.5 text-xs flex rounded bg-gray-200">
-                                <div
-                                    style={{ width: `${progressPercentage}%` }}
-                                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-barber transition-all duration-500"
-                                ></div>
-                            </div>
+                                </li>
+                            ))}
+                        </ol>
+                        <div
+                            className="relative mt-2.5 h-2 overflow-hidden rounded-[1px] border border-foreground/25 bg-secondary"
+                            role="progressbar"
+                            aria-valuenow={step}
+                            aria-valuemin={1}
+                            aria-valuemax={4}
+                        >
+                            <div
+                                style={{ width: `${progressPercentage}%` }}
+                                className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-700 ease-out-liquid after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-tile/90"
+                            />
                         </div>
                     </div>
 
                     <div className="max-w-4xl mx-auto">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                             <div className="md:col-span-2">
-                                <Card className="animate-fade-in shadow-lg">
+                                <Card>
                                     <CardHeader>
-                                        <CardTitle className="text-xl font-semibold text-foreground">
+                                        <CardTitle className="text-xl">
                                             {getStepTitle()}
                                         </CardTitle>
                                     </CardHeader>
@@ -778,7 +753,7 @@ const Booking = () => {
                                             {step < 4 ? (
                                                 <Button
                                                     type="button"
-                                                    className="bg-barber hover:bg-barber-muted ml-auto"
+                                                    className="bg-primary hover:bg-primary/90 ml-auto"
                                                     onClick={handleNext}
                                                 >
                                                     {t("bookingPage.next")}
@@ -786,7 +761,7 @@ const Booking = () => {
                                             ) : (
                                                 <Button
                                                     type="submit"
-                                                    className="bg-barber hover:bg-barber-muted ml-auto"
+                                                    className="bg-primary hover:bg-primary/90 ml-auto"
                                                     onClick={handleSubmit}
                                                     disabled={!formData.termsAccepted}
                                                 >
@@ -799,9 +774,9 @@ const Booking = () => {
                             </div>
 
                             <div className="md:col-span-1 sticky top-24">
-                                <Card className="shadow-lg">
+                                <Card className="shadow-plate-lift">
                                     <CardHeader>
-                                        <CardTitle className="text-lg font-semibold text-barber">
+                                        <CardTitle className="text-lg font-semibold text-primary">
                                             {t("bookingPage.summary")}
                                         </CardTitle>
                                     </CardHeader>
@@ -812,10 +787,10 @@ const Booking = () => {
                                             </Label>
                                             <p className="font-medium text-foreground">
                                                 {currentService?.name ||
-                                                    (lang === "pl" ? "Nie wybrano" : "Not selected")}
+                                                    t("bookingPage.notSelected")}
                                             </p>
                                             {currentService && (
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-xs text-muted-foreground">
                                                     {currentService.duration}{" "}
                                                     min –{" "}
                                                     {currentService.price.toFixed(
@@ -831,7 +806,7 @@ const Booking = () => {
                                             </Label>
                                             <p className="font-medium text-foreground">
                                                 {currentBarber?.name ||
-                                                    (lang === "pl" ? "Nie wybrano" : "Not selected")}
+                                                    t("bookingPage.notSelected")}
                                             </p>
                                         </div>
                                         <div>
@@ -841,14 +816,14 @@ const Booking = () => {
                                             <p className="font-medium text-foreground">
                                                 {formData.date && isValidDateFn(formData.date)
                                                     ? format(formData.date, "PPP", { locale: dateLocale })
-                                                    : (lang === "pl" ? "Nie wybrano" : "Not selected")}
+                                                    : t("bookingPage.notSelected")}
                                                 {formData.timeSlot ? `, ${formData.timeSlot}` : ""}
                                             </p>
                                         </div>
                                         {(formData.firstName || formData.lastName) && step === 4 && (
                                             <div>
                                                 <Label className="text-xs text-muted-foreground">
-                                                    {lang === "pl" ? "Klient" : "Client"}
+                                                    {t("bookingPage.clientLabel")}
                                                 </Label>
                                                 <p className="font-medium text-foreground">
                                                     {formData.firstName} {formData.lastName}
@@ -858,15 +833,15 @@ const Booking = () => {
                                         {step === 4 && currentService && (
                                             <div className="pt-3 border-t mt-3">
                                                 <div className="flex justify-between">
-                                                    <p>{lang === "pl" ? "Suma netto:" : "Net amount:"}</p>
+                                                    <p>{t("bookingPage.netAmount")}</p>
                                                     <p>{currentService.price.toFixed(2)} PLN</p>
                                                 </div>
                                                 <div className="flex justify-between text-xs text-muted-foreground">
-                                                    <p>{lang === "pl" ? "Szacowany podatek (10%):" : "Estimated tax (10%):"}</p>
+                                                    <p>{t("bookingPage.estimatedTax")}</p>
                                                     <p>{(currentService.price * 0.1).toFixed(2)} PLN</p>
                                                 </div>
-                                                <div className="flex justify-between font-bold text-md mt-2 text-barber">
-                                                    <p>{lang === "pl" ? "Razem:" : "Total:"}</p>
+                                                <div className="flex justify-between font-bold text-md mt-2 text-primary">
+                                                    <p>{t("bookingPage.total")}</p>
                                                     <p>{totalCost.toFixed(2)} PLN</p>
                                                 </div>
                                             </div>

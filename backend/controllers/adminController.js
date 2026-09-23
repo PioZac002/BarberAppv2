@@ -683,84 +683,6 @@ const deleteReview = async (req, res) => {
 
 // --- POWIADOMIENIA ADMINA ---
 
-const getAdminNotifications = async (req, res) => {
-    const adminUserId = req.user?.id;
-    try {
-        const result = await pool.query(
-            `SELECT id, type, title, message, link, is_read, created_at 
-             FROM admin_notifications 
-             WHERE (admin_user_id = $1 OR admin_user_id IS NULL) 
-             ORDER BY is_read ASC, created_at DESC 
-             LIMIT 50`,
-            [adminUserId]
-        );
-        res.json(result.rows);
-    } catch (err) {
-        console.error("Error in getAdminNotifications (AdminController):", err.stack);
-        res.status(500).json({
-            error: 'Błąd podczas pobierania powiadomień administratora.',
-        });
-    }
-};
-
-const markNotificationAsRead = async (req, res) => {
-    const { id } = req.params;
-    const adminUserId = req.user.id;
-    try {
-        const result = await pool.query(
-            'UPDATE admin_notifications SET is_read = TRUE WHERE id = $1 AND (admin_user_id = $2 OR admin_user_id IS NULL) RETURNING id',
-            [id, adminUserId]
-        );
-        if (result.rowCount === 0) {
-            return res.status(404).json({
-                error: 'Powiadomienie nie istnieje lub nie masz do niego uprawnień.',
-            });
-        }
-        res.status(200).json({ message: 'Powiadomienie zostało oznaczone jako przeczytane.' });
-    } catch (err) {
-        console.error('Error marking notification as read:', err.stack);
-        res.status(500).json({ error: 'Błąd serwera podczas oznaczania powiadomienia.' });
-    }
-};
-
-const markAllNotificationsAsRead = async (req, res) => {
-    const adminUserId = req.user.id;
-    try {
-        await pool.query(
-            'UPDATE admin_notifications SET is_read = TRUE WHERE is_read = FALSE AND (admin_user_id = $1 OR admin_user_id IS NULL)',
-            [adminUserId]
-        );
-        res
-            .status(200)
-            .json({ message: 'Wszystkie powiadomienia zostały oznaczone jako przeczytane.' });
-    } catch (err) {
-        console.error('Error marking all notifications as read:', err.stack);
-        res.status(500).json({
-            error: 'Błąd serwera podczas oznaczania wszystkich powiadomień.',
-        });
-    }
-};
-
-const deleteNotification = async (req, res) => {
-    const { id } = req.params;
-    const adminUserId = req.user.id;
-    try {
-        const result = await pool.query(
-            'DELETE FROM admin_notifications WHERE id = $1 AND (admin_user_id = $2 OR admin_user_id IS NULL) RETURNING id',
-            [id, adminUserId]
-        );
-        if (result.rowCount === 0) {
-            return res.status(404).json({
-                error: 'Powiadomienie nie istnieje lub nie masz do niego uprawnień.',
-            });
-        }
-        res.status(200).json({ message: 'Powiadomienie zostało usunięte.' });
-    } catch (err) {
-        console.error('Error deleting notification:', err.stack);
-        res.status(500).json({ error: 'Błąd serwera podczas usuwania powiadomienia.' });
-    }
-};
-
 const getBarbersForSelect = async (req, res) => {
     try {
         const result = await pool.query(`
@@ -782,10 +704,6 @@ const getBarbersForSelect = async (req, res) => {
 module.exports = {
     getStats,
     getRevenue,
-    getAdminNotifications,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
-    deleteNotification,
     getUsers,
     updateUser,
     deleteUser,

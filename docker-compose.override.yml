@@ -1,0 +1,8 @@
+# Local-only port remap so the stack runs alongside other services already
+# holding 5432 and 3000 on this machine. Not part of the shipped deployment.
+services:
+  db:
+    ports: !reset []
+  backend:
+    ports: !override
+      - "3100:3000"

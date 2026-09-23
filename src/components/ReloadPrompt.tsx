@@ -2,8 +2,10 @@ import React from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 function ReloadPrompt() {
+    const { t } = useLanguage();
     const {
         needRefresh: [needRefresh, setNeedRefresh],
         updateServiceWorker,
@@ -22,18 +24,18 @@ function ReloadPrompt() {
 
     React.useEffect(() => {
         if (needRefresh) {
-            const toastId = toast.info('Nowa wersja aplikacji jest dostępna!', {
+            const toastId = toast.info(t('app.updateAvailable'), {
                 position: 'top-center',
                 duration: Infinity,
                 action: {
-                    label: 'Odśwież',
+                    label: t('app.reload'),
                     onClick: () => {
                         updateServiceWorker(true);
                         toast.dismiss(toastId);
                     },
                 },
                 cancel: {
-                    label: 'Później',
+                    label: t('app.later'),
                     onClick: () => {
                         close();
                         toast.dismiss(toastId);

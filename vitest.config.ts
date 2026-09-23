@@ -14,5 +14,7 @@ export default defineConfig({
         setupFiles: "./vitest.setup.ts",
         globals: true,
         include: ["src/**/*.test.{ts,tsx}", "backend/**/*.test.js"],
+        // node_modules under backend/ must not be scanned for suites
+        exclude: ["**/node_modules/**", "dist/**"],
     },
 });

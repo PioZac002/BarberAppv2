@@ -1,8 +1,9 @@
 // src/pages/barber-dashboard/BarberScheduleOverview.tsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { NotificationDigest } from "@/components/szlif/NotificationDigest";
 import {
     Card,
     CardContent,
@@ -17,18 +18,15 @@ import {
     CalendarDays,
     Info,
     Bell,
-    Star,
-    ArrowRight,
+    Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format, isValid, formatDistanceToNow } from "date-fns";
-import { pl } from "date-fns/locale";
-import { enUS } from "date-fns/locale";
+import { format, isValid } from "date-fns";
 import dayjs from "dayjs";
 import "dayjs/locale/pl";
 import "dayjs/locale/en";
+import { JarLoader } from "@/components/szlif/Loading";
 
 dayjs.locale("pl");
 
@@ -41,55 +39,19 @@ interface DailyAppointment {
     price: number | string;
 }
 
-interface Notification {
-    id: number;
-    type: string;
-    title: string;
-    message: string;
-    is_read: boolean;
-    created_at: string;
-}
-
-const getNotificationIcon = (type: string) => {
-    switch (type) {
-        case "new_booking_barber":
-        case "appointment_confirmed_by_admin_staff":
-        case "appointment_canceled":
-            return CalendarDays;
-        case "new_review":
-            return Star;
-        default:
-            return Bell;
-    }
-};
-
-const getNotificationColorClass = (type: string) => {
-    switch (type) {
-        case "new_booking_barber":
-        case "appointment_confirmed_by_admin_staff":
-            return "text-blue-500";
-        case "appointment_canceled":
-            return "text-red-500";
-        case "new_review":
-            return "text-yellow-500";
-        default:
-            return "text-muted-foreground";
-    }
-};
-
 const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
         case "pending":
-            return "bg-yellow-100 text-yellow-800";
+            return "bg-secondary text-muted-foreground";
         case "confirmed":
-            return "bg-green-100 text-green-800";
+            return "bg-primary/10 text-primary";
         case "completed":
-            return "bg-blue-100 text-blue-800";
+            return "bg-series-7/10 text-series-7";
         case "canceled":
         case "cancelled":
-            return "bg-red-100 text-red-800";
+            return "bg-destructive/10 text-destructive";
         case "no-show":
-            return "bg-orange-100 text-orange-800";
+            return "bg-destructive/10 text-destructive";
         default:
             return "bg-muted text-foreground";
     }
@@ -98,13 +60,11 @@ const getStatusBadgeVariant = (status: string) => {
 const BarberScheduleOverview = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
     const { t, lang } = useLanguage();
-    const dateLocale = lang === 'pl' ? pl : enUS;
+    const dateLocale = useDateLocale();
 
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [dailyAppointments, setDailyAppointments] = useState<DailyAppointment[]>([]);
     const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
-    const [latestNotifications, setLatestNotifications] = useState<Notification[]>([]);
-    const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
 
     useEffect(() => {
         dayjs.locale(lang === 'pl' ? 'pl' : 'en');
@@ -131,14 +91,11 @@ const BarberScheduleOverview = () => {
     useEffect(() => {
         if (authContextLoading) {
             setIsLoadingAppointments(true);
-            setIsLoadingNotifications(true);
             return;
         }
         if (!authUser || !token) {
             setDailyAppointments([]);
-            setLatestNotifications([]);
             setIsLoadingAppointments(false);
-            setIsLoadingNotifications(false);
             return;
         }
 
@@ -180,53 +137,18 @@ const BarberScheduleOverview = () => {
             setIsLoadingAppointments(false);
         }
 
-        const fetchLatestNotifications = async () => {
-            if (!token) return;
-            setIsLoadingNotifications(true);
-            try {
-                const response = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/barber/notifications?limit=5`,
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
-                );
-                if (!response.ok) {
-                    let errorMsg = t("barberPanel.notifications.loadFailed");
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorMsg;
-                    } catch (e) {
-                        /* Ignore */
-                    }
-                    throw new Error(errorMsg);
-                }
-                const data: Notification[] = await response.json();
-                setLatestNotifications(data);
-            } catch (error: any) {
-                console.error("Error fetching notifications:", error);
-                toast.error(error.message || t("barberPanel.notifications.loadFailed"));
-                setLatestNotifications([]);
-            } finally {
-                setIsLoadingNotifications(false);
-            }
-        };
-        fetchLatestNotifications();
+
     }, [authUser, token, selectedDate, authContextLoading]);
 
     const handleDateChangeForMui = (newDate: Date | null) => {
         setSelectedDate(newDate || undefined);
     };
 
-    if (
-        authContextLoading ||
-        (isLoadingAppointments &&
-            isLoadingNotifications &&
-            dailyAppointments.length === 0 &&
-            latestNotifications.length === 0)
-    ) {
+    // the digest loads itself now, so the page waits only on its own data
+    if (authContextLoading || (isLoadingAppointments && dailyAppointments.length === 0)) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -237,7 +159,7 @@ const BarberScheduleOverview = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center text-lg sm:text-xl">
-                            <CalendarDays className="h-5 w-5 mr-2 text-barber" />
+                            <CalendarDays className="h-5 w-5 mr-2 text-primary" />
                             {t("barberPanel.schedule.selectDate")}
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
@@ -255,87 +177,12 @@ const BarberScheduleOverview = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center text-lg sm:text-xl">
-                            <Bell className="h-5 w-5 mr-2 text-barber" />
+                            <Bell className="h-5 w-5 mr-2 text-primary" />
                             {t("barberPanel.schedule.latestNotifications")}
                         </CardTitle>
-                        <CardDescription className="text-xs sm:text-sm">
-                            {t("barberPanel.schedule.latestNotifications")}
-                        </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0 px-3 sm:px-4">
-                        {isLoadingNotifications && latestNotifications.length === 0 ? (
-                            <div className="text-center py-4">
-                                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-barber mx-auto"></div>
-                            </div>
-                        ) : latestNotifications.length > 0 ? (
-                            <div className="space-y-3">
-                                {latestNotifications.slice(0, 5).map((notification) => {
-                                    const IconComponent = getNotificationIcon(notification.type);
-                                    const timeAgo = isValid(new Date(notification.created_at))
-                                        ? formatDistanceToNow(
-                                            new Date(notification.created_at),
-                                            { addSuffix: true, locale: dateLocale }
-                                        )
-                                        : "—";
-                                    return (
-                                        <Link
-                                            to="/barber-dashboard/notifications"
-                                            key={notification.id}
-                                            className={`block p-2.5 rounded-md border transition-colors ${
-                                                notification.is_read
-                                                    ? "bg-muted/50 hover:bg-muted border-border"
-                                                    : "bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
-                                            }`}
-                                        >
-                                            <div className="flex items-center space-x-2.5">
-                                                <div
-                                                    className={`flex-shrink-0 p-1.5 rounded-full ${
-                                                        notification.is_read ? "bg-muted" : "bg-card"
-                                                    }`}
-                                                >
-                                                    <IconComponent
-                                                        className={`h-4 w-4 ${getNotificationColorClass(
-                                                            notification.type
-                                                        )}`}
-                                                    />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p
-                                                        className={`text-xs sm:text-sm font-medium truncate ${
-                                                            notification.is_read
-                                                                ? "text-muted-foreground"
-                                                                : "text-foreground"
-                                                        }`}
-                                                    >
-                                                        {notification.title}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">{timeAgo}</p>
-                                                </div>
-                                                {!notification.is_read && (
-                                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 animate-pulse"></div>
-                                                )}
-                                            </div>
-                                        </Link>
-                                    );
-                                })}
-                                <Link
-                                    to="/barber-dashboard/notifications"
-                                    className="block mt-3"
-                                >
-                                    <Button variant="outline" size="sm" className="w-full">
-                                        {t("barberPanel.schedule.viewAllNotifications")}
-                                        <ArrowRight className="h-4 w-4 ml-2" />
-                                    </Button>
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="text-center py-6">
-                                <Bell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                                <p className="text-sm text-muted-foreground">
-                                    {t("barberPanel.notifications.noNotifications")}
-                                </p>
-                            </div>
-                        )}
+                        <NotificationDigest allHref="/barber-dashboard/notifications" />
                     </CardContent>
                 </Card>
             </div>
@@ -344,7 +191,7 @@ const BarberScheduleOverview = () => {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center text-lg sm:text-xl">
-                            <Clock className="h-5 w-5 mr-2 text-barber" />
+                            <Clock className="h-5 w-5 mr-2 text-primary" />
                             {t("barberPanel.schedule.appointmentsFor")}{" "}
                             {selectedDate && isValid(selectedDate)
                                 ? format(selectedDate, "PPP", { locale: dateLocale })
@@ -357,7 +204,7 @@ const BarberScheduleOverview = () => {
                     <CardContent>
                         {isLoadingAppointments && dailyAppointments.length === 0 ? (
                             <div className="text-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-barber mx-auto mb-2"></div>
+                                <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
                                 <p className="text-muted-foreground text-sm">{t("barberPanel.loading")}</p>
                             </div>
                         ) : dailyAppointments.length > 0 ? (
@@ -365,13 +212,11 @@ const BarberScheduleOverview = () => {
                                 {dailyAppointments.map((apt) => (
                                     <div
                                         key={apt.id}
-                                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow"
+                                        className="plate flex flex-col items-start justify-between p-3 sm:flex-row sm:items-center sm:p-4"
                                     >
                                         <div className="flex items-center mb-2 sm:mb-0 w-full sm:w-auto">
                                             <div
-                                                className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center text-white ${
-                                                    getStatusBadgeVariant(apt.status).split(" ")[0]
-                                                }`}
+                                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-foreground/30 bg-secondary text-foreground"
                                             >
                                                 <User className="h-5 w-5" />
                                             </div>

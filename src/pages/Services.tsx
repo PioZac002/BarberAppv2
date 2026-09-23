@@ -1,18 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-    Clock,
-    Calendar,
-    Loader2,
-    Scissors,
-    Zap,
-    Smile,
-    Heart,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Layout from "@/components/Layout";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader, EmptyShelf } from "@/components/szlif/Loading";
 import { toast } from "sonner";
+import { catalogName, catalogDescription } from "@/lib/catalog-names";
 
 interface Service {
     id: number;
@@ -21,35 +14,16 @@ interface Service {
     duration: number;
     price: number;
     image: string | null;
-    icon?: React.ElementType;
     category?: string;
 }
 
-const serviceIconMap: Record<string, React.ElementType> = {
-    haircut: Scissors,
-    beard: Zap,
-    facial: Smile,
-    kids: Heart,
-    default: Scissors,
-};
-
-const assignIconToService = (service: Service): Service => {
-    let assignedIcon = serviceIconMap.default;
-    const lower = service.name.toLowerCase();
-    if (lower.includes("haircut") || lower.includes("cut")) {
-        assignedIcon = serviceIconMap.haircut;
-    } else if (lower.includes("beard")) {
-        assignedIcon = serviceIconMap.beard;
-    } else if (lower.includes("facial") || lower.includes("shave")) {
-        assignedIcon = serviceIconMap.facial;
-    } else if (lower.includes("kid")) {
-        assignedIcon = serviceIconMap.kids;
-    }
-    return { ...service, icon: assignedIcon };
-};
-
+/**
+ * The tariff sheet. A barbershop's price list is a printed object with its
+ * own conventions — position, name, directions, net time, price — so the
+ * page is that object rather than a grid of icon cards.
+ */
 const ServicesPage = () => {
-    const { t } = useLanguage();
+    const { t, lang } = useLanguage();
     const [services, setServicesData] = useState<Service[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -61,8 +35,7 @@ const ServicesPage = () => {
                     `${import.meta.env.VITE_API_URL}/api/public/services`
                 );
                 if (!response.ok) throw new Error("Failed to fetch services");
-                let data: Service[] = await response.json();
-                data = data.map(assignIconToService);
+                const data: Service[] = await response.json();
                 setServicesData(data);
             } catch (error) {
                 console.error("Error fetching services:", error);
@@ -77,92 +50,79 @@ const ServicesPage = () => {
 
     return (
         <Layout>
-            {/* ── Hero ── */}
-            <section className="relative py-24 md:py-36">
-                <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                    style={{
-                        backgroundImage:
-                            "linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.72)), url('https://images.unsplash.com/photo-1622288432428-5937a421a05c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80')",
-                    }}
-                />
-                <div className="container mx-auto px-4 relative z-10 text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-fade-in">
+            <section className="tile-wall">
+                <div className="mx-auto w-full max-w-[1440px] px-5 pb-12 pt-16 md:px-8 md:pb-16 md:pt-20">
+                    <h1 className="lockup text-wall text-[clamp(2.75rem,10vw,7rem)]">
                         {t("services.title")}
                     </h1>
-                    <p
-                        className="text-xl text-gray-300 max-w-3xl mx-auto animate-fade-in"
-                        style={{ animationDelay: "0.2s" }}
-                    >
+                    <p className="mt-6 max-w-2xl text-[0.9375rem] leading-relaxed text-wall/85">
                         {t("services.subtitle")}
                     </p>
                 </div>
+                <div className="shelf" aria-hidden />
             </section>
 
-            {/* ── Services grid ── */}
-            <section className="py-16 bg-background">
-                <div className="container mx-auto px-4">
+            <section className="bg-background py-12 md:py-16">
+                <div className="container">
                     {isLoading ? (
-                        <div className="text-center py-16">
-                            <Loader2 className="h-12 w-12 text-barber animate-spin mx-auto" />
-                            <p className="mt-4 text-muted-foreground">{t("services.loading")}</p>
-                        </div>
+                        <JarLoader label={t("services.loading")} />
                     ) : services.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {services.map((service, index) => {
-                                const ServiceIcon = service.icon || Scissors;
-                                return (
-                                    <div
-                                        key={service.id}
-                                        className="bg-card rounded-xl border border-border hover:border-barber/40 hover:shadow-xl transition-all duration-300 flex flex-col animate-fade-in"
-                                        style={{ animationDelay: `${0.08 * index}s` }}
-                                    >
-                                        <div className="p-6 flex-grow flex flex-col">
-                                            <div className="w-16 h-16 bg-barber/10 dark:bg-barber/20 rounded-full flex items-center justify-center mb-5 self-center">
-                                                <ServiceIcon className="h-8 w-8 text-barber" />
+                        <div className="plate plate--flat overflow-hidden">
+                            {/* the sheet's column heads */}
+                            <div className="rule-double hidden grid-cols-[3.5rem_minmax(0,1fr)_7rem_8rem_3rem] items-end gap-4 px-5 pb-2 pt-5 md:grid">
+                                <span className="directions">{t("plate.shelf")}</span>
+                                <span className="directions">{t("plate.item")}</span>
+                                <span className="directions text-right">{t("plate.duration")}</span>
+                                <span className="directions text-right">{t("plate.price")}</span>
+                                <span className="sr-only">{t("services.bookAppointment")}</span>
+                            </div>
+
+                            <ol>
+                                {services.map((service, index) => (
+                                    <li key={service.id} className="border-b border-border last:border-b-0">
+                                        <Link
+                                            to={`/booking?serviceId=${service.id}`}
+                                            className="group grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 px-5 py-6 transition-colors duration-200 hover:bg-accent/60 md:grid-cols-[3.5rem_minmax(0,1fr)_7rem_8rem_3rem] md:items-center md:gap-4"
+                                        >
+                                            <span className="net-line pt-1 text-sm text-muted-foreground md:pt-0">
+                                                {String(index + 1).padStart(2, "0")}
+                                            </span>
+
+                                            <div className="min-w-0">
+                                                <h2 className="label-caps text-lg leading-tight">{catalogName(service.name, lang)}</h2>
+                                                {service.description && (
+                                                    <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-muted-foreground">
+                                                        {catalogDescription(service.description, lang)}
+                                                    </p>
+                                                )}
                                             </div>
-                                            <h3 className="text-xl font-semibold mb-3 text-foreground text-center">
-                                                {service.name}
-                                            </h3>
-                                            <p className="text-muted-foreground mb-4 text-sm min-h-[4.5rem] line-clamp-3 flex-grow">
-                                                {service.description}
-                                            </p>
-                                            <div className="flex items-center text-sm text-muted-foreground mb-4 mt-auto">
-                                                <Clock className="h-4 w-4 text-barber mr-1.5" />
-                                                <span>
+
+                                            <span className="col-start-2 flex items-baseline gap-4 md:contents">
+                                                <span className="net-line order-2 text-sm text-muted-foreground md:order-none md:col-start-3 md:text-right">
                                                     {service.duration} {t("services.duration")}
                                                 </span>
-                                            </div>
-                                            <div className="border-t border-border pt-4 flex items-center justify-between">
-                                                <span className="text-2xl font-bold text-barber">
-                                                    {service.price.toFixed(2)} PLN
+                                                <span className="net-line order-1 text-xl font-semibold md:order-none md:col-start-4 md:text-right">
+                                                    {service.price.toFixed(2)}
+                                                    <span className="ml-1 text-micro text-muted-foreground">PLN</span>
                                                 </span>
-                                                <Button
-                                                    asChild
-                                                    size="sm"
-                                                    className="bg-barber hover:bg-barber-muted text-white"
-                                                >
-                                                    <Link to={`/booking?serviceId=${service.id}`}>
-                                                        <Calendar className="h-4 w-4 mr-2" />
-                                                        {t("services.bookAppointment")}
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                            </span>
+
+                                            <span className="col-start-2 flex items-center gap-2 md:col-start-5 md:justify-end">
+                                                <span className="label-caps text-[0.6875rem] text-primary md:sr-only">
+                                                    {t("services.bookAppointment")}
+                                                </span>
+                                                <ArrowRight className="h-4 w-4 text-primary transition-transform duration-300 group-hover:translate-x-1" />
+                                            </span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ol>
                         </div>
                     ) : (
-                        <div className="text-center py-16">
-                            <Scissors className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
-                            <p className="text-foreground text-lg font-medium">
-                                {t("services.noServices")}
-                            </p>
-                            <p className="text-muted-foreground mt-1">
-                                {t("services.noServicesHint")}
-                            </p>
-                        </div>
+                        <EmptyShelf
+                            title={t("services.noServices")}
+                            hint={t("services.noServicesHint")}
+                        />
                     )}
                 </div>
             </section>

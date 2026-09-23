@@ -1,4 +1,5 @@
 const express = require('express');
+const notifications = require('../controllers/notificationsController');
 const router = express.Router();
 const path = require('path');
 const multer = require('multer');
@@ -11,10 +12,6 @@ const {
     uploadProfilePhoto,
     getBarberProfile,
     updateBarberProfile,
-    getBarberNotifications,
-    markNotificationAsRead,
-    deleteNotification,
-    markAllNotificationsAsRead,
     getBarberStats,
     getBarberAppointments,
     updateAppointmentStatus,
@@ -77,10 +74,13 @@ router.put('/profile', blockDemoProfileChange, updateBarberProfile);
 router.post('/profile/upload-photo', uploadProfile.single('photo'), uploadProfilePhoto);
 
 // Notifications
-router.get('/notifications', getBarberNotifications);
-router.put('/notifications/read-all', markAllNotificationsAsRead);
-router.put('/notifications/:id/read', markNotificationAsRead);
-router.delete('/notifications/:id', deleteNotification);
+// Notifications are the same four operations for every role; the recipient is
+// whoever is holding the token, so one controller serves all three panels.
+router.get('/notifications', notifications.list);
+router.get('/notifications/unread-count', notifications.unreadCount);
+router.put('/notifications/read-all', notifications.markAllRead);
+router.put('/notifications/:id/read', notifications.markRead);
+router.delete('/notifications/:id', notifications.remove);
 
 // Stats
 router.get('/stats', getBarberStats);

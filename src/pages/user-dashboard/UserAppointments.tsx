@@ -20,8 +20,9 @@ import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { isValid, format } from "date-fns";
-import { pl, enUS } from "date-fns/locale";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface Appointment {
     id: number;
@@ -37,13 +38,13 @@ interface Appointment {
 
 const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-        case "confirmed": return "bg-green-100 text-green-800";
-        case "pending": return "bg-yellow-100 text-yellow-800";
-        case "completed": return "bg-blue-100 text-blue-800";
+        case "confirmed": return "bg-primary/10 text-primary";
+        case "pending": return "bg-secondary text-muted-foreground";
+        case "completed": return "bg-series-7/10 text-series-7";
         case "canceled":
-        case "cancelled": return "bg-red-100 text-red-800";
-        case "no-show": return "bg-orange-100 text-orange-800";
-        default: return "bg-gray-100 text-gray-800";
+        case "cancelled": return "bg-destructive/10 text-destructive";
+        case "no-show": return "bg-destructive/10 text-destructive";
+        default: return "bg-secondary text-muted-foreground";
     }
 };
 
@@ -57,7 +58,7 @@ const UserAppointments = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
     useRequireAuth({ allowedRoles: ["client"] });
     const { t, lang } = useLanguage();
-    const dateLocale = lang === "pl" ? pl : enUS;
+    const dateLocale = useDateLocale();
 
     const [appointmentList, setAppointmentList] = useState<Appointment[]>([]);
     const [filter, setFilter] = useState("all");
@@ -179,7 +180,7 @@ const UserAppointments = () => {
     if (authContextLoading || isDataLoading) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -187,10 +188,10 @@ const UserAppointments = () => {
     if (!authContextLoading && !authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">
+                <p className="text-destructive">
                     {t("userPanel.authErrorDesc")}
                 </p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                <Button asChild className="mt-4 bg-primary hover:bg-primary/90">
                     <Link to="/login">{t("userPanel.goToLogin")}</Link>
                 </Button>
             </div>
@@ -206,7 +207,7 @@ const UserAppointments = () => {
                         {t("userPanel.appointments.subtitle")}
                     </p>
                 </div>
-                <Button asChild className="bg-barber hover:bg-barber-muted w-full sm:w-auto">
+                <Button asChild className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
                     <Link to="/booking">
                         <Plus className="h-4 w-4 mr-2" />
                         {t("userPanel.appointments.bookNew")}
@@ -243,7 +244,7 @@ const UserAppointments = () => {
                     appointmentList.map((appointment) => (
                         <Card
                             key={appointment.id}
-                            className="hover:shadow-lg transition-shadow duration-200"
+                            className="hover:shadow-plate-lift transition-shadow duration-200"
                         >
                             <CardContent className="p-4 sm:p-6">
                                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -278,7 +279,7 @@ const UserAppointments = () => {
                                             </div>
                                         </div>
 
-                                        <div className="text-md sm:text-lg font-semibold text-barber pt-1">
+                                        <div className="text-md sm:text-lg font-semibold text-primary pt-1">
                                             {formatPricePln(appointment.price)}
                                         </div>
                                     </div>
@@ -290,7 +291,7 @@ const UserAppointments = () => {
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleCancelAppointment(appointment.id)}
-                                                className="w-full border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                className="w-full border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
                                             >
                                                 <Trash2 className="h-4 w-4 mr-1.5" />
                                                 {t("userPanel.appointments.cancelAppointment")}
@@ -301,7 +302,7 @@ const UserAppointments = () => {
                                                 variant="outline"
                                                 size="sm"
                                                 disabled
-                                                className="w-full border-barber text-barber hover:bg-barber/10"
+                                                className="w-full border-primary text-primary hover:bg-primary/10"
                                             >
                                                 <Edit className="h-4 w-4 mr-1.5" />
                                                 {t("userPanel.appointments.reschedule")}
@@ -312,7 +313,7 @@ const UserAppointments = () => {
                                                 variant="outline"
                                                 size="sm"
                                                 disabled
-                                                className="w-full border-barber text-barber hover:bg-barber/10"
+                                                className="w-full border-primary text-primary hover:bg-primary/10"
                                             >
                                                 <Star className="h-4 w-4 mr-1.5" />
                                                 {t("userPanel.appointments.addReview")}
@@ -335,7 +336,7 @@ const UserAppointments = () => {
                                     ? t("userPanel.appointments.noAppointmentsYet")
                                     : `${t("userPanel.appointments.noAppointmentsFilter")} ${getFilterLabel(filter).toLowerCase()}.`}
                             </p>
-                            <Button asChild className="bg-barber hover:bg-barber-muted">
+                            <Button asChild className="bg-primary hover:bg-primary/90">
                                 <Link to="/booking">{t("userPanel.appointments.bookFirst")}</Link>
                             </Button>
                         </CardContent>

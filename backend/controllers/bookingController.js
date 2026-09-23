@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const notifications = require('../services/notifications');
 const { parse, format, addMinutes, isValid: isValidDateFn } = require('date-fns');
 
 // Funkcja generateTimeSlots
@@ -55,7 +56,7 @@ const getBarbersForBooking = async (req, res) => {
             SELECT 
                 b.id, u.first_name, u.last_name,
                 COALESCE(b.job_title, 'Barber') AS role,
-                COALESCE(b.profile_image_url, 'https://via.placeholder.com/150/CCCCCC/808080?Text=No+Image') AS image,
+                b.profile_image_url AS image,
                 b.experience AS experience_text, 
                 COALESCE(br.avg_rating, 0.0) AS rating
             FROM barbers b
@@ -172,11 +173,10 @@ const getAvailableTimeSlots = async (req, res) => {
             );
         });
 
-        res.json(
-            availableSlots.map(slot =>
-                format(parse(slot, 'HH:mm', new Date()), 'h:mm a')
-            )
-        );
+        // 24-hour HH:mm is the value, not the label. Formatting it here in
+        // English meant a Polish page showed "9:00 AM", and the same string
+        // had to be parsed back out of the booking request.
+        res.json(availableSlots);
     } catch (err) {
         console.error('Error in getAvailableTimeSlots:', err.stack);
         res.status(500).json({
@@ -202,7 +202,11 @@ const createBooking = async (req, res) => {
         pgClient = await pool.connect();
         await pgClient.query('BEGIN');
 
-        const parsedTime = parse(timeSlot, 'h:mm a', new Date());
+        // accept the 24-hour value; tolerate the legacy 12-hour form so a
+        // page still open from before this change does not fail to book
+        const parsedTime = /^\d{1,2}:\d{2}$/.test(timeSlot)
+            ? parse(timeSlot, 'HH:mm', new Date())
+            : parse(timeSlot, 'h:mm a', new Date());
         const datePart = date.split('T')[0];
         const localDateTime = new Date(
             `${datePart}T${format(parsedTime, 'HH:mm:ss')}`
@@ -251,74 +255,41 @@ const createBooking = async (req, res) => {
         const targetBarberName = newAppointment.target_barber_name;
         const targetBarberUserId = newAppointment.target_barber_user_id;
 
-        // Powiadomienie dla klienta
-        const clientNotificationTitle = 'Rezerwacja oczekuje na potwierdzenie';
-        const clientMessage = `Twoja rezerwacja na usługę ${serviceName} u ${targetBarberName} w dniu ${appointmentTimeFormatted} oczekuje na potwierdzenie. Powiadomimy Cię, gdy zostanie potwierdzona.`;
-        await pgClient.query(
-            `INSERT INTO user_notifications (user_id, type, title, message, link, is_read, created_at)
-             VALUES ($1, $2, $3, $4, $5, FALSE, NOW())`,
-            [
-                clientUserId,
-                'booking_pending',
-                clientNotificationTitle,
-                clientMessage,
-                `/user-dashboard/appointments`,
-            ]
-        );
+        // One event, three audiences. The wording is not decided here: the
+        // row carries the type and its values, and each reader renders the
+        // sentence in their own language when they open it.
+        const notifyParams = {
+            service: serviceName,
+            barber: targetBarberName,
+            client: clientName,
+            when: newAppointment.appointment_time,
+            appointmentId,
+        };
 
-        // Powiadomienie dla barbera
-        const barberNotificationTitle = 'Nowa rezerwacja';
-        const barberMessageForBarber = `Nowa rezerwacja od ${clientName} na usługę ${serviceName} w dniu ${appointmentTimeFormatted} (ID wizyty: ${appointmentId}).`;
-        if (barberId) {
-            await pgClient.query(
-                `INSERT INTO notifications (barber_id, recipient_user_id, type, title, message, link, is_read, created_at) 
-                 VALUES ($1, $2, $3, $4, $5, $6, FALSE, NOW())`,
-                [
-                    barberId,
-                    targetBarberUserId,
-                    'new_booking_barber',
-                    barberNotificationTitle,
-                    barberMessageForBarber,
-                    `/barber-dashboard/schedule`,
-                ]
-            );
-        }
+        await notifications.notify(pgClient, {
+            recipientId: clientUserId,
+            audience: 'client',
+            type: 'booking_pending',
+            params: notifyParams,
+            link: '/user-dashboard/appointments',
+            appointmentId,
+        });
 
-        // Powiadomienia dla administratorów
-        const adminNotificationTitle = 'Nowa wizyta została zarezerwowana';
-        const adminMessageForAdmin = `Nowa wizyta (ID: ${appointmentId}) została zarezerwowana przez ${clientName} u ${targetBarberName} na usługę ${serviceName} w dniu ${appointmentTimeFormatted}.`;
-        const adminLink = `/admin-dashboard/appointments?appointmentId=${appointmentId}`;
+        await notifications.notify(pgClient, {
+            recipientId: targetBarberUserId,
+            audience: 'barber',
+            type: 'new_booking_barber',
+            params: notifyParams,
+            link: '/barber-dashboard/appointments',
+            appointmentId,
+        });
 
-        const adminUsersResult = await pgClient.query(
-            "SELECT id FROM users WHERE role = 'admin'"
-        );
-        if (adminUsersResult.rows.length > 0) {
-            const adminNotificationQuery = `
-                INSERT INTO admin_notifications (admin_user_id, type, title, message, link, 
-                                                related_appointment_id, related_client_id, related_barber_id, 
-                                                is_read, created_at) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW());
-            `;
-            for (const admin of adminUsersResult.rows) {
-                try {
-                    await pgClient.query(adminNotificationQuery, [
-                        admin.id,
-                        'new_appointment_booked',
-                        adminNotificationTitle,
-                        adminMessageForAdmin,
-                        adminLink,
-                        appointmentId,
-                        clientUserId,
-                        barberId,
-                    ]);
-                } catch (adminNotifError) {
-                    console.error(
-                        `Failed to send notification to admin ${admin.id}:`,
-                        adminNotifError.message
-                    );
-                }
-            }
-        }
+        await notifications.notifyAdmins(pgClient, {
+            type: 'new_appointment_booked',
+            params: notifyParams,
+            link: `/admin-dashboard/appointments?appointmentId=${appointmentId}`,
+            appointmentId,
+        });
 
         await pgClient.query('COMMIT');
         res.status(201).json({

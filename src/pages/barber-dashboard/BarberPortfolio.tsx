@@ -9,6 +9,7 @@ import {
     CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { mediaUrl } from "@/lib/media-url";
 import {
     Image as ImageIcon,
     Plus,
@@ -16,6 +17,7 @@ import {
     Link as LinkIcon,
     Upload,
     Clipboard,
+    Loader2,
 } from "lucide-react";
 import {
     Dialog,
@@ -33,6 +35,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Link as RouterLink } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface PortfolioImage {
     id: number;
@@ -236,7 +239,7 @@ const BarberPortfolioPage = () => {
     if (authContextLoading || isLoading) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber" />
+                <JarLoader />
             </div>
         );
     }
@@ -244,8 +247,8 @@ const BarberPortfolioPage = () => {
     if (!authContextLoading && !authUser) {
         return (
             <div className="p-6 text-center">
-                <p className="text-red-500">{t("barberPanel.authError")}</p>
-                <Button asChild className="mt-4 bg-barber hover:bg-barber-muted">
+                <p className="text-destructive">{t("barberPanel.authError")}</p>
+                <Button asChild className="mt-4 bg-primary hover:bg-primary/90">
                     <RouterLink to="/login">{t("barberPanel.goToLogin")}</RouterLink>
                 </Button>
             </div>
@@ -256,16 +259,16 @@ const BarberPortfolioPage = () => {
 
     return (
         <>
-            <Card className="mb-6 shadow-md">
+            <Card className="mb-6 shadow-plate">
                 <CardHeader className="border-b pb-4">
                     <CardTitle className="flex items-center justify-between text-xl sm:text-2xl">
                         <div className="flex items-center">
-                            <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-barber" />
+                            <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-primary" />
                             {t("barberPanel.portfolio.title")}
                         </div>
                         <Button
                             onClick={() => { resetForm(); setIsAddModalOpen(true); }}
-                            className="bg-barber hover:bg-barber-muted text-xs sm:text-sm h-9 sm:h-10"
+                            className="bg-primary hover:bg-primary/90 text-xs sm:text-sm h-9 sm:h-10"
                             size="sm"
                         >
                             <Plus className="h-4 w-4 mr-1" />
@@ -282,25 +285,25 @@ const BarberPortfolioPage = () => {
                             {portfolioImages.map(image => (
                                 <div
                                     key={image.id}
-                                    className="group relative rounded-lg overflow-hidden shadow-lg aspect-square"
+                                    className="photo-frame group relative aspect-square shadow-plate"
                                 >
                                     <img
-                                        src={image.image_url}
+                                        src={mediaUrl(image.image_url)}
                                         alt={image.title || "Portfolio"}
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                         onError={e => { (e.target as HTMLImageElement).src = placeholderSvg; }}
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-3 sm:p-4 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <h3 className="font-semibold text-md sm:text-lg text-white truncate">{image.title}</h3>
+                                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-ink/85 via-ink/45 to-transparent p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:p-4">
+                                        <h3 className="label-caps truncate text-sm text-label sm:text-base">{image.title}</h3>
                                         {image.description && (
-                                            <p className="text-xs sm:text-sm text-gray-200 line-clamp-2">{image.description}</p>
+                                            <p className="mt-1 line-clamp-2 text-xs text-wall/80 sm:text-sm">{image.description}</p>
                                         )}
                                     </div>
                                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                         <Button
                                             size="icon"
                                             variant="destructive"
-                                            className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-red-600/80 hover:bg-red-600"
+                                            className="h-8 w-8 rounded-[2px] bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:h-9 sm:w-9"
                                             onClick={e => { e.stopPropagation(); openDeleteModal(image); }}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -311,14 +314,14 @@ const BarberPortfolioPage = () => {
                         </div>
                     ) : (
                         <div className="text-center py-12">
-                            <div className="mx-auto bg-muted rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[2px] border border-border bg-secondary">
                                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
                             </div>
                             <h3 className="text-lg font-medium text-foreground mb-1">{t("barberPanel.portfolio.empty")}</h3>
                             <p className="text-muted-foreground mb-4">{t("barberPanel.portfolio.emptyDesc")}</p>
                             <Button
                                 onClick={() => { resetForm(); setIsAddModalOpen(true); }}
-                                className="bg-barber hover:bg-barber-muted"
+                                className="bg-primary hover:bg-primary/90"
                             >
                                 <Plus className="h-4 w-4 mr-1" />
                                 {t("barberPanel.portfolio.addFirst")}
@@ -356,7 +359,7 @@ const BarberPortfolioPage = () => {
                         <TabsContent value="url" className="space-y-3 mt-3">
                             <div className="space-y-1">
                                 <Label htmlFor="newImageUrl">
-                                    {t("barberPanel.portfolio.imageUrl")} <span className="text-red-500">*</span>
+                                    {t("barberPanel.portfolio.imageUrl")} <span className="text-destructive">*</span>
                                 </Label>
                                 <Input
                                     id="newImageUrl"
@@ -380,14 +383,14 @@ const BarberPortfolioPage = () => {
                         {/* Upload tab */}
                         <TabsContent value="upload" className="space-y-3 mt-3">
                             <div
-                                className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-barber hover:bg-barber/5 transition-colors"
+                                className="cursor-pointer rounded-[2px] border border-dashed border-foreground/40 p-6 text-center transition-colors duration-200 hover:border-primary hover:bg-accent/60"
                                 onClick={() => fileInputRef.current?.click()}
                                 onDragOver={e => e.preventDefault()}
                                 onDrop={handleDrop}
                             >
                                 {isUploading ? (
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-barber" />
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                         <p className="text-sm">Przesyłanie...</p>
                                     </div>
                                 ) : previewUrl ? (
@@ -398,7 +401,7 @@ const BarberPortfolioPage = () => {
                                     />
                                 ) : (
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <Upload className="h-8 w-8 text-barber" />
+                                        <Upload className="h-8 w-8 text-primary" />
                                         <p className="text-sm font-medium">{t("barberPanel.portfolio.clickToUpload")}</p>
                                         <p className="text-xs">JPG, PNG, WEBP</p>
                                     </div>
@@ -417,12 +420,12 @@ const BarberPortfolioPage = () => {
                         <TabsContent value="paste" className="space-y-3 mt-3">
                             <div
                                 ref={pasteAreaRef}
-                                className="border-2 border-dashed border-border rounded-lg p-6 text-center focus:outline-none focus:border-barber transition-colors"
+                                className="rounded-[2px] border border-dashed border-foreground/40 p-6 text-center transition-colors duration-200 focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                 tabIndex={0}
                             >
                                 {isUploading ? (
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-barber" />
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                         <p className="text-sm">Przesyłanie...</p>
                                     </div>
                                 ) : previewUrl ? (
@@ -432,11 +435,11 @@ const BarberPortfolioPage = () => {
                                             alt="paste preview"
                                             className="max-h-36 mx-auto rounded object-contain"
                                         />
-                                        <p className="text-xs text-green-600 font-medium">{t("barberPanel.portfolio.pasteReady")}</p>
+                                        <p className="text-xs text-primary font-medium">{t("barberPanel.portfolio.pasteReady")}</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <Clipboard className="h-8 w-8 text-barber" />
+                                        <Clipboard className="h-8 w-8 text-primary" />
                                         <p className="text-sm font-medium">{t("barberPanel.portfolio.pasteHint")}</p>
                                         <p className="text-xs">Ctrl+V / Cmd+V</p>
                                     </div>
@@ -473,7 +476,7 @@ const BarberPortfolioPage = () => {
                             <Button variant="outline">{t("barberPanel.portfolio.cancel")}</Button>
                         </DialogClose>
                         <Button
-                            className="bg-barber hover:bg-barber-muted"
+                            className="bg-primary hover:bg-primary/90"
                             onClick={handleAddImage}
                             disabled={!newImageUrl || isUploading}
                         >
@@ -494,7 +497,7 @@ const BarberPortfolioPage = () => {
                     {imageToDelete && (
                         <div className="border rounded-md p-2 my-4 max-h-48 overflow-hidden">
                             <img
-                                src={imageToDelete.image_url}
+                                src={mediaUrl(imageToDelete.image_url)}
                                 alt={imageToDelete.title || "Image"}
                                 className="w-full h-auto object-contain rounded max-h-44"
                                 onError={e => { (e.target as HTMLImageElement).src = placeholderSvg; }}

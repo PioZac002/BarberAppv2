@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "name": "SZLIF",
+  "world": "back bar — glazed Barbicide wall, printed label stock, chrome",
+  "radius": "2px",
+  "fonts": {
+    "sans": "Archivo",
+    "mono": "Spline Sans Mono",
+    "rule": "two faces only; hierarchy from weight, width, case and rule weight"
+  },
+  "tokens": {
+    "materials": {
+      "glaze": {
+        "light": "234 75% 45%",
+        "dark": "231 100% 62%"
+      },
+      "tile": {
+        "light": "72 13% 92%",
+        "dark": "231 40% 11%"
+      },
+      "grout": {
+        "light": "77 10% 82%",
+        "dark": "231 35% 18%"
+      },
+      "label": {
+        "light": "51 33% 96%",
+        "dark": "231 44% 14%"
+      },
+      "chrome": {
+        "light": "210 8% 71%",
+        "dark": "224 13% 50%"
+      },
+      "ink": {
+        "light": "225 17% 9%",
+        "dark": "77 15% 91%"
+      },
+      "ink2": {
+        "light": "3 74% 47%",
+        "dark": "5 100% 64%"
+      }
+    },
+    "fixed": {
+      "wall-ink": {
+        "light": "51 33% 96%",
+        "dark": "77 15% 94%"
+      },
+      "wall-deep": {
+        "light": "234 78% 15%",
+        "dark": "231 60% 9%"
+      }
+    },
+    "series": {
+      "light": [
+        "234 75% 45%",
+        "3 74% 47%",
+        "210 12% 52%",
+        "234 62% 64%",
+        "3 56% 66%",
+        "225 34% 26%",
+        "196 48% 42%",
+        "262 36% 54%"
+      ],
+      "dark": [
+        "231 100% 66%",
+        "5 100% 66%",
+        "224 16% 62%",
+        "231 80% 78%",
+        "5 78% 76%",
+        "225 40% 48%",
+        "196 62% 55%",
+        "262 58% 70%"
+      ]
+    }
+  },
+  "classes": {
+    "surfaces": [
+      ".tile-wall",
+      ".plate",
+      ".plate--wall",
+      ".plate--flat",
+      ".shelf",
+      ".rule-double",
+      ".photo-frame",
+      ".jar",
+      ".jar--wall"
+    ],
+    "type": [
+      ".lockup",
+      ".label-caps",
+      ".directions",
+      ".net-line",
+      ".section-head"
+    ],
+    "state": [
+      ".stamp--pending",
+      ".stamp--confirmed",
+      ".stamp--done",
+      ".stamp--alert",
+      ".stamp--void",
+      ".stamp--absent"
+    ],
+    "brand": [
+      ".brand-mark",
+      ".brand-lockup"
+    ],
+    "motion": [
+      ".fill",
+      ".fill__liquid",
+      ".fill__meniscus",
+      ".cut",
+      ".wall-reveal",
+      ".plate-enter"
+    ]
+  },
+  "motion": {
+    "material": "liquid rising to an exact line, read vertically and horizontally",
+    "easing": "cubic-bezier(.16, 1, .3, 1)",
+    "rule": "entrances live in CSS with both fill, never in script"
+  },
+  "components": {
+    "brand": "src/components/brand/Szlif.tsx",
+    "world": "src/components/szlif/Bits.tsx",
+    "loading": "src/components/szlif/Loading.tsx",
+    "cut": "src/components/szlif/CutReveal.tsx",
+    "chartInk": "src/lib/chart-ink.ts",
+    "catalogNames": "src/lib/catalog-names.ts"
+  }
+}

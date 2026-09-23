@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
     Card,
-    CardContent,
     CardHeader,
     CardTitle,
     CardDescription,
@@ -23,11 +22,12 @@ import {
     DollarSign,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Lot } from "@/components/szlif/Bits";
 import { toast } from "sonner";
 import { isValid, format } from "date-fns";
-import { pl, enUS } from "date-fns/locale";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface Appointment {
     id: number;
@@ -39,19 +39,20 @@ interface Appointment {
     status: string;
 }
 
+// Same stamp vocabulary as every other panel: the line style is the state.
 const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
-    confirmed:  { bg: "bg-blue-100 dark:bg-blue-900/30",   text: "text-blue-700 dark:text-blue-300",   dot: "bg-blue-500" },
-    completed:  { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300", dot: "bg-green-500" },
-    cancelled:  { bg: "bg-red-100 dark:bg-red-900/30",     text: "text-red-700 dark:text-red-300",     dot: "bg-red-500" },
-    canceled:   { bg: "bg-red-100 dark:bg-red-900/30",     text: "text-red-700 dark:text-red-300",     dot: "bg-red-500" },
-    pending:    { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-300", dot: "bg-amber-500" },
-    "no-show":  { bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-300", dot: "bg-orange-500" },
+    confirmed:  { bg: "stamp stamp--confirmed", text: "", dot: "bg-primary" },
+    completed:  { bg: "stamp stamp--done",      text: "", dot: "bg-foreground/70" },
+    cancelled:  { bg: "stamp stamp--void",      text: "", dot: "bg-destructive" },
+    canceled:   { bg: "stamp stamp--void",      text: "", dot: "bg-destructive" },
+    pending:    { bg: "stamp stamp--pending",   text: "", dot: "bg-muted-foreground" },
+    "no-show":  { bg: "stamp stamp--absent",    text: "", dot: "bg-destructive" },
 };
 
 const BarberAppointmentsPage = () => {
     const { user: authUser, token, loading: authContextLoading } = useAuth();
-    const { t, lang } = useLanguage();
-    const dateLocale = lang === "pl" ? pl : enUS;
+    const { t } = useLanguage();
+    const dateLocale = useDateLocale();
 
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [statusFilter, setStatusFilter] = useState("all");
@@ -135,7 +136,7 @@ const BarberAppointmentsPage = () => {
     if (authContextLoading || isLoadingData) {
         return (
             <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber" />
+                <JarLoader />
             </div>
         );
     }
@@ -148,7 +149,7 @@ const BarberAppointmentsPage = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle className="flex items-center text-xl sm:text-2xl">
-                                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-barber" />
+                                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-primary" />
                                 {t("barberPanel.appointments.title")}
                             </CardTitle>
                             <CardDescription className="mt-1">{t("barberPanel.appointments.subtitle")}</CardDescription>
@@ -205,11 +206,10 @@ const BarberAppointmentsPage = () => {
                         return (
                             <Card
                                 key={appointment.id}
-                                className="overflow-hidden transition-shadow hover:shadow-md"
+                                className="overflow-hidden transition-shadow hover:shadow-plate"
                             >
                                 <div className="flex flex-col sm:flex-row">
                                     {/* Left accent bar */}
-                                    <div className={`w-full sm:w-1.5 h-1.5 sm:h-auto flex-shrink-0 ${cfg.dot.replace("bg-", "bg-")}`} />
 
                                     <div className="flex-1 p-4">
                                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -219,19 +219,20 @@ const BarberAppointmentsPage = () => {
                                                     <h3 className="font-semibold text-foreground text-base">
                                                         {appointment.client_name}
                                                     </h3>
-                                                    <Badge className={`${cfg.bg} ${cfg.text} border-0 text-xs font-medium`}>
+                                                    <Lot value={appointment.id} />
+                                                    <span className={cfg.bg}>
                                                         <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dot} mr-1.5`} />
                                                         {getStatusLabel(appointment.status)}
-                                                    </Badge>
+                                                    </span>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
                                                     <div className="flex items-center gap-1.5">
-                                                        <Scissors className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                                                         <span className="truncate">{appointment.service_name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
-                                                        <Clock className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <Clock className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                                                         <span>
                                                             {validDate
                                                                 ? format(aptDate, "PP", { locale: dateLocale })
@@ -239,7 +240,7 @@ const BarberAppointmentsPage = () => {
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
-                                                        <CalendarIcon className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <CalendarIcon className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                                                         <span>
                                                             {validDate
                                                                 ? format(aptDate, "p", { locale: dateLocale })
@@ -247,7 +248,7 @@ const BarberAppointmentsPage = () => {
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5">
-                                                        <DollarSign className="h-3.5 w-3.5 text-barber flex-shrink-0" />
+                                                        <DollarSign className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                                                         <span className="font-medium text-foreground">
                                                             {parseFloat(String(appointment.price)).toFixed(2)} PLN
                                                         </span>
@@ -270,7 +271,7 @@ const BarberAppointmentsPage = () => {
                                                             size="sm"
                                                             disabled={isUpdating}
                                                             onClick={() => handleStatusChange(appointment.id, "confirmed")}
-                                                            className="bg-green-600 hover:bg-green-700 text-white h-8 px-3 text-xs gap-1.5"
+                                                            className="h-8 gap-1.5 px-3 text-[0.6875rem]"
                                                         >
                                                             <CheckCircle2 className="h-3.5 w-3.5" />
                                                             {t("barberPanel.appointments.confirm")}
@@ -280,7 +281,7 @@ const BarberAppointmentsPage = () => {
                                                             disabled={isUpdating}
                                                             variant="outline"
                                                             onClick={() => handleStatusChange(appointment.id, "canceled")}
-                                                            className="border-red-400 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 h-8 px-3 text-xs gap-1.5"
+                                                            className="h-8 gap-1.5 border-destructive px-3 text-[0.6875rem] text-destructive hover:border-destructive hover:before:bg-destructive"
                                                         >
                                                             <XCircle className="h-3.5 w-3.5" />
                                                             {t("barberPanel.appointments.cancel")}
@@ -293,7 +294,7 @@ const BarberAppointmentsPage = () => {
                                                             size="sm"
                                                             disabled={isUpdating}
                                                             onClick={() => handleStatusChange(appointment.id, "completed")}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 text-xs gap-1.5"
+                                                            className="h-8 gap-1.5 px-3 text-[0.6875rem]"
                                                         >
                                                             <ThumbsUp className="h-3.5 w-3.5" />
                                                             {t("barberPanel.appointments.complete")}
@@ -303,7 +304,7 @@ const BarberAppointmentsPage = () => {
                                                             disabled={isUpdating}
                                                             variant="outline"
                                                             onClick={() => handleStatusChange(appointment.id, "no-show")}
-                                                            className="border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30 h-8 px-3 text-xs gap-1.5"
+                                                            className="h-8 gap-1.5 border-destructive px-3 text-[0.6875rem] text-destructive hover:border-destructive hover:before:bg-destructive"
                                                         >
                                                             <UserX className="h-3.5 w-3.5" />
                                                             {t("barberPanel.appointments.markNoShow")}

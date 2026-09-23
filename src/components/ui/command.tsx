@@ -42,7 +42,7 @@ CommandList.displayName = "CommandList";
 
 // Command Empty
 const CommandEmpty = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-    <Command.Empty className={cn("p-2 text-gray-500", className)} {...props} />
+    <Command.Empty className={cn("p-2 text-muted-foreground", className)} {...props} />
 );
 CommandEmpty.displayName = "CommandEmpty";
 
@@ -54,7 +54,7 @@ CommandGroup.displayName = "CommandGroup";
 
 // Command Separator
 const CommandSeparator = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-    <Command.Separator className={cn("h-px bg-gray-200", className)} {...props} />
+    <Command.Separator className={cn("h-px bg-secondary", className)} {...props} />
 );
 CommandSeparator.displayName = "CommandSeparator";
 

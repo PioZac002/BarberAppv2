@@ -268,10 +268,21 @@ Copy from the example: `cp backend/.env.local.example backend/.env.local`
 
 ### Backend
 
-| Command          | Description                  |
-|------------------|------------------------------|
-| `node index.js`  | Start the Express server     |
-| `npm test`       | Run backend tests (Vitest)   |
+| Command                    | Description                                                   |
+|----------------------------|---------------------------------------------------------------|
+| `node index.js`            | Start the Express server                                      |
+| `npm test`                 | Run backend tests (Vitest)                                    |
+| `node db/migrate.js`       | Apply pending SQL migrations from `backend/db/migrations/`    |
+
+Run `npm run test:backend` from the repository root to install the backend dependencies and run
+the backend suite in one step; `npm test` at the root runs the whole suite, frontend and backend
+together (91 tests at the time of writing).
+
+### Database migrations
+
+`backend/db/01_schema.sql` creates a fresh database. Everything that changed after the first
+deployment lives in `backend/db/migrations/` as numbered SQL files, applied in order by
+`node backend/db/migrate.js`; each file is recorded once, so running it again is a no-op.
 
 ---
 
@@ -291,7 +302,8 @@ Barberapplication/
 │   └── index.css               # Global styles + dark mode CSS vars
 ├── backend/
 │   ├── controllers/            # Route handler logic
-│   ├── db/                     # SQL schema + seed file
+│   ├── db/                     # SQL schema, seed file, migrations/ + migrate.js
+│   ├── services/               # Domain services (notifications)
 │   ├── middleware/             # Auth middleware (verifyToken, requireAdmin, demoGuard, etc.)
 │   ├── routes/                 # Express routers
 │   ├── uploads/                # Uploaded files (portfolio, profile photos)
@@ -299,6 +311,8 @@ Barberapplication/
 │   ├── .env                    # Backend env — gitignored
 │   ├── .env.local              # Local DB override — gitignored, copy from .env.local.example
 │   └── .env.local.example      # Template for local Docker DB setup
+├── design-assets/              # Source artwork the site assets were made from (gitignored GIF)
+├── scripts/                    # Repo scripts (backend dependency check before tests)
 ├── .env.development            # Frontend env — local dev
 └── .env.production             # Frontend env — production
 ```

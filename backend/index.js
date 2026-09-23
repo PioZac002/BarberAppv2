@@ -70,7 +70,21 @@ for (const r of routesToMount) {
 // opcjonalnie wyłącz nagłówek X-Powered-By
 app.disable('x-powered-by');
 
-app.listen(port, () => {
-    console.log(`Serwer działa na porcie ${port}`);
-    console.log(`Allowed frontend origins: ${allowedOrigins.join(', ')}`);
-});
+// Bring the schema up to date before accepting traffic. A server answering
+// requests against a schema it cannot query is exactly the failure mode this
+// guards against, so a failed migration stops the boot rather than serving
+// 500s that look like application bugs.
+const { runMigrations } = require('./db/migrate');
+
+runMigrations()
+    .then(() => {
+        app.listen(port, () => {
+            console.log(`Serwer działa na porcie ${port}`);
+            console.log(`Allowed frontend origins: ${allowedOrigins.join(', ')}`);
+        });
+    })
+    .catch(err => {
+        console.error('\n[ERROR] Migrations failed; refusing to start.');
+        console.error(err && err.stack ? err.stack : err);
+        process.exit(1);
+    });

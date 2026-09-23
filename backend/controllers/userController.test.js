@@ -22,10 +22,6 @@ const {
     getUserAppointments,
     cancelUserAppointment,
     getNextUpcomingAppointment,
-    getUserNotifications,
-    markUserNotificationAsRead,
-    markAllUserNotificationsAsRead,
-    deleteUserNotification,
     getUserProfile,
     updateUserProfile,
     getUserReviewsWritten,
@@ -223,119 +219,9 @@ describe("getNextUpcomingAppointment", () => {
 
 /* ================== Powiadomienia ================== */
 
-describe("getUserNotifications", () => {
-    it("zwraca listę powiadomień", async () => {
-        mockPool.query.mockResolvedValueOnce({
-            rows: [{ id: 1, title: "T", message: "M" }],
-        });
 
-        const req = getMockReq({ user: { id: 5 } });
-        const { res } = getMockRes();
 
-        await getUserNotifications(req, res);
 
-        expect(res.json).toHaveBeenCalledWith([
-            expect.objectContaining({ id: 1 }),
-        ]);
-    });
-
-    it("zwraca 500 przy błędzie bazy", async () => {
-        mockPool.query.mockRejectedValueOnce(new Error("db error"));
-
-        const req = getMockReq({ user: { id: 5 } });
-        const { res } = getMockRes();
-
-        await getUserNotifications(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(500);
-    });
-});
-
-describe("markUserNotificationAsRead", () => {
-    it("zwraca 404 gdy powiadomienie nie istnieje", async () => {
-        mockPool.query.mockResolvedValueOnce({ rows: [] });
-
-        const req = getMockReq({
-            user: { id: 5 },
-            params: { notificationId: "10" },
-        });
-        const { res } = getMockRes();
-
-        await markUserNotificationAsRead(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-    });
-
-    it("zwraca zaktualizowane powiadomienie", async () => {
-        mockPool.query.mockResolvedValueOnce({
-            rows: [{ id: 10, is_read: true }],
-        });
-
-        const req = getMockReq({
-            user: { id: 5 },
-            params: { notificationId: "10" },
-        });
-        const { res } = getMockRes();
-
-        await markUserNotificationAsRead(req, res);
-
-        expect(res.json).toHaveBeenCalledWith(
-            expect.objectContaining({ id: 10, is_read: true })
-        );
-    });
-});
-
-describe("markAllUserNotificationsAsRead", () => {
-    it("oznacza wszystkie jako przeczytane", async () => {
-        mockPool.query.mockResolvedValueOnce({});
-
-        const req = getMockReq({ user: { id: 5 } });
-        const { res } = getMockRes();
-
-        await markAllUserNotificationsAsRead(req, res);
-
-        expect(mockPool.query).toHaveBeenCalledWith(
-            "UPDATE user_notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE",
-            [5]
-        );
-        expect(res.json).toHaveBeenCalledWith({
-            message:
-                "Wszystkie powiadomienia użytkownika zostały oznaczone jako przeczytane.",
-        });
-    });
-});
-
-describe("deleteUserNotification", () => {
-    it("zwraca 404 gdy powiadomienie nie należy do użytkownika", async () => {
-        mockPool.query.mockResolvedValueOnce({ rowCount: 0 });
-
-        const req = getMockReq({
-            user: { id: 5 },
-            params: { notificationId: "10" },
-        });
-        const { res } = getMockRes();
-
-        await deleteUserNotification(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-    });
-
-    it("usuwa powiadomienie", async () => {
-        mockPool.query.mockResolvedValueOnce({ rowCount: 1 });
-
-        const req = getMockReq({
-            user: { id: 5 },
-            params: { notificationId: "10" },
-        });
-        const { res } = getMockRes();
-
-        await deleteUserNotification(req, res);
-
-        expect(res.json).toHaveBeenCalledWith({
-            message: "Powiadomienie użytkownika zostało usunięte.",
-        });
-    });
-});
 
 /* ================== Profil użytkownika ================== */
 

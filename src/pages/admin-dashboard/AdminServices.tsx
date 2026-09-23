@@ -31,6 +31,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { JarLoader } from "@/components/szlif/Loading";
 
 interface Service {
     id: number;
@@ -76,7 +77,7 @@ const AdminServices = () => {
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/services`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
-                if (!response.ok) throw new Error('Failed to fetch services');
+                if (!response.ok) throw new Error(t("errors.loadFailed"));
                 const data = await response.json();
                 setServices(data);
                 setLoading(false);
@@ -115,7 +116,7 @@ const AdminServices = () => {
                 },
                 body: JSON.stringify(data),
             });
-            if (!response.ok) throw new Error('Failed to add service');
+            if (!response.ok) throw new Error(t("errors.saveFailed"));
             const newService = await response.json();
             setServices([...services, newService]);
             setIsAddModalOpen(false);
@@ -138,7 +139,7 @@ const AdminServices = () => {
                 },
                 body: JSON.stringify(data),
             });
-            if (!response.ok) throw new Error('Failed to update service');
+            if (!response.ok) throw new Error(t("errors.saveFailed"));
             const updatedService = await response.json();
             setServices(services.map(service => service.id === updatedService.id ? updatedService : service));
             setIsEditModalOpen(false);
@@ -157,7 +158,7 @@ const AdminServices = () => {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
-            if (!response.ok) throw new Error('Failed to delete service');
+            if (!response.ok) throw new Error(t("errors.deleteFailed"));
             setServices(services.filter(service => service.id !== selectedService.id));
             setIsDeleteModalOpen(false);
             setSelectedService(null);
@@ -171,7 +172,7 @@ const AdminServices = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-barber"></div>
+                <JarLoader />
             </div>
         );
     }
@@ -183,7 +184,7 @@ const AdminServices = () => {
                     <span>{t('adminPanel.services.title')}</span>
                     <Button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="bg-barber hover:bg-barber-muted"
+                        className="bg-primary hover:bg-primary/90"
                     >
                         <Plus className="h-4 w-4 mr-1" />
                         {t('adminPanel.services.addNew')}
@@ -237,7 +238,7 @@ const AdminServices = () => {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="text-red-500 hover:text-red-700"
+                                            className="text-destructive hover:text-destructive"
                                             onClick={() => {
                                                 setSelectedService(service);
                                                 setIsDeleteModalOpen(true);
@@ -259,7 +260,7 @@ const AdminServices = () => {
                                     <h3 className="font-medium">{service.name}</h3>
                                     <p className="text-sm text-muted-foreground">{service.description}</p>
                                 </div>
-                                <span className="px-2 py-1 rounded-full text-xs font-medium">{service.price} zł</span>
+                                <span className="net-line text-sm font-semibold">{service.price} zł</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                                 <div>
@@ -283,7 +284,7 @@ const AdminServices = () => {
                                     <Pencil className="h-4 w-4 mr-1" />
                                     {t('adminPanel.services.edit')}
                                 </Button>
-                                <Button variant="outline" size="sm" className="text-red-500" onClick={() => {
+                                <Button variant="outline" size="sm" className="text-destructive" onClick={() => {
                                     setSelectedService(service);
                                     setIsDeleteModalOpen(true);
                                 }}>
@@ -308,28 +309,28 @@ const AdminServices = () => {
                             <Label htmlFor="add-name">{t('adminPanel.services.serviceName')}</Label>
                             <Input id="add-name" {...addForm.register("name")} />
                             {addForm.formState.errors.name && (
-                                <p className="text-sm text-red-500">{addForm.formState.errors.name.message}</p>
+                                <p className="text-sm text-destructive">{addForm.formState.errors.name.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="add-description">{t('adminPanel.services.colDescription')}</Label>
                             <Textarea id="add-description" {...addForm.register("description")} />
                             {addForm.formState.errors.description && (
-                                <p className="text-sm text-red-500">{addForm.formState.errors.description.message}</p>
+                                <p className="text-sm text-destructive">{addForm.formState.errors.description.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="add-price">{t('adminPanel.services.priceLabel')}</Label>
                             <Input id="add-price" type="number" {...addForm.register("price")} />
                             {addForm.formState.errors.price && (
-                                <p className="text-sm text-red-500">{addForm.formState.errors.price.message}</p>
+                                <p className="text-sm text-destructive">{addForm.formState.errors.price.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="add-duration">{t('adminPanel.services.durationLabel')}</Label>
                             <Input id="add-duration" type="number" {...addForm.register("duration")} />
                             {addForm.formState.errors.duration && (
-                                <p className="text-sm text-red-500">{addForm.formState.errors.duration.message}</p>
+                                <p className="text-sm text-destructive">{addForm.formState.errors.duration.message}</p>
                             )}
                         </div>
                         <DialogFooter>
@@ -352,28 +353,28 @@ const AdminServices = () => {
                             <Label htmlFor="edit-name">{t('adminPanel.services.serviceName')}</Label>
                             <Input id="edit-name" {...editForm.register("name")} />
                             {editForm.formState.errors.name && (
-                                <p className="text-sm text-red-500">{editForm.formState.errors.name.message}</p>
+                                <p className="text-sm text-destructive">{editForm.formState.errors.name.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-description">{t('adminPanel.services.colDescription')}</Label>
                             <Textarea id="edit-description" {...editForm.register("description")} />
                             {editForm.formState.errors.description && (
-                                <p className="text-sm text-red-500">{editForm.formState.errors.description.message}</p>
+                                <p className="text-sm text-destructive">{editForm.formState.errors.description.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-price">{t('adminPanel.services.priceLabel')}</Label>
                             <Input id="edit-price" type="number" {...editForm.register("price")} />
                             {editForm.formState.errors.price && (
-                                <p className="text-sm text-red-500">{editForm.formState.errors.price.message}</p>
+                                <p className="text-sm text-destructive">{editForm.formState.errors.price.message}</p>
                             )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="edit-duration">{t('adminPanel.services.durationLabel')}</Label>
                             <Input id="edit-duration" type="number" {...editForm.register("duration")} />
                             {editForm.formState.errors.duration && (
-                                <p className="text-sm text-red-500">{editForm.formState.errors.duration.message}</p>
+                                <p className="text-sm text-destructive">{editForm.formState.errors.duration.message}</p>
                             )}
                         </div>
                         <DialogFooter>

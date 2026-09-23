@@ -1,20 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Layout from "@/components/Layout";
+import { Lockup } from "@/components/brand/Szlif";
+import { Loader2 } from "lucide-react";
 
 interface FormData {
     firstName: string;
@@ -86,56 +80,59 @@ const Register = () => {
     };
 
     return (
-        <Layout>
-            <div className="flex items-center justify-center min-h-screen bg-background py-12">
-                <div className="w-full max-w-md px-4">
-                    <Card className="animate-fade-in shadow-lg border-border">
-                        <CardHeader className="space-y-1 text-center pb-6">
-                            <div className="w-12 h-12 bg-barber rounded-full flex items-center justify-center mx-auto mb-3">
-                                <span className="text-white font-bold text-xl">B</span>
-                            </div>
-                            <CardTitle className="text-3xl font-bold text-foreground">
-                                {t("auth.registerTitle")}
-                            </CardTitle>
-                            <CardDescription className="text-muted-foreground">
-                                {t("auth.registerSubtitleFull")}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+        <Layout withFooter={false}>
+            <div className="grid min-h-[calc(100svh-4rem)] lg:grid-cols-[1.1fr_1fr]">
+                <div className="tile-wall relative hidden flex-col justify-end p-10 lg:flex xl:p-14">
+                    <Lockup className="w-[min(26rem,60%)] text-wall" />
+                    <div className="shelf mt-8 w-full" aria-hidden />
+                    <p className="mt-6 max-w-sm text-sm leading-relaxed text-wall/80">
+                        {t("auth.registerSubtitleFull")}
+                    </p>
+                </div>
+
+                <div className="flex items-center justify-center bg-background px-5 py-12 md:px-8">
+                    <div className="w-full max-w-md">
+                        <h2 className="section-head">{t("auth.registerTitle")}</h2>
+                        <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground lg:hidden">
+                            {t("auth.registerSubtitleFull")}
+                        </p>
+                        <div className="mt-8">
                             <form onSubmit={handleSubmit}>
-                                <div className="grid gap-4">
+                                <div className="grid gap-5">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="firstName">{t("auth.firstName")}</Label>
+                                        <div className="grid gap-2">
+                                            <Label className="directions" htmlFor="firstName">{t("auth.firstName")}</Label>
                                             <Input
                                                 id="firstName"
                                                 name="firstName"
                                                 placeholder="Jan"
                                                 value={formData.firstName}
                                                 onChange={handleChange}
-                                                className={errors.firstName ? "border-destructive" : ""}
+                                                aria-invalid={!!errors.firstName}
+                                            aria-describedby={errors.firstName ? "firstName-error" : undefined}
                                             />
                                             {errors.firstName && (
-                                                <p className="text-destructive text-sm">{errors.firstName}</p>
+                                                <p id="firstName-error" className="text-sm text-destructive">{errors.firstName}</p>
                                             )}
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="lastName">{t("auth.lastName")}</Label>
+                                        <div className="grid gap-2">
+                                            <Label className="directions" htmlFor="lastName">{t("auth.lastName")}</Label>
                                             <Input
                                                 id="lastName"
                                                 name="lastName"
                                                 placeholder="Kowalski"
                                                 value={formData.lastName}
                                                 onChange={handleChange}
-                                                className={errors.lastName ? "border-destructive" : ""}
+                                                aria-invalid={!!errors.lastName}
+                                            aria-describedby={errors.lastName ? "lastName-error" : undefined}
                                             />
                                             {errors.lastName && (
-                                                <p className="text-destructive text-sm">{errors.lastName}</p>
+                                                <p id="lastName-error" className="text-sm text-destructive">{errors.lastName}</p>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email">{t("auth.email")}</Label>
+                                    <div className="grid gap-2">
+                                        <Label className="directions" htmlFor="email">{t("auth.email")}</Label>
                                         <Input
                                             id="email"
                                             name="email"
@@ -143,14 +140,15 @@ const Register = () => {
                                             placeholder="name@example.com"
                                             value={formData.email}
                                             onChange={handleChange}
-                                            className={errors.email ? "border-destructive" : ""}
+                                            aria-invalid={!!errors.email}
+                                            aria-describedby={errors.email ? "email-error" : undefined}
                                         />
                                         {errors.email && (
-                                            <p className="text-destructive text-sm">{errors.email}</p>
+                                            <p id="email-error" className="text-sm text-destructive">{errors.email}</p>
                                         )}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="phone">{t("auth.phone")}</Label>
+                                    <div className="grid gap-2">
+                                        <Label className="directions" htmlFor="phone">{t("auth.phone")}</Label>
                                         <Input
                                             id="phone"
                                             name="phone"
@@ -158,14 +156,15 @@ const Register = () => {
                                             placeholder="+48 123 456 789"
                                             value={formData.phone}
                                             onChange={handleChange}
-                                            className={errors.phone ? "border-destructive" : ""}
+                                            aria-invalid={!!errors.phone}
+                                            aria-describedby={errors.phone ? "phone-error" : undefined}
                                         />
                                         {errors.phone && (
-                                            <p className="text-destructive text-sm">{errors.phone}</p>
+                                            <p id="phone-error" className="text-sm text-destructive">{errors.phone}</p>
                                         )}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="password">{t("auth.password")}</Label>
+                                    <div className="grid gap-2">
+                                        <Label className="directions" htmlFor="password">{t("auth.password")}</Label>
                                         <Input
                                             id="password"
                                             name="password"
@@ -173,14 +172,15 @@ const Register = () => {
                                             placeholder="••••••••"
                                             value={formData.password}
                                             onChange={handleChange}
-                                            className={errors.password ? "border-destructive" : ""}
+                                            aria-invalid={!!errors.password}
+                                            aria-describedby={errors.password ? "password-error" : undefined}
                                         />
                                         {errors.password && (
-                                            <p className="text-destructive text-sm">{errors.password}</p>
+                                            <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
                                         )}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
+                                    <div className="grid gap-2">
+                                        <Label className="directions" htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
                                         <Input
                                             id="confirmPassword"
                                             name="confirmPassword"
@@ -188,31 +188,28 @@ const Register = () => {
                                             placeholder="••••••••"
                                             value={formData.confirmPassword}
                                             onChange={handleChange}
-                                            className={errors.confirmPassword ? "border-destructive" : ""}
+                                            aria-invalid={!!errors.confirmPassword}
+                                            aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
                                         />
                                         {errors.confirmPassword && (
-                                            <p className="text-destructive text-sm">{errors.confirmPassword}</p>
+                                            <p id="confirmPassword-error" className="text-sm text-destructive">{errors.confirmPassword}</p>
                                         )}
                                     </div>
-                                    <Button
-                                        type="submit"
-                                        className="bg-barber hover:bg-barber-muted text-white btn-hover w-full"
-                                        disabled={isSubmitting}
-                                    >
+                                    <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                                        {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                                         {isSubmitting ? t("auth.creatingAccount") : t("auth.registerButton")}
                                     </Button>
                                 </div>
                             </form>
-                        </CardContent>
-                        <CardFooter className="text-center pt-2">
-                            <div className="text-sm text-muted-foreground w-full">
-                                {t("auth.hasAccount")}{" "}
-                                <Link to="/login" className="text-barber font-medium hover:underline">
-                                    {t("auth.signInLink")}
-                                </Link>
-                            </div>
-                        </CardFooter>
-                    </Card>
+                        </div>
+
+                        <p className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
+                            {t("auth.hasAccount")}{" "}
+                            <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+                                {t("auth.signInLink")}
+                            </Link>
+                        </p>
+                    </div>
                 </div>
             </div>
         </Layout>

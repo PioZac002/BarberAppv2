@@ -26,3 +26,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Impeccable: review captures are build output, not source
+.impeccable/review/
+
+# Prywatne notatki projektowe — nie trafiają do repozytorium
+notes/
+
+# Materiały robocze (zostają lokalnie)
+.impeccable/review/
+.impeccable/work/
+.impeccable/hook.cache.json
+design-assets/*.gif

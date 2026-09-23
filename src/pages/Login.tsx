@@ -1,50 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Layout from "@/components/Layout";
+import { Lockup } from "@/components/brand/Szlif";
 import { toast } from "sonner";
-import { ShieldCheck, Scissors, User } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
+/**
+ * Most people meet this product here, through the one-click demo logins.
+ * So the demo accounts are not a footnote under the form — they are three
+ * bottles standing on the shelf, each capped in its own ink.
+ */
 const DEMO_ACCOUNTS = [
-    {
-        key: "demoAdmin" as const,
-        email: "admin@barbershop.com",
-        password: "Admin1234!",
-        icon: ShieldCheck,
-        color: "text-red-500",
-        bg: "hover:bg-red-50 dark:hover:bg-red-950/30",
-        border: "border-red-200 dark:border-red-800",
-    },
-    {
-        key: "demoBarber" as const,
-        email: "marek@barbershop.com",
-        password: "User1234!",
-        icon: Scissors,
-        color: "text-barber",
-        bg: "hover:bg-barber/5",
-        border: "border-barber/30",
-    },
-    {
-        key: "demoClient" as const,
-        email: "jan@example.com",
-        password: "User1234!",
-        icon: User,
-        color: "text-blue-500",
-        bg: "hover:bg-blue-50 dark:hover:bg-blue-950/30",
-        border: "border-blue-200 dark:border-blue-800",
-    },
+    { key: "demoAdmin" as const,  email: "admin@barbershop.com", password: "Admin1234!", cap: "bg-ink2" },
+    { key: "demoBarber" as const, email: "marek@barbershop.com", password: "User1234!",  cap: "bg-primary" },
+    { key: "demoClient" as const, email: "jan@example.com",      password: "User1234!",  cap: "bg-chrome" },
 ] as const;
 
 const Login = () => {
@@ -69,14 +44,9 @@ const Login = () => {
 
     const validateForm = () => {
         const newErrors: { email?: string; password?: string } = {};
-        if (!email) {
-            newErrors.email = t("auth.emailRequired");
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            newErrors.email = t("auth.emailInvalid");
-        }
-        if (!password) {
-            newErrors.password = t("auth.passwordRequired");
-        }
+        if (!email) newErrors.email = t("auth.emailRequired");
+        else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = t("auth.emailInvalid");
+        if (!password) newErrors.password = t("auth.passwordRequired");
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -94,133 +64,125 @@ const Login = () => {
         }
     };
 
+    const busy = isSubmitting || demoLoading !== null;
+
     return (
-        <Layout>
-            <div className="flex items-center justify-center min-h-screen bg-background py-12">
-                <div className="w-full max-w-md px-4">
-                    <Card className="animate-fade-in shadow-lg border-border">
-                        <CardHeader className="space-y-1 text-center pb-6">
-                            <div className="w-12 h-12 bg-barber rounded-full flex items-center justify-center mx-auto mb-3">
-                                <span className="text-white font-bold text-xl">B</span>
+        <Layout withFooter={false}>
+            <div className="grid min-h-[calc(100svh-4rem)] lg:grid-cols-[1.1fr_1fr]">
+                {/* the wall, so you know whose counter you are standing at */}
+                <div className="tile-wall relative hidden flex-col justify-end p-10 lg:flex xl:p-14">
+                    <Lockup className="w-[min(26rem,60%)] text-wall" />
+                    <div className="shelf mt-8 w-full" aria-hidden />
+                    <p className="mt-6 max-w-sm text-sm leading-relaxed text-wall/80">
+                        {t("auth.loginSubtitleFull")}
+                    </p>
+                </div>
+
+                <div className="flex items-center justify-center bg-background px-5 py-12 md:px-8">
+                    <div className="w-full max-w-md">
+                        <h2 className="section-head">{t("auth.loginWelcome")}</h2>
+                        <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground lg:hidden">
+                            {t("auth.loginSubtitleFull")}
+                        </p>
+
+                        <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+                            <div className="grid gap-2">
+                                <Label htmlFor="email" className="directions">{t("auth.email")}</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="name@example.com"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    autoComplete="email"
+                                    aria-invalid={!!errors.email}
+                                    aria-describedby={errors.email ? "email-error" : undefined}
+                                />
+                                {errors.email && (
+                                    <p id="email-error" className="text-sm text-destructive">{errors.email}</p>
+                                )}
                             </div>
-                            <CardTitle className="text-3xl font-bold text-foreground">
-                                {t("auth.loginWelcome")}
-                            </CardTitle>
-                            <CardDescription className="text-muted-foreground">
-                                {t("auth.loginSubtitleFull")}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit}>
-                                <div className="grid gap-5">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email">{t("auth.email")}</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            placeholder="name@example.com"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            autoComplete="email"
-                                            className={errors.email ? "border-destructive" : ""}
-                                        />
-                                        {errors.email && (
-                                            <p className="text-destructive text-sm">{errors.email}</p>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label htmlFor="password">{t("auth.password")}</Label>
-                                            <Link
-                                                to="/forgot-password"
-                                                className="text-sm text-barber hover:text-barber-muted hover:underline transition-colors"
-                                            >
-                                                {t("auth.forgotPassword")}
-                                            </Link>
-                                        </div>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            autoComplete="current-password"
-                                            className={errors.password ? "border-destructive" : ""}
-                                        />
-                                        {errors.password && (
-                                            <p className="text-destructive text-sm">{errors.password}</p>
-                                        )}
-                                    </div>
-                                    <Button
-                                        type="submit"
-                                        className="bg-barber hover:bg-barber-muted text-white btn-hover w-full"
-                                        disabled={isSubmitting}
+
+                            <div className="grid gap-2">
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <Label htmlFor="password" className="directions">{t("auth.password")}</Label>
+                                    <Link
+                                        to="/forgot-password"
+                                        className="text-sm text-primary underline-offset-4 hover:underline"
                                     >
-                                        {isSubmitting ? t("auth.loggingIn") : t("auth.loginButton")}
-                                    </Button>
+                                        {t("auth.forgotPassword")}
+                                    </Link>
                                 </div>
-                            </form>
-                        </CardContent>
-                        {/* Demo accounts section */}
-                        <div className="px-6 pb-2">
-                            <div className="relative mb-4">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-border" />
-                                </div>
-                                <div className="relative flex justify-center text-xs uppercase">
-                                    <span className="bg-card px-2 text-muted-foreground">
-                                        {t("auth.or")}
-                                    </span>
-                                </div>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    autoComplete="current-password"
+                                    aria-invalid={!!errors.password}
+                                    aria-describedby={errors.password ? "password-error" : undefined}
+                                />
+                                {errors.password && (
+                                    <p id="password-error" className="text-sm text-destructive">{errors.password}</p>
+                                )}
                             </div>
 
-                            <div className="rounded-lg border border-barber/20 bg-barber/5 p-4 space-y-3">
-                                <div className="text-center">
-                                    <p className="text-sm font-semibold text-foreground">{t("auth.demoTitle")}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{t("auth.demoSubtitle")}</p>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {DEMO_ACCOUNTS.map((account) => {
-                                        const Icon = account.icon;
-                                        const isLoading = demoLoading === account.key;
-                                        return (
-                                            <button
-                                                key={account.key}
-                                                type="button"
-                                                disabled={isSubmitting || demoLoading !== null}
-                                                onClick={() => handleDemoLogin(account.email, account.password, account.key)}
-                                                className={`flex flex-col items-center gap-1.5 rounded-md border px-2 py-3 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-card ${account.border} ${account.bg}`}
-                                            >
-                                                {isLoading ? (
-                                                    <svg className="h-4 w-4 animate-spin text-muted-foreground" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                                    </svg>
-                                                ) : (
-                                                    <Icon className={`h-4 w-4 ${account.color}`} />
-                                                )}
-                                                <span className="text-foreground leading-tight text-center">
-                                                    {t(`auth.${account.key}`)}
+                            <Button type="submit" size="lg" className="w-full" disabled={busy}>
+                                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                {isSubmitting ? t("auth.loggingIn") : t("auth.loginButton")}
+                            </Button>
+                        </form>
+
+                        {/* ── the demo shelf ── */}
+                        <section className="mt-10" aria-labelledby="demo-heading">
+                            <div className="rule-double flex items-baseline justify-between gap-3 pb-2">
+                                <h3 id="demo-heading" className="label-caps text-[0.8125rem]">
+                                    {t("auth.demoTitle")}
+                                </h3>
+                                <span className="directions">{t("auth.demoSubtitle")}</span>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-3 gap-2.5">
+                                {DEMO_ACCOUNTS.map(account => {
+                                    const loading = demoLoading === account.key;
+                                    return (
+                                        <button
+                                            key={account.key}
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => handleDemoLogin(account.email, account.password, account.key)}
+                                            className="plate plate-interactive flex flex-col items-start gap-3 p-3 text-left disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                            {/* the bottle's cap: one ink per role */}
+                                            <span className={cn("h-1.5 w-8 shrink-0", account.cap)} aria-hidden />
+                                            <span className="label-caps text-[0.6875rem] leading-tight">
+                                                {t(`auth.${account.key}`)}
+                                            </span>
+                                            {loading ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                            ) : (
+                                                <span className="net-line text-micro text-muted-foreground">
+                                                    {account.email.split("@")[0]}
                                                 </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                                <p className="text-center text-[11px] text-muted-foreground">
-                                    {t("auth.demoNote")}
-                                </p>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        </div>
 
-                        <CardFooter className="flex flex-col space-y-4 pt-2">
-                            <div className="text-center text-sm text-muted-foreground">
-                                {t("auth.noAccount")}{" "}
-                                <Link to="/register" className="text-barber font-medium hover:underline">
-                                    {t("auth.signUpLink")}
-                                </Link>
-                            </div>
-                        </CardFooter>
-                    </Card>
+                            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                                {t("auth.demoNote")}
+                            </p>
+                        </section>
+
+                        <p className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
+                            {t("auth.noAccount")}{" "}
+                            <Link to="/register" className="font-medium text-primary underline-offset-4 hover:underline">
+                                {t("auth.signUpLink")}
+                            </Link>
+                        </p>
+                    </div>
                 </div>
             </div>
         </Layout>
