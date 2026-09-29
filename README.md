@@ -2,9 +2,14 @@
 
 A full-stack barbershop management application with online booking, role-based dashboards, dark/light mode, and bilingual (PL/EN) support.
 
-**Live demo:** [https://barberappv2-1.onrender.com](https://barberappv2-1.onrender.com)
+**Live demo:** [https://barberappv2026.onrender.com](https://barberappv2026.onrender.com)
 
-> The live instance runs on Render's free tier — the backend may take 30–60 seconds to wake up on first load.
+> **How the live version runs:** three separate services on Render's free tier.
+> - **Frontend:** a Static Site with the Vite build, served straight from Render's CDN, so the page opens instantly.
+> - **API:** the Express backend as a Web Service. The frontend is built with its URL in `VITE_API_URL`, and the API only accepts requests from the frontend's address (`FRONTEND_URL`, CORS).
+> - **Database:** a Render PostgreSQL instance, loaded once with `backend/db/01_schema.sql` and `02_seed.sql`. Later schema changes are applied by `backend/db/migrate.js` whenever the API starts.
+>
+> The API sleeps after about 15 minutes without traffic, so the first sign-in can take 30-60 seconds. The free tier has no persistent disk, so photos uploaded through the panels are lost when the API restarts. Everything stored in the database stays.
 
 ### Try it instantly — demo accounts
 
